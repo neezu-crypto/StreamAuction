@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="StreamAuction - 스트리머 닉네임을 사고파는 경매 게임">
+  <title>StreamAuction - 스트리머 경매시장</title>
+
+  <!-- 공통 스타일 -->
+  <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+  <!-- 헤더 -->
+  <header class="header">
+    <div class="header-inner">
+      <h1 class="logo">StreamAuction</h1>
+      <div class="auth-area" id="authArea">
+        <!-- 로그인 상태에 따라 동적 갱신 -->
+        <span class="loading">로딩 중...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 메인 콘텐츠 -->
+  <main class="main">
+    <section class="hero">
+      <h2>스트리머의 이름을 사고파세요</h2>
+      <p class="subtitle">soop 스트리머 닉네임 경매 게임</p>
+
+      <!-- 디버그/테스트용 영역 (개발 중에만 사용) -->
+      <div class="dev-panel" id="devPanel">
+        <h3>개발 테스트 패널</h3>
+        <div class="dev-info">
+          <p>인증 상태: <span id="authStatus">확인 중...</span></p>
+          <p>유저 ID: <span id="userId">-</span></p>
+          <p>유저 타입: <span id="userType">-</span></p>
+        </div>
+        <div class="dev-buttons">
+          <button id="btnAnonymousLogin">익명 로그인</button>
+          <button id="btnGoogleLogin">Google 로그인</button>
+          <button id="btnLogout">로그아웃</button>
+          <button id="btnTestFirestore">Firestore 연결 테스트</button>
+        </div>
+        <div class="dev-output">
+          <h4>로그</h4>
+          <pre id="devLog">대기 중...</pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 푸터 -->
+  <footer class="footer">
+    <p>&copy; 2026 StreamAuction. MVP Build.</p>
+  </footer>
+
+  <!-- Firebase + 앱 스크립트 (ES Modules) -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

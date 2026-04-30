@@ -1,0 +1,199 @@
+/* ============================================
+   StreamAuction - 공통 스타일
+   ============================================ */
+
+/* ===== Reset & Base ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Pretendard",
+               "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #e8e8e8;
+  background-color: #0f1115;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  border: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ===== Layout ===== */
+.header {
+  background-color: #1a1d24;
+  border-bottom: 1px solid #2a2e38;
+  padding: 16px 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f5d142;
+  letter-spacing: -0.5px;
+}
+
+.auth-area {
+  font-size: 0.9rem;
+  color: #9ba3b4;
+}
+
+.main {
+  flex: 1;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.footer {
+  background-color: #1a1d24;
+  border-top: 1px solid #2a2e38;
+  padding: 24px 0;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+/* ===== Hero ===== */
+.hero {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.hero h2 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #ffffff;
+}
+
+.subtitle {
+  color: #9ba3b4;
+  font-size: 1rem;
+  margin-bottom: 40px;
+}
+
+/* ===== Dev Panel (개발 중에만 사용) ===== */
+.dev-panel {
+  max-width: 720px;
+  margin: 40px auto 0;
+  padding: 24px;
+  background-color: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.dev-panel h3 {
+  font-size: 1.1rem;
+  margin-bottom: 16px;
+  color: #f5d142;
+}
+
+.dev-panel h4 {
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  color: #9ba3b4;
+}
+
+.dev-info {
+  background-color: #0f1115;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  font-family: "SF Mono", Consolas, monospace;
+}
+
+.dev-info p {
+  margin-bottom: 6px;
+}
+
+.dev-info span {
+  color: #f5d142;
+}
+
+.dev-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.dev-buttons button {
+  padding: 8px 16px;
+  background-color: #2a2e38;
+  color: #e8e8e8;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  transition: background-color 0.15s;
+}
+
+.dev-buttons button:hover {
+  background-color: #353a47;
+}
+
+.dev-buttons button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dev-output pre {
+  background-color: #0f1115;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-family: "SF Mono", Consolas, monospace;
+  color: #9ba3b4;
+  max-height: 240px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.loading {
+  font-style: italic;
+  color: #6b7280;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 640px) {
+  .header-inner { padding: 0 16px; }
+  .logo { font-size: 1.25rem; }
+  .main { padding: 24px 16px; }
+  .hero h2 { font-size: 1.6rem; }
+  .dev-panel { padding: 16px; }
+  .dev-buttons { flex-direction: column; }
+  .dev-buttons button { width: 100%; }
+}
