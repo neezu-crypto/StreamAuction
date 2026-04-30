@@ -28,7 +28,11 @@ const app = initializeApp(firebaseConfig);
 
 // 서비스 인스턴스 export
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+// Firestore 데이터베이스 이름 지정
+// 기본 데이터베이스는 "(default)"이지만, 우리 프로젝트는 "streamauction"으로 만들었음
+export const db = getFirestore(app, "streamauction");
+
 export const googleProvider = new GoogleAuthProvider();
 
 // Analytics는 환경에 따라 실패할 수 있어 안전하게 처리
@@ -41,4 +45,4 @@ try {
 export { analytics };
 
 // 디버깅용
-console.log("Firebase 초기화 완료:", firebaseConfig.projectId);
+console.log("Firebase 초기화 완료:", firebaseConfig.projectId, "/ DB:", "streamauction");
