@@ -6,6 +6,7 @@
 //   3. 로그인 직후 → initializeUser 호출
 //   4. 신규 유저면 환영 모달 표시
 //   5. 익명 → Google 전환 시 자산 승계 + 보너스
+//   6. switched (이미 사용 중인 Google) → 즉시 UI 갱신
 // ============================================
 
 import { auth, db, functions } from "./firebase-config.js";
@@ -54,7 +55,7 @@ const btnWelcomeUpgrade = $("btnWelcomeUpgrade");
 // ===== 상태 =====
 let currentUserData = null;
 let isProcessingLogin = false;
-let isConverting = false; // 전환 처리 중 플래그 (initializeUser 중복 호출 방지)
+let isConverting = false; // 전환 처리 중 플래그
 
 // ===== 로그 헬퍼 =====
 function log(message, isError = false) {
@@ -118,7 +119,6 @@ function showWelcomeModal(userData, options = {}) {
   const { isConversion = false, conversionBonus = 0 } = options;
 
   if (isConversion) {
-    // 익명 → Google 전환 성공
     welcomeTitle.textContent = "Google 계정 연동 완료! 🎉";
     welcomeMessage.innerHTML = `
       ${userData.displayName || "플레이어"}님, 환영합니다.<br>
@@ -170,7 +170,7 @@ function hideWelcomeModal() {
 
 // ===== 핵심: 유저 초기화 =====
 async function processUserLogin(user) {
-  if (isProcessingLogin || isConverting) {
+  if (isProcessingLogin) {
     log("이미 처리 중이라 건너뜀");
     return;
   }
@@ -221,14 +221,12 @@ async function handleConvertToGoogle() {
   try {
     log("Google 계정 연결 시도...");
 
-    // 1단계: 익명 계정에 Google 계정 연결
     const linkResult = await linkAnonymousToGoogle();
 
     if (linkResult.status === "linked") {
-      // 자산 승계 케이스
+      // ===== 케이스 A: 자산 승계 성공 =====
       log("Google 계정 연결 성공, 서버에 전환 처리 요청...");
 
-      // 2단계: Cloud Function으로 authType 변경 + 보너스 지급
       const convertFn = httpsCallable(functions, "convertAnonymousToGoogle");
       const result = await convertFn();
       const userData = result.data;
@@ -236,18 +234,20 @@ async function handleConvertToGoogle() {
       log(`전환 완료! balance=${formatG(userData.balance)}, 보너스=+${formatG(userData.conversionBonus)}`);
 
       currentUserData = userData;
-      updateUI(currentUser, userData);
+      updateUI(linkResult.user, userData);
 
-      // 전환 환영 모달
       showWelcomeModal(userData, {
         isConversion: true,
         conversionBonus: userData.conversionBonus,
       });
     } else if (linkResult.status === "switched") {
-      // 이미 사용 중인 Google 계정 → 단순 로그인 (익명 자산 폐기)
-      log("이미 사용 중인 Google 계정으로 로그인됨 (이전 익명 자산은 폐기)");
-      // watchAuthState가 다시 트리거되어 processUserLogin이 호출됨
-      // 별도 처리 불필요
+      // ===== 케이스 B: 이미 사용 중인 Google 계정 =====
+      log("이미 사용 중인 Google 계정으로 전환됨 (이전 익명 자산 폐기)");
+
+      // 새 유저 데이터로 즉시 UI 갱신
+      // (watchAuthState가 isConverting=true 동안 무시했을 수 있어서 직접 호출)
+      isConverting = false; // 먼저 플래그 끄기
+      await processUserLogin(linkResult.user);
     }
   } catch (error) {
     if (error.code === "auth/popup-closed-by-user") {
@@ -265,7 +265,6 @@ async function handleConvertToGoogle() {
 
 // ===== 인증 상태 구독 =====
 watchAuthState(async (user) => {
-  // 전환 처리 중이면 자동 처리 안 함 (handleConvertToGoogle이 직접 처리)
   if (isConverting) {
     log("전환 처리 중 (인증 상태 변경 무시)");
     return;
@@ -279,7 +278,6 @@ watchAuthState(async (user) => {
     currentUserData = null;
     updateUI(null, null);
 
-    // 자동 익명 로그인
     log("자동 익명 로그인 시도...");
     try {
       await loginAnonymous();
@@ -300,7 +298,6 @@ btnAnonymous.addEventListener("click", async () => {
 });
 
 btnGoogle.addEventListener("click", async () => {
-  // 헤더의 Google 버튼은 익명 유저면 전환, 아니면 단순 로그인
   if (auth.currentUser && auth.currentUser.isAnonymous) {
     await handleConvertToGoogle();
   } else {
@@ -343,7 +340,6 @@ btnTestFirestore.addEventListener("click", async () => {
   }
 });
 
-// 환영 모달 핸들러
 if (btnWelcomeClose) {
   btnWelcomeClose.addEventListener("click", hideWelcomeModal);
 }
