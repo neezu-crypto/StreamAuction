@@ -9,16 +9,14 @@ const logger = require("firebase-functions/logger");
 const {initializeApp} = require("firebase-admin/app");
 const {getFirestore, FieldValue} = require("firebase-admin/firestore");
 
-// Firebase Admin 초기화 (Firestore 등 서버 SDK 사용)
+// Firebase Admin 초기화
 const app = initializeApp();
-
-// Firestore 인스턴스 (DB 이름 streamauction 명시)
 const db = getFirestore(app, "streamauction");
 
-// 글로벌 설정: 비용 통제를 위해 동시 실행 인스턴스 제한
+// 글로벌 설정
 setGlobalOptions({
   maxInstances: 10,
-  region: "asia-northeast3", // 모든 함수의 기본 리전을 서울로
+  region: "asia-northeast3",
 });
 
 
@@ -40,26 +38,11 @@ exports.helloWorld = onRequest(
 // ============================================
 // initializeUser: 유저 가입 처리
 // ============================================
-//
-// 호출 시점: 클라이언트가 로그인 직후 호출
-// 동작:
-//   - users/{uid} 문서가 없으면 → 신규 가입 처리 + 보너스 지급
-//   - 이미 있으면 → lastLoginAt만 갱신
-//
-// 응답:
-//   - { isNewUser: true,  balance: 200000, authType: "anonymous", ... }
-//   - { isNewUser: false, balance: 350000, authType: "google", ... }
-//
-// 보안:
-//   - request.auth 에서 자동으로 유저 정보 가져옴 (위변조 불가)
-//   - balance 등은 서버가 결정 (클라이언트 입력값 무시)
-// ============================================
 exports.initializeUser = onCall(
     {
       region: "asia-northeast3",
     },
     async (request) => {
-      // 인증 체크
       if (!request.auth) {
         throw new HttpsError(
             "unauthenticated",
@@ -69,35 +52,26 @@ exports.initializeUser = onCall(
 
       const uid = request.auth.uid;
       const authProvider = request.auth.token.firebase.sign_in_provider;
-      // "anonymous" | "google.com" | ...
-
       const isAnonymous = authProvider === "anonymous";
       const authType = isAnonymous ? "anonymous" : "google";
 
-      logger.info(`initializeUser 호출: uid=${uid}, authType=${authType}`);
+      logger.info(`initializeUser: uid=${uid}, authType=${authType}`);
 
       // 시스템 설정 가져오기
       const configSnap = await db.collection("system").doc("config").get();
       if (!configSnap.exists) {
-        throw new HttpsError(
-            "internal",
-            "시스템 설정을 찾을 수 없습니다.",
-        );
+        throw new HttpsError("internal", "시스템 설정을 찾을 수 없습니다.");
       }
       const config = configSnap.data();
 
-      // 유저 문서 참조
       const userRef = db.collection("users").doc(uid);
 
-      // 트랜잭션으로 안전하게 처리 (동시 호출 방어)
       const result = await db.runTransaction(async (transaction) => {
         const userSnap = await transaction.get(userRef);
 
         // ===== 케이스 1: 기존 유저 =====
         if (userSnap.exists) {
           const userData = userSnap.data();
-
-          // lastLoginAt 갱신
           transaction.update(userRef, {
             lastLoginAt: FieldValue.serverTimestamp(),
           });
@@ -123,7 +97,6 @@ exports.initializeUser = onCall(
           config.anonymousOwnedLimit :
           config.googleOwnedLimit;
 
-        // 토큰에서 추가 정보 가져오기 (Google 로그인 시)
         const email = request.auth.token.email || null;
         const displayName = request.auth.token.name || null;
         const photoURL = request.auth.token.picture || null;
@@ -175,6 +148,124 @@ exports.initializeUser = onCall(
           balance: balance,
           ownedCount: 0,
           ownedLimit: ownedLimit,
+          displayName: displayName,
+        };
+      });
+
+      return result;
+    },
+);
+
+
+// ============================================
+// convertAnonymousToGoogle: 익명 → Google 전환 처리
+// ============================================
+//
+// 호출 시점: 클라이언트에서 linkWithCredential 성공 직후 호출
+//
+// 동작:
+//   - 현재 유저가 anonymous였는데 google로 전환됐는지 확인
+//   - users 문서의 authType, ownedLimit 등 갱신
+//   - 전환 보너스 지급 (config.googleBonus - config.anonymousBonus)
+//
+// 보안:
+//   - request.auth에서 직접 uid/authProvider 확인 (위변조 불가)
+//   - 이미 전환된 계정은 거부 (중복 보너스 방지)
+//   - authType 검증으로 잘못된 호출 차단
+// ============================================
+exports.convertAnonymousToGoogle = onCall(
+    {
+      region: "asia-northeast3",
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+      }
+
+      const uid = request.auth.uid;
+      const authProvider = request.auth.token.firebase.sign_in_provider;
+
+      logger.info(
+          `convertAnonymousToGoogle: uid=${uid}, provider=${authProvider}`,
+      );
+
+      // 현재 토큰이 google.com이어야 (linkWithCredential 후라야 정상)
+      if (authProvider !== "google.com") {
+        throw new HttpsError(
+            "failed-precondition",
+            "Google 로그인이 필요합니다.",
+        );
+      }
+
+      // 시스템 설정
+      const configSnap = await db.collection("system").doc("config").get();
+      const config = configSnap.data();
+
+      const userRef = db.collection("users").doc(uid);
+
+      const result = await db.runTransaction(async (transaction) => {
+        const userSnap = await transaction.get(userRef);
+
+        if (!userSnap.exists) {
+          throw new HttpsError(
+              "not-found",
+              "유저 데이터를 찾을 수 없습니다.",
+          );
+        }
+
+        const userData = userSnap.data();
+
+        // 이미 google 유저면 거부 (중복 보너스 방지)
+        if (userData.authType === "google") {
+          throw new HttpsError(
+              "already-exists",
+              "이미 Google 계정으로 전환된 유저입니다.",
+          );
+        }
+
+        // 익명이 아니면 거부
+        if (userData.authType !== "anonymous") {
+          throw new HttpsError(
+              "failed-precondition",
+              "익명 계정만 전환 가능합니다.",
+          );
+        }
+
+        // 전환 보너스 계산
+        // 익명 200,000G + 보너스 800,000G = 총 1,000,000G 만큼 채워줌
+        const conversionBonus = config.googleBonus - config.anonymousBonus;
+        const newBalance = userData.balance + conversionBonus;
+
+        // 토큰에서 Google 정보 가져오기
+        const email = request.auth.token.email || userData.email;
+        const displayName = request.auth.token.name || userData.displayName;
+        const photoURL = request.auth.token.picture || userData.photoURL;
+
+        // 업데이트
+        transaction.update(userRef, {
+          authType: "google",
+          email: email,
+          displayName: displayName,
+          photoURL: photoURL,
+          balance: newBalance,
+          ownedLimit: config.googleOwnedLimit, // 1 → 5
+          convertedAt: FieldValue.serverTimestamp(),
+          lastLoginAt: FieldValue.serverTimestamp(),
+        });
+
+        logger.info(
+            `Google 전환 완료: uid=${uid}, balance ${userData.balance}G ` +
+        `→ ${newBalance}G (+${conversionBonus}G 보너스)`,
+        );
+
+        return {
+          success: true,
+          uid: uid,
+          authType: "google",
+          balance: newBalance,
+          conversionBonus: conversionBonus,
+          ownedCount: userData.ownedCount || 0,
+          ownedLimit: config.googleOwnedLimit,
           displayName: displayName,
         };
       });
