@@ -68,6 +68,16 @@ a {
   color: #9ba3b4;
 }
 
+.auth-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.auth-info strong {
+  color: #f5d142;
+}
+
 .main {
   flex: 1;
   max-width: 1200px;
@@ -104,7 +114,7 @@ a {
   margin-bottom: 40px;
 }
 
-/* ===== Dev Panel (개발 중에만 사용) ===== */
+/* ===== Dev Panel ===== */
 .dev-panel {
   max-width: 720px;
   margin: 40px auto 0;
@@ -160,7 +170,7 @@ a {
   transition: background-color 0.15s;
 }
 
-.dev-buttons button:hover {
+.dev-buttons button:hover:not(:disabled) {
   background-color: #353a47;
 }
 
@@ -187,6 +197,130 @@ a {
   color: #6b7280;
 }
 
+/* ============================================
+   환영 모달
+   ============================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+}
+
+.modal-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal {
+  background-color: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 480px;
+  width: calc(100% - 32px);
+  text-align: center;
+  transform: scale(0.95);
+  transition: transform 0.2s;
+}
+
+.modal-overlay.show .modal {
+  transform: scale(1);
+}
+
+.modal h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 12px;
+}
+
+.modal-message {
+  color: #9ba3b4;
+  font-size: 0.95rem;
+  margin-bottom: 24px;
+  line-height: 1.7;
+}
+
+.bonus-card {
+  background: linear-gradient(135deg, #2a2e38 0%, #353a47 100%);
+  border: 1px solid #f5d14233;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.bonus-label {
+  font-size: 0.8rem;
+  color: #9ba3b4;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.bonus-amount {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f5d142;
+}
+
+.welcome-tip {
+  background-color: #0f1115;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 0.85rem;
+  color: #9ba3b4;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.welcome-tip strong {
+  color: #f5d142;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.btn-primary {
+  padding: 12px 24px;
+  background-color: #f5d142;
+  color: #0f1115;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background-color 0.15s;
+}
+
+.btn-primary:hover {
+  background-color: #ffe066;
+}
+
+.btn-secondary {
+  padding: 12px 24px;
+  background-color: #2a2e38;
+  color: #e8e8e8;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: background-color 0.15s;
+}
+
+.btn-secondary:hover {
+  background-color: #353a47;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 640px) {
   .header-inner { padding: 0 16px; }
@@ -196,4 +330,10 @@ a {
   .dev-panel { padding: 16px; }
   .dev-buttons { flex-direction: column; }
   .dev-buttons button { width: 100%; }
+
+  .modal { padding: 24px; }
+  .modal h2 { font-size: 1.3rem; }
+  .bonus-amount { font-size: 1.6rem; }
+  .modal-buttons { flex-direction: column; }
+  .modal-buttons button { width: 100%; }
 }

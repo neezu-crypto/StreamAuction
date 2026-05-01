@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================
+    // system 컬렉션: 게임 설정값
+    // - 누구나 읽기 가능
+    // - 쓰기는 절대 차단 (Firebase Console로만 수정)
+    // ============================================
+    match /system/{document} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ============================================
+    // users 컬렉션: 유저 정보
+    // - 본인 문서만 읽기 가능
+    // - 쓰기는 절대 차단 (Cloud Functions로만 변경)
+    //   → 클라이언트가 자기 balance 임의로 늘리는 것 방지
+    // ============================================
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    // ============================================
+    // 그 외 모든 경로: 차단
+    // 컬렉션 추가될 때마다 위에 규칙 추가
+    // ============================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -10,6 +10,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+import { getFunctions } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-functions.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-analytics.js";
 
 // Firebase 프로젝트 설정
@@ -29,9 +30,11 @@ const app = initializeApp(firebaseConfig);
 // 서비스 인스턴스 export
 export const auth = getAuth(app);
 
-// Firestore 데이터베이스 이름 지정
-// 기본 데이터베이스는 "(default)"이지만, 우리 프로젝트는 "streamauction"으로 만들었음
+// Firestore: 데이터베이스 이름 streamauction 명시
 export const db = getFirestore(app, "streamauction");
+
+// Cloud Functions: 서울 리전 명시 (함수와 일치해야 함)
+export const functions = getFunctions(app, "asia-northeast3");
 
 export const googleProvider = new GoogleAuthProvider();
 
@@ -45,4 +48,4 @@ try {
 export { analytics };
 
 // 디버깅용
-console.log("Firebase 초기화 완료:", firebaseConfig.projectId, "/ DB:", "streamauction");
+console.log("Firebase 초기화 완료:", firebaseConfig.projectId, "/ DB: streamauction / Region: asia-northeast3");
