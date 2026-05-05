@@ -4,9 +4,23 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ============================================
+    // 헬퍼 함수
+    // ============================================
+
+    // 인증된 유저인지
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // 본인인지
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ============================================
     // system 컬렉션: 게임 설정값
     // - 누구나 읽기 가능
-    // - 쓰기는 절대 차단 (Firebase Console로만 수정)
+    // - 쓰기는 절대 차단 (Firebase Console로만)
     // ============================================
     match /system/{document} {
       allow read: if true;
@@ -16,17 +30,37 @@ service cloud.firestore {
     // ============================================
     // users 컬렉션: 유저 정보
     // - 본인 문서만 읽기 가능
-    // - 쓰기는 절대 차단 (Cloud Functions로만 변경)
-    //   → 클라이언트가 자기 balance 임의로 늘리는 것 방지
+    // - 쓰기는 절대 차단 (Cloud Functions로만)
+    //   → 클라이언트가 자기 balance 임의 수정 방지
     // ============================================
     match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
+
+    // ============================================
+    // listings 컬렉션: 매물 정보
+    // - 누구나 읽기 가능 (매물 검색 + 조회)
+    // - 쓰기는 Cloud Functions로만 (시세 조작 방지)
+    // ============================================
+    match /listings/{listingId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ============================================
+    // reports 컬렉션: 매물 신고
+    // - 신고자 본인은 자기 신고만 읽기 가능 (취소 등)
+    // - 보유자는 자기 매물 신고 읽기 불가 (보호)
+    // - 쓰기는 Cloud Functions로만 (사유 검증, 카운트 갱신 등)
+    // ============================================
+    match /reports/{reportId} {
+      allow read: if isAuthenticated() && resource.data.reporterId == request.auth.uid;
       allow write: if false;
     }
 
     // ============================================
     // 그 외 모든 경로: 차단
-    // 컬렉션 추가될 때마다 위에 규칙 추가
     // ============================================
     match /{document=**} {
       allow read, write: if false;

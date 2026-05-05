@@ -1,6 +1,6 @@
 /**
  * StreamAuction Cloud Functions
- * MVP 개발 단계
+ * MVP 개발 단계 - Step 1: 매물 시스템 기반 구축
  */
 
 const {onRequest, onCall, HttpsError} = require("firebase-functions/v2/https");
@@ -38,16 +38,18 @@ exports.helloWorld = onRequest(
 // ============================================
 // initializeUser: 유저 가입 처리
 // ============================================
+//
+// v2 변경사항:
+// - blockedListingIds 필드 추가 (개인 차단 매물 목록)
+// - onboardingStep 필드 추가 (튜토리얼 진행 단계)
+// ============================================
 exports.initializeUser = onCall(
     {
       region: "asia-northeast3",
     },
     async (request) => {
       if (!request.auth) {
-        throw new HttpsError(
-            "unauthenticated",
-            "로그인이 필요합니다.",
-        );
+        throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
       }
 
       const uid = request.auth.uid;
@@ -57,7 +59,6 @@ exports.initializeUser = onCall(
 
       logger.info(`initializeUser: uid=${uid}, authType=${authType}`);
 
-      // 시스템 설정 가져오기
       const configSnap = await db.collection("system").doc("config").get();
       if (!configSnap.exists) {
         throw new HttpsError("internal", "시스템 설정을 찾을 수 없습니다.");
@@ -72,9 +73,19 @@ exports.initializeUser = onCall(
         // ===== 케이스 1: 기존 유저 =====
         if (userSnap.exists) {
           const userData = userSnap.data();
-          transaction.update(userRef, {
+
+          // 기존 유저 마이그레이션: blockedListingIds, onboardingStep 없으면 추가
+          const updates = {
             lastLoginAt: FieldValue.serverTimestamp(),
-          });
+          };
+          if (userData.blockedListingIds === undefined) {
+            updates.blockedListingIds = [];
+          }
+          if (userData.onboardingStep === undefined) {
+            updates.onboardingStep = 4; // 기존 유저는 튜토리얼 완료 처리
+          }
+
+          transaction.update(userRef, updates);
 
           logger.info(`기존 유저 로그인: uid=${uid}`);
 
@@ -86,6 +97,8 @@ exports.initializeUser = onCall(
             ownedCount: userData.ownedCount || 0,
             ownedLimit: userData.ownedLimit,
             displayName: userData.displayName || null,
+            blockedListingIds: userData.blockedListingIds || [],
+            onboardingStep: userData.onboardingStep || 4,
           };
         }
 
@@ -128,10 +141,14 @@ exports.initializeUser = onCall(
             firstForceLiquidation: false,
           },
 
+          // v2 신규 필드
+          blockedListingIds: [], // 본인이 차단한 매물 ID 배열
+          onboardingStep: 0, // 0: 시작, 1: 첫 검색, 2: 첫 구매, 3: 마이페이지, 4: 완료
+
           isBanned: false,
           banReason: null,
 
-          schemaVersion: 1,
+          schemaVersion: 2, // v1 → v2로 스키마 버전 갱신
         };
 
         transaction.set(userRef, newUser);
@@ -149,6 +166,8 @@ exports.initializeUser = onCall(
           ownedCount: 0,
           ownedLimit: ownedLimit,
           displayName: displayName,
+          blockedListingIds: [],
+          onboardingStep: 0,
         };
       });
 
@@ -158,20 +177,7 @@ exports.initializeUser = onCall(
 
 
 // ============================================
-// convertAnonymousToGoogle: 익명 → Google 전환 처리
-// ============================================
-//
-// 호출 시점: 클라이언트에서 linkWithCredential 성공 직후 호출
-//
-// 동작:
-//   - 현재 유저가 anonymous였는데 google로 전환됐는지 확인
-//   - users 문서의 authType, ownedLimit 등 갱신
-//   - 전환 보너스 지급 (config.googleBonus - config.anonymousBonus)
-//
-// 보안:
-//   - request.auth에서 직접 uid/authProvider 확인 (위변조 불가)
-//   - 이미 전환된 계정은 거부 (중복 보너스 방지)
-//   - authType 검증으로 잘못된 호출 차단
+// convertAnonymousToGoogle: 익명 → Google 전환
 // ============================================
 exports.convertAnonymousToGoogle = onCall(
     {
@@ -189,7 +195,6 @@ exports.convertAnonymousToGoogle = onCall(
           `convertAnonymousToGoogle: uid=${uid}, provider=${authProvider}`,
       );
 
-      // 현재 토큰이 google.com이어야 (linkWithCredential 후라야 정상)
       if (authProvider !== "google.com") {
         throw new HttpsError(
             "failed-precondition",
@@ -197,7 +202,6 @@ exports.convertAnonymousToGoogle = onCall(
         );
       }
 
-      // 시스템 설정
       const configSnap = await db.collection("system").doc("config").get();
       const config = configSnap.data();
 
@@ -215,7 +219,6 @@ exports.convertAnonymousToGoogle = onCall(
 
         const userData = userSnap.data();
 
-        // 이미 google 유저면 거부 (중복 보너스 방지)
         if (userData.authType === "google") {
           throw new HttpsError(
               "already-exists",
@@ -223,7 +226,6 @@ exports.convertAnonymousToGoogle = onCall(
           );
         }
 
-        // 익명이 아니면 거부
         if (userData.authType !== "anonymous") {
           throw new HttpsError(
               "failed-precondition",
@@ -231,24 +233,20 @@ exports.convertAnonymousToGoogle = onCall(
           );
         }
 
-        // 전환 보너스 계산
-        // 익명 200,000G + 보너스 800,000G = 총 1,000,000G 만큼 채워줌
         const conversionBonus = config.googleBonus - config.anonymousBonus;
         const newBalance = userData.balance + conversionBonus;
 
-        // 토큰에서 Google 정보 가져오기
         const email = request.auth.token.email || userData.email;
         const displayName = request.auth.token.name || userData.displayName;
         const photoURL = request.auth.token.picture || userData.photoURL;
 
-        // 업데이트
         transaction.update(userRef, {
           authType: "google",
           email: email,
           displayName: displayName,
           photoURL: photoURL,
           balance: newBalance,
-          ownedLimit: config.googleOwnedLimit, // 1 → 5
+          ownedLimit: config.googleOwnedLimit,
           convertedAt: FieldValue.serverTimestamp(),
           lastLoginAt: FieldValue.serverTimestamp(),
         });
@@ -273,3 +271,15 @@ exports.convertAnonymousToGoogle = onCall(
       return result;
     },
 );
+
+
+// ============================================
+// 매물 시스템 함수 골격 (Step 2에서 구현)
+// ============================================
+
+// TODO: searchListing - 매물 검색 (닉네임 또는 ID로)
+// TODO: createAndBuyListing - 신규 매물 등록 + 첫 구매 (5만G)
+// TODO: blockListing - 매물 차단 (개인용)
+// TODO: unblockListing - 매물 차단 해제
+// TODO: reportListing - 매물 신고 (구글 유저만)
+// TODO: updateOnboardingStep - 온보딩 단계 갱신
