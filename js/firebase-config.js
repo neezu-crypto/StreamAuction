@@ -10,6 +10,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+import { getDatabase } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
 import { getFunctions } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-functions.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-analytics.js";
 
@@ -17,6 +18,7 @@ import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.12.1/firebas
 const firebaseConfig = {
   apiKey: "AIzaSyCpnVq7UqSYmEQhUc5svtRBKH57A7JDhR4",
   authDomain: "streamauction-a0b39.firebaseapp.com",
+  databaseURL: "https://streamauction-a0b39-default-rtdb.firebaseio.com",
   projectId: "streamauction-a0b39",
   storageBucket: "streamauction-a0b39.firebasestorage.app",
   messagingSenderId: "68551970742",
@@ -30,8 +32,11 @@ const app = initializeApp(firebaseConfig);
 // 서비스 인스턴스 export
 export const auth = getAuth(app);
 
-// Firestore: 데이터베이스 이름 streamauction 명시
+// Firestore: 영속 데이터 (유저, 매물, 신고, 히스토리)
 export const db = getFirestore(app, "streamauction");
+
+// Realtime Database: 실시간 데이터 (경매 진행, 입찰, 대기열)
+export const rtdb = getDatabase(app);
 
 // Cloud Functions: 서울 리전 명시 (함수와 일치해야 함)
 export const functions = getFunctions(app, "asia-northeast3");
@@ -48,4 +53,4 @@ try {
 export { analytics };
 
 // 디버깅용
-console.log("Firebase 초기화 완료:", firebaseConfig.projectId, "/ DB: streamauction / Region: asia-northeast3");
+console.log("Firebase 초기화 완료:", firebaseConfig.projectId, "/ Firestore: streamauction / RTDB: connected / Region: asia-northeast3");
