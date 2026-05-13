@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StreamAuction 기획서 v3</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;color:#1a1a1a;background:#f8f7f4;font-size:15px;line-height:1.7}
+.container{max-width:860px;margin:0 auto;padding:2rem 1.5rem}
+h1{font-size:28px;font-weight:600;margin-bottom:4px}
+h2{font-size:20px;font-weight:600;margin:2.5rem 0 1rem;padding-bottom:8px;border-bottom:1.5px solid #e5e2d8}
+h3{font-size:16px;font-weight:600;margin:1.5rem 0 0.5rem}
+h4{font-size:14px;font-weight:600;margin:1rem 0 0.4rem;color:#666}
+p{margin-bottom:0.75rem}
+ul{padding-left:1.4rem;margin-bottom:0.75rem}
+li{margin-bottom:4px}
+code{font-family:"SF Mono",Consolas,monospace;font-size:12px;background:#eeece6;padding:2px 6px;border-radius:4px;border:1px solid #ddd}
+pre{font-family:"SF Mono",Consolas,monospace;font-size:12px;background:#eeece6;padding:14px;border-radius:8px;border:1px solid #ddd;overflow-x:auto;margin-bottom:1rem;white-space:pre-wrap;line-height:1.6}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px}
+.badge-done{background:#d1fae5;color:#065f46}
+.badge-todo{background:#f3f4f6;color:#374151}
+.badge-phase{background:#dbeafe;color:#1e40af}
+.badge-new{background:#fef3c7;color:#92400e}
+table{width:100%;border-collapse:collapse;margin-bottom:1rem;font-size:14px}
+th{text-align:left;padding:9px 12px;font-weight:600;background:#f0ede6;border-bottom:1.5px solid #d6d2c8;font-size:13px;color:#555}
+td{padding:9px 12px;border-bottom:1px solid #e8e5de;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#faf9f6}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:1.5rem}
+.stat{background:#fff;border:1px solid #e5e2d8;border-radius:8px;padding:14px 16px}
+.stat-label{font-size:12px;color:#888;margin-bottom:4px}
+.stat-value{font-size:20px;font-weight:600;color:#1a1a1a}
+.card{background:#fff;border:1px solid #e5e2d8;border-radius:12px;padding:18px 22px;margin-bottom:1rem}
+.toc{background:#fff;border:1px solid #e5e2d8;border-radius:12px;padding:18px 22px;margin-bottom:2.5rem}
+.toc-title{font-size:13px;font-weight:600;margin-bottom:10px;color:#888;text-transform:uppercase;letter-spacing:.5px}
+.toc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:4px 16px}
+.toc-item{font-size:13px;color:#555;padding:3px 0;text-decoration:none;display:block}
+.toc-item:hover{color:#1a1a1a}
+.hero{margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1.5px solid #e5e2d8}
+.hero-sub{font-size:17px;color:#666;margin-top:6px}
+.hero-badges{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.diff-table td:nth-child(2){color:#999;text-decoration:line-through}
+.diff-table td:nth-child(3){color:#1d4ed8;font-weight:600}
+hr{border:none;border-top:1px solid #e5e2d8;margin:2rem 0}
+blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background:#f5f5ff;border-radius:0 8px 8px 0;margin-bottom:1rem}
+.checklist-item{display:flex;gap:10px;align-items:flex-start;font-size:13px;padding:5px 0;border-bottom:1px solid #f0ede6}
+.checklist-item:last-child{border-bottom:none}
+.checklist-item input[type=checkbox]{margin-top:3px;flex-shrink:0;width:15px;height:15px}
+.phase-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:1.5rem}
+.phase-card{background:#fff;border:1px solid #e5e2d8;border-radius:10px;padding:14px}
+.phase-title{font-size:13px;font-weight:700;margin-bottom:8px;color:#1a1a1a}
+.phase-item{font-size:12px;color:#666;line-height:1.8}
+.timeline{display:flex;flex-direction:column;gap:0}
+.timeline-item{display:flex;gap:14px;padding:12px 0;border-bottom:1px solid #f0ede6}
+.timeline-item:last-child{border-bottom:none}
+.timeline-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;margin-top:1px}
+.dot-done{background:#d1fae5;color:#065f46}
+.dot-inprogress{background:#fef3c7;color:#92400e}
+.dot-todo{background:#f3f4f6;color:#9ca3af}
+.timeline-title{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.timeline-desc{font-size:13px;color:#666;margin-top:3px}
+.auction-demo{background:#f8f7f4;border:1px solid #e5e2d8;border-radius:12px;padding:16px;margin-bottom:1rem}
+.auction-live{border-left:3px solid #ef4444;padding-left:12px;margin-bottom:12px}
+.auction-queue{border-left:3px solid #f59e0b;padding-left:12px;margin-bottom:12px}
+.auction-empty{border-left:3px solid #d1d5db;padding-left:12px}
+.auction-label{font-size:12px;font-weight:700;margin-bottom:4px}
+.auction-value{font-size:13px;color:#555}
+.info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px;margin-bottom:1rem}
+.info-box-title{font-size:13px;font-weight:700;color:#1e40af;margin-bottom:6px}
+.info-box-text{font-size:13px;color:#3730a3}
+.section-anchor{scroll-margin-top:20px}
+.nav-sticky{position:sticky;top:0;background:rgba(248,247,244,0.95);backdrop-filter:blur(8px);padding:10px 0;border-bottom:1px solid #e5e2d8;margin-bottom:2rem;z-index:100}
+.nav-inner{max-width:860px;margin:0 auto;padding:0 1.5rem;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.nav-inner::-webkit-scrollbar{display:none}
+.nav-btn{font-size:12px;font-weight:500;padding:4px 10px;border-radius:20px;border:1px solid #d6d2c8;background:#fff;cursor:pointer;white-space:nowrap;color:#555;text-decoration:none;display:inline-block}
+.nav-btn:hover{background:#f0ede6;color:#1a1a1a}
+@media(max-width:600px){
+  .container{padding:1rem}
+  h1{font-size:22px}
+  h2{font-size:18px}
+  .phase-row{grid-template-columns:1fr}
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(prefers-color-scheme:dark){
+  body{background:#111;color:#e8e8e8}
+  h2{border-color:#333}
+  code{background:#222;border-color:#444;color:#e8e8e8}
+  pre{background:#1a1a1a;border-color:#333;color:#e8e8e8}
+  table th{background:#1e1e1e;border-color:#333;color:#aaa}
+  table td{border-color:#2a2a2a}
+  tr:hover td{background:#1a1a1a}
+  .toc,.card,.stat,.phase-card{background:#1a1a1a;border-color:#333}
+  .toc-item{color:#aaa}
+  .toc-item:hover{color:#e8e8e8}
+  .hero{border-color:#333}
+  .hero-sub{color:#aaa}
+  .stat-label{color:#777}
+  .stat-value{color:#e8e8e8}
+  .info-box{background:#1a1f35;border-color:#2d3f6b}
+  .info-box-title{color:#93c5fd}
+  .info-box-text{color:#a5b4fc}
+  .auction-demo{background:#1a1a1a;border-color:#333}
+  .auction-value{color:#aaa}
+  .phase-item,.timeline-desc{color:#aaa}
+  .checklist-item{border-color:#2a2a2a}
+  blockquote{background:#1a1a2a;color:#aaa;border-color:#6366f1}
+  .nav-sticky{background:rgba(17,17,17,0.95);border-color:#333}
+  .nav-btn{background:#1a1a1a;border-color:#333;color:#aaa}
+  .nav-btn:hover{background:#2a2a2a;color:#e8e8e8}
+  .diff-table td:nth-child(3){color:#93c5fd}
+  .badge-done{background:#064e3b;color:#6ee7b7}
+  .badge-phase{background:#1e3a5f;color:#93c5fd}
+  .badge-new{background:#451a03;color:#fcd34d}
+  .dot-done{background:#064e3b;color:#6ee7b7}
+  .dot-inprogress{background:#451a03;color:#fcd34d}
+  .dot-todo{background:#2a2a2a;color:#6b7280}
+  hr{border-color:#333}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav-sticky">
+  <div class="nav-inner">
+    <a class="nav-btn" href="#s1">1. 개요</a>
+    <a class="nav-btn" href="#s2">2. 기술 스택</a>
+    <a class="nav-btn" href="#s3">3. 게임 컨셉</a>
+    <a class="nav-btn" href="#s4">4. 경매 시스템</a>
+    <a class="nav-btn" href="#s5">5. 시세</a>
+    <a class="nav-btn" href="#s6">6. 유저 등급</a>
+    <a class="nav-btn" href="#s7">7. 매물 등록</a>
+    <a class="nav-btn" href="#s8">8. 강제청산</a>
+    <a class="nav-btn" href="#s9">9. 어뷰징 방어</a>
+    <a class="nav-btn" href="#s10">10. 신고/숨기기</a>
+    <a class="nav-btn" href="#s11">11. 화폐 발행원</a>
+    <a class="nav-btn" href="#s12">12. BM</a>
+    <a class="nav-btn" href="#s13">13. MVP 로드맵</a>
+    <a class="nav-btn" href="#s14">14. 미정 항목</a>
+  </div>
+</nav>
+
+<div class="container">
+
+<div class="hero">
+  <h1>StreamAuction 기획서 v3</h1>
+  <p class="hero-sub">스트리머 닉네임을 사고파는 실시간 경매 게임 — Trade the Streamers You Love</p>
+  <div class="hero-badges">
+    <span class="badge badge-done">v3 경매 중심 재설계</span>
+    <span class="badge badge-phase">2026-05-02 최종 업데이트</span>
+  </div>
+</div>
+
+<div class="toc">
+  <div class="toc-title">목차</div>
+  <div class="toc-grid">
+    <a class="toc-item" href="#s1">1. 프로젝트 개요</a>
+    <a class="toc-item" href="#s2">2. 기술 스택</a>
+    <a class="toc-item" href="#s3">3. 게임 컨셉</a>
+    <a class="toc-item" href="#s4">4. 경매 시스템</a>
+    <a class="toc-item" href="#s5">5. 시세 시스템</a>
+    <a class="toc-item" href="#s6">6. 유저 등급 시스템</a>
+    <a class="toc-item" href="#s7">7. 매물 등록 정책</a>
+    <a class="toc-item" href="#s8">8. 강제청산 시스템</a>
+    <a class="toc-item" href="#s9">9. 어뷰징 방어</a>
+    <a class="toc-item" href="#s10">10. 신고 및 숨기기</a>
+    <a class="toc-item" href="#s11">11. 화폐 발행원</a>
+    <a class="toc-item" href="#s12">12. 비즈니스 모델</a>
+    <a class="toc-item" href="#s13">13. MVP 로드맵</a>
+    <a class="toc-item" href="#s14">14. 미정 항목</a>
+  </div>
+</div>
+
+<div id="s1" class="section-anchor">
+<h2>1. 프로젝트 개요</h2>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>프로젝트명</td><td><strong>StreamAuction</strong> (스트림옥션)</td></tr>
+<tr><td>부제</td><td>Trade the Streamers You Love</td></tr>
+<tr><td>컨셉</td><td>soop 스트리머 닉네임/ID 실시간 경매 게임</td></tr>
+<tr><td>타깃 유저</td><td>soop 시청자, 스트리머 본인 및 팬덤</td></tr>
+<tr><td>플랫폼</td><td>웹 (PC/모바일 반응형)</td></tr>
+<tr><td>배포</td><td>GitHub Pages + Firebase Cloud Functions</td></tr>
+</table>
+
+<blockquote>스트리머 닉네임을 두고 실시간으로 경쟁 입찰하는 경매 게임. 한 번에 하나의 경매에 모든 관심이 집중된다.</blockquote>
+
+<h3>v2 → v3 핵심 변경</h3>
+<table class="diff-table">
+<tr><th>항목</th><th>v2 (이전)</th><th>v3 (현재)</th></tr>
+<tr><td>거래 방식</td><td>1:1 제안 → 승인</td><td>실시간 경매 (5분)</td></tr>
+<tr><td>동시 거래</td><td>제한 없음</td><td>서버 전체 1개만</td></tr>
+<tr><td>손절</td><td>시스템 즉시 매입 80%</td><td>경매로 판매</td></tr>
+<tr><td>시세 결정</td><td>마지막 거래가</td><td>낙찰가</td></tr>
+<tr><td>수수료</td><td>10% (판매자)</td><td>5% (판매자)</td></tr>
+<tr><td>강제청산</td><td>시세 환급</td><td>무보유 처리 + 시세 100% 환급</td></tr>
+</table>
+</div>
+
+<div id="s2" class="section-anchor">
+<h2>2. 기술 스택</h2>
+<table>
+<tr><th>영역</th><th>기술</th><th>용도</th></tr>
+<tr><td>프론트엔드</td><td>HTML / CSS / JavaScript (Vanilla)</td><td></td></tr>
+<tr><td>호스팅</td><td>GitHub Pages</td><td></td></tr>
+<tr><td>인증</td><td>Firebase Authentication</td><td>Google, Anonymous</td></tr>
+<tr><td>데이터베이스 (영속)</td><td>Firebase Firestore</td><td>유저, 매물, 신고, 히스토리</td></tr>
+<tr><td>데이터베이스 (실시간)</td><td>Firebase Realtime Database <span class="badge badge-new">신규</span></td><td>경매 진행, 입찰, 대기열</td></tr>
+<tr><td>서버 함수</td><td>Firebase Cloud Functions (Node 22)</td><td></td></tr>
+<tr><td>스케줄러</td><td>클라이언트 트리거 (MVP) → Cloud Scheduler (Phase 2)</td><td></td></tr>
+<tr><td>분석</td><td>Firebase Analytics</td><td></td></tr>
+<tr><td>저장소</td><td>GitHub</td><td></td></tr>
+</table>
+
+<div class="info-box">
+  <div class="info-box-title">대용량 대응 전략 (1,000명 동시 접속)</div>
+  <div class="info-box-text">Firestore onSnapshot만 사용 시 월 ~$180 예상 → RTDB 하이브리드로 월 ~$50~70으로 절감. 실시간 경매 데이터(입찰/카운트다운)는 RTDB, 영속 데이터(매물/유저)는 Firestore로 분리.</div>
+</div>
+</div>
+
+<div id="s3" class="section-anchor">
+<h2>3. 게임 컨셉</h2>
+<h3>핵심 플레이 루프</h3>
+<pre>1. 유저가 스트리머 닉네임/ID 검색
+2. 매물이 없으면 → 경매 등록 (큐에 추가)
+3. 경매 시작 → 5분간 실시간 입찰 경쟁
+4. 최고 입찰자 낙찰 → 매물 보유
+5. 보유 매물의 시세 변동 관찰
+6. 다른 유저가 내 매물에 경매 요청 → 승인/거절
+7. 경매에서 더 높은 가격에 판매 → 수익 실현</pre>
+
+<h3>차별화 포인트: 하나의 경매</h3>
+<ul>
+<li>서버 전체에서 동시에 <strong>1개 경매만</strong> 진행</li>
+<li>모든 유저의 관심이 하나에 집중 → 실시간 경쟁 극대화</li>
+<li>스트리밍 시 시청자와 함께 참여 가능</li>
+<li>경매 대기열로 순서 관리 (선착순, 최대 5개)</li>
+</ul>
+
+<h3>메인 페이지 경매 표시 예시</h3>
+<div class="auction-demo">
+  <div class="auction-live">
+    <div class="auction-label" style="color:#dc2626">🔴 현재 진행 중인 경매</div>
+    <div class="auction-value">매물: 홍길동 (hwt1014) · 현재 최고가: 150,000G (3명 입찰) · 잔여 시간: 2:34</div>
+  </div>
+  <div class="auction-queue">
+    <div class="auction-label" style="color:#d97706">🟡 대기 중인 다음 경매</div>
+    <div class="auction-value">매물: 이순신 (lss2025) · 등록자: ab12*** · 대기 순서: 1번째</div>
+  </div>
+  <div class="auction-empty">
+    <div class="auction-label" style="color:#9ca3af">⚪ 경매 없음</div>
+    <div class="auction-value">스트리머를 검색해서 첫 경매를 등록해보세요!</div>
+  </div>
+</div>
+
+<h3>게임 화폐</h3>
+<div class="stat-grid">
+<div class="stat"><div class="stat-label">화폐 단위</div><div class="stat-value">G (Gold)</div></div>
+<div class="stat"><div class="stat-label">최저 입찰가</div><div class="stat-value">50,000G</div></div>
+<div class="stat"><div class="stat-label">최소 입찰 단위</div><div class="stat-value">10,000G</div></div>
+</div>
+</div>
+
+<div id="s4" class="section-anchor">
+<h2>4. 경매 시스템</h2>
+
+<h3>4.1 경매 유형 3가지</h3>
+
+<h4>유형 A — 신규 매물 경매</h4>
+<pre>1. 유저가 스트리머 검색 → 매물 없음
+2. 유저가 경매 등록 (시작가 5만G 이상, 등록 수수료 없음)
+3. 대기열에 추가 (선착순)
+4. 순서가 오면 경매 시작 (5분)
+5-A. 입찰 있음 → 최고 입찰자 낙찰
+5-B. 유찰 → 등록자가 시작가에 자동 낙찰 (반드시 보유자 생김)</pre>
+
+<h4>유형 B — 보유자 승인 경매</h4>
+<pre>1. 유저B가 유저A의 매물에 경매 등록 요청
+2. 유저A에게 알림 (24시간 회신 기한)
+3-A. 승인 → 경매 대기열 추가, 시작가 5만G
+3-B. 거절 → 요청 취소 (24시간 면역, 3일 재요청 불가)
+3-C. 미회신 → 강제청산 발동 (§8 참고)</pre>
+
+<h4>유형 C — 손절 경매</h4>
+<pre>1. 보유자가 본인 매물 경매 등록 (시작가 5만G)
+2. 5분 경매 진행
+3-A. 입찰 있음 → 낙찰자에게 매물 이전, 보유자에게 낙찰가 × 95%
+3-B. 유찰 → 경매 취소 (보유 유지, 시세 변동 없음)</pre>
+
+<h3>4.2 경매 진행 규칙</h3>
+<div class="stat-grid">
+<div class="stat"><div class="stat-label">경매 시간</div><div class="stat-value">5분</div></div>
+<div class="stat"><div class="stat-label">동시 경매</div><div class="stat-value">1개</div></div>
+<div class="stat"><div class="stat-label">대기열</div><div class="stat-value">최대 5개</div></div>
+<div class="stat"><div class="stat-label">스나이핑 방지</div><div class="stat-value">15초 연장</div></div>
+<div class="stat"><div class="stat-label">연장 횟수</div><div class="stat-value">무제한</div></div>
+<div class="stat"><div class="stat-label">경매 수수료</div><div class="stat-value">5%</div></div>
+</div>
+
+<h3>4.3 입찰 규칙</h3>
+<table>
+<tr><th>항목</th><th>정책</th></tr>
+<tr><td>입찰금 처리</td><td>에스크로 (즉시 잔액 차감, 갱신 시 환불)</td></tr>
+<tr><td>입찰 취소</td><td>불가</td></tr>
+<tr><td>경매 취소</td><td>불가 (등록 후 취소 안 됨)</td></tr>
+<tr><td>자기 매물 입찰</td><td>불가 (어뷰징 방지)</td></tr>
+<tr><td>익명 유저 입찰/등록</td><td>가능 (보유 한도 1개 적용)</td></tr>
+<tr><td>더 높은 입찰 시</td><td>이전 최고 입찰자에게 즉시 환불</td></tr>
+</table>
+
+<h3>4.4 낙찰 처리</h3>
+<table>
+<tr><th>경매 유형</th><th>낙찰금 처리</th><th>시세 갱신</th></tr>
+<tr><td>신규 매물</td><td>100% 시스템 회수 (판매자 없음)</td><td>낙찰가 = 새 시세</td></tr>
+<tr><td>보유자 승인 / 손절</td><td>보유자에게 낙찰가 × 95%</td><td>낙찰가 = 새 시세</td></tr>
+<tr><td>손절 유찰</td><td>없음</td><td>변동 없음</td></tr>
+</table>
+
+<h3>4.5 경매 상태</h3>
+<pre>QUEUED     대기열에서 대기 중
+ACTIVE     경매 진행 중 (5분 카운트다운)
+COMPLETED  낙찰 완료
+FAILED     유찰 (입찰 0건, 손절 경매에서만)
+CANCELLED  취소 (시스템 예외)</pre>
+</div>
+
+<div id="s5" class="section-anchor">
+<h2>5. 시세 시스템</h2>
+<table>
+<tr><th>이벤트</th><th>시세 변동</th></tr>
+<tr><td>신규 매물 경매 낙찰</td><td>낙찰가 = 시세</td></tr>
+<tr><td>보유자 승인 / 손절 낙찰</td><td>낙찰가 = 새 시세</td></tr>
+<tr><td>손절 유찰</td><td>변동 없음</td></tr>
+<tr><td>강제청산</td><td>변동 없음 (무보유 처리)</td></tr>
+</table>
+
+<h3>시세 하락 메커니즘 <span class="badge badge-phase">Phase 2</span></h3>
+<table>
+<tr><th>무거래 기간</th><th>시세 변화</th></tr>
+<tr><td>7일</td><td>-5%</td></tr>
+<tr><td>14일</td><td>-5% (누적 -10%)</td></tr>
+<tr><td>21일</td><td>-5% (누적 -15%)</td></tr>
+<tr><td>이후 7일마다</td><td>추가 -5%</td></tr>
+<tr><td>하한선</td><td>50,000G</td></tr>
+</table>
+
+<h3>휴면 매물 강제 회수 <span class="badge badge-phase">Phase 2</span></h3>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>트리거</td><td>보유자 30일 미접속 + 14일 무거래</td></tr>
+<tr><td>회수 가격</td><td>시세의 70% (보유자에게 입금)</td></tr>
+<tr><td>회수 후</td><td>무보유 매물 (시세 유지)</td></tr>
+</table>
+</div>
+
+<div id="s6" class="section-anchor">
+<h2>6. 유저 등급 시스템</h2>
+<table>
+<tr><th>기능</th><th>익명</th><th>구글</th></tr>
+<tr><td>초기 자산</td><td>200,000G</td><td>1,000,000G</td></tr>
+<tr><td>보유 한도</td><td>1개</td><td>5개</td></tr>
+<tr><td>경매 입찰</td><td>✅</td><td>✅</td></tr>
+<tr><td>경매 등록</td><td>✅</td><td>✅</td></tr>
+<tr><td>경매 요청 (보유자에게)</td><td>✅</td><td>✅</td></tr>
+<tr><td>매물 신고</td><td>❌</td><td>✅</td></tr>
+<tr><td>매물 숨기기</td><td>❌</td><td>✅</td></tr>
+<tr><td>경매 히스토리 열람</td><td>50,000G 결제</td><td>50,000G 결제</td></tr>
+<tr><td>데이터 영속성</td><td>브라우저 종속</td><td>영구 보관</td></tr>
+</table>
+
+<h3>익명 → 구글 전환</h3>
+<ul>
+<li>자산 그대로 승계 (UID 유지, linkWithPopup)</li>
+<li>전환 보너스: 800,000G 추가 (총 1,000,000G까지)</li>
+<li>보유 한도 1 → 5개 확장</li>
+<li>중복 보너스 방지: 1회만 지급 (convertedAt 기록)</li>
+</ul>
+</div>
+
+<div id="s7" class="section-anchor">
+<h2>7. 매물 등록 정책</h2>
+<ul>
+<li>검색 → 없으면 경매 등록 (검색 + 첫 등록이 곧 매물 생성)</li>
+<li>닉네임 또는 ID 하나라도 동일하면 같은 매물</li>
+<li>검색: ID 우선 매칭 → 없으면 닉네임 매칭</li>
+</ul>
+
+<h3>입력 검증</h3>
+<table>
+<tr><th>필드</th><th>규칙</th></tr>
+<tr><td>soop 닉네임</td><td>한글/외래어/대소문자/특수문자 OK, 이모지 NO</td></tr>
+<tr><td>soop ID</td><td>영문 대소문자 + 숫자만</td></tr>
+</table>
+<pre>const hasEmoji = /\p{Extended_Pictographic}/u.test(nickname);
+const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
+<p>프로필 이미지 URL 패턴: <code>https://stimg.sooplive.com/LOGO/{앞2글자}/{id}/{id}.jpg</code></p>
+<p>CORS 문제로 검증 어려움 → 프로필 없이도 등록 가능. 부적절 프로필은 신고 시스템으로 대응.</p>
+</div>
+
+<div id="s8" class="section-anchor">
+<h2>8. 강제청산 시스템</h2>
+<pre>0시간:  유저B가 유저A 매물에 경매 요청 → 유저A에게 알림
+24시간: 유저A 미회신 → 강제청산 발동
+→ 유저A에게 시세 100% 환급
+→ 매물 무보유 상태 전환 (시세 유지)
+→ 이후 누구나 경매 등록 가능 (5만G부터)</pre>
+
+<h3>남용 방지</h3>
+<table>
+<tr><th>방어</th><th>내용</th></tr>
+<tr><td>거절 면역</td><td>보유자 거절 시 해당 매물 24시간 면역 (모든 유저)</td></tr>
+<tr><td>재요청 제한</td><td>같은 유저가 같은 매물에 3일 내 재요청 불가</td></tr>
+</table>
+
+<h3>BM 확장 <span class="badge badge-phase">Phase 2-3</span></h3>
+<table>
+<tr><th>아이템</th><th>효과</th></tr>
+<tr><td>강제청산 방어권</td><td>회신 기한 24시간 → 72시간 연장</td></tr>
+<tr><td>금고 사용권</td><td>매물 강제청산 영구 면제 (매물당 1칸)</td></tr>
+</table>
+</div>
+
+<div id="s9" class="section-anchor">
+<h2>9. 어뷰징 방어 시스템</h2>
+<table>
+<tr><th>어뷰징</th><th>v3 방어</th></tr>
+<tr><td>자전거래</td><td>경매 공개 → 다른 유저가 끼어들 수 있음</td></tr>
+<tr><td>시세 펌핑</td><td>자기 매물 입찰 불가 + 공개 경매</td></tr>
+<tr><td>가격 조작</td><td>경매 기록 전부 공개 (Phase 2)</td></tr>
+<tr><td>허위 입찰</td><td>입찰 취소 불가 + 에스크로</td></tr>
+<tr><td>봇 트래픽</td><td>분당 N회 이상 입찰 차단 (Phase 2)</td></tr>
+<tr><td>신규 계정</td><td>가입 후 24시간 경매 등록 불가</td></tr>
+<tr><td>동일 IP</td><td>같은 IP 경매 등록 + 입찰 동시 차단</td></tr>
+</table>
+</div>
+
+<div id="s10" class="section-anchor">
+<h2>10. 신고 및 숨기기 시스템</h2>
+<h3>개인 차단 (구글 유저만)</h3>
+<ul>
+<li>본인 화면에서만 안 보임, 사유 불필요, 무제한</li>
+<li><code>users/{uid}.blockedListingIds</code> 배열에 저장</li>
+</ul>
+
+<h3>커뮤니티 신고 (구글 유저만)</h3>
+<table>
+<tr><th>영문 코드</th><th>한글 표시</th></tr>
+<tr><td><code>inappropriateImage</code></td><td>부적절한 프로필 이미지</td></tr>
+<tr><td><code>profanity</code></td><td>비속어/혐오 닉네임</td></tr>
+<tr><td><code>misinformation</code></td><td>잘못된 정보 (실제 스트리머 아님)</td></tr>
+<tr><td><code>other</code></td><td>기타 (자유 입력)</td></tr>
+</table>
+<ul>
+<li>1인당 1매물 1회만 신고 가능</li>
+<li>누적 10명 → 자동 모자이크 (기본 아바타로 대체)</li>
+<li>임계값: <code>system/config.reportThreshold</code>로 운영 중 조정 가능</li>
+<li>신고자 정보 비공개 (보안 규칙으로 차단)</li>
+</ul>
+</div>
+
+<div id="s11" class="section-anchor">
+<h2>11. 화폐 발행원 정책</h2>
+<h3>가입 보너스</h3>
+<div class="stat-grid">
+<div class="stat"><div class="stat-label">익명 가입</div><div class="stat-value">200,000G</div></div>
+<div class="stat"><div class="stat-label">구글 가입</div><div class="stat-value">1,000,000G</div></div>
+<div class="stat"><div class="stat-label">전환 보너스</div><div class="stat-value">+800,000G</div></div>
+</div>
+
+<h3>구글 유저 수입원 (출석/광고/튜토리얼)</h3>
+<table>
+<tr><th>항목</th><th>값</th></tr>
+<tr><td>출석 1~2일</td><td>5,000G/일</td></tr>
+<tr><td>출석 3일+</td><td>10,000G/일</td></tr>
+<tr><td>출석 7일 특별</td><td>30,000G</td></tr>
+<tr><td>출석 30일 특별</td><td>100,000G</td></tr>
+<tr><td>광고 시청 (일 5회 한도)</td><td>10,000G/회</td></tr>
+<tr><td>첫 경매 등록 (1회)</td><td>10,000G</td></tr>
+<tr><td>첫 낙찰 (1회)</td><td>30,000G</td></tr>
+<tr><td>첫 손절 경매 (1회)</td><td>5,000G</td></tr>
+<tr><td>첫 강제청산 경험 (1회)</td><td>10,000G</td></tr>
+</table>
+
+<h3>회수 메커니즘</h3>
+<table>
+<tr><th>항목</th><th>회수율</th></tr>
+<tr><td>경매 수수료</td><td>낙찰가의 5% (판매자 부담)</td></tr>
+<tr><td>신규 매물 낙찰금</td><td>100% 시스템 회수</td></tr>
+<tr><td>경매 히스토리 열람</td><td>50,000G</td></tr>
+<tr><td>강제청산 시세 환급</td><td>0% 회수 (보유자에게 100%)</td></tr>
+</table>
+</div>
+
+<div id="s12" class="section-anchor">
+<h2>12. 비즈니스 모델</h2>
+<table>
+<tr><th>항목</th><th>설명</th><th>Phase</th></tr>
+<tr><td>경매 히스토리 열람</td><td>과거 경매 결과 + 입찰 기록 → 50,000G</td><td><span class="badge badge-done">MVP</span></td></tr>
+<tr><td>강제청산 방어권</td><td>회신 기한 24→72시간 연장</td><td><span class="badge badge-phase">Phase 2-3</span></td></tr>
+<tr><td>금고 사용권</td><td>매물 강제청산 영구 면제</td><td><span class="badge badge-phase">Phase 2-3</span></td></tr>
+<tr><td>광고</td><td>배너, 영상 광고 (보상형)</td><td><span class="badge badge-phase">Phase 2</span></td></tr>
+<tr><td>스킨/칭호</td><td>프로필 꾸미기</td><td><span class="badge badge-phase">Phase 3</span></td></tr>
+</table>
+
+<h3>절대 금지</h3>
+<ul>
+<li>❌ 게임 화폐(G)의 현금 충전/환전</li>
+<li>❌ 실제 통화 단위(원/달러) 표기</li>
+<li>❌ 확률형 아이템 (가챠)</li>
+<li>❌ Pay-to-Win (결제로 경매 우선권 등)</li>
+</ul>
+</div>
+
+<div id="s13" class="section-anchor">
+<h2>13. MVP 범위 및 개발 로드맵</h2>
+
+<h3>Phase 분류</h3>
+<div class="phase-row">
+<div class="phase-card">
+  <div class="phase-title">Phase 1 — MVP</div>
+  <div class="phase-item">경매 핵심 루프<br>인증/유저 시스템<br>강제청산<br>신고/차단<br>어뷰징 방어<br>경매 히스토리 BM</div>
+</div>
+<div class="phase-card">
+  <div class="phase-title">Phase 2 — 출시 1개월</div>
+  <div class="phase-item">시세 감가상각<br>휴면 매물 회수<br>출석/광고 보상<br>닉네임 변경 투표<br>관리자 페이지<br>Cloud Scheduler</div>
+</div>
+<div class="phase-card">
+  <div class="phase-title">Phase 3 — 출시 3개월</div>
+  <div class="phase-item">방어권/금고 BM<br>보유자 정보 BM<br>스킨/칭호<br>랭킹 시스템<br>운영 대시보드</div>
+</div>
+</div>
+
+<h3>개발 단계별 진행 현황</h3>
+<div class="timeline">
+<div class="timeline-item">
+  <div class="timeline-dot dot-done">1</div>
+  <div>
+    <div class="timeline-title">Step 1 — 프로젝트 기반 구축 <span class="badge badge-done">완료</span></div>
+    <div class="timeline-desc">GitHub 레포, Firebase 프로젝트, Authentication, Firestore, Cloud Functions (Node 22), GitHub Pages</div>
+  </div>
+</div>
+<div class="timeline-item">
+  <div class="timeline-dot dot-done">2</div>
+  <div>
+    <div class="timeline-title">Step 2 — 인증 시스템 <span class="badge badge-done">완료</span></div>
+    <div class="timeline-desc">자동 익명 로그인, Google 로그인, 익명→구글 전환 (자산 승계), initializeUser / convertAnonymousToGoogle 함수, 환영 모달</div>
+  </div>
+</div>
+<div class="timeline-item">
+  <div class="timeline-dot dot-inprogress">3</div>
+  <div>
+    <div class="timeline-title">Step 3 — RTDB 활성화 <span class="badge badge-new">진행 중</span></div>
+    <div class="timeline-desc">Realtime Database 활성화, 보안 규칙 설정, firebase-config.js 업데이트, API 키 제한 추가</div>
+  </div>
+</div>
+<div class="timeline-item">
+  <div class="timeline-dot dot-todo">4</div>
+  <div>
+    <div class="timeline-title">Step 4 — 경매 데이터 구조</div>
+    <div class="timeline-desc">listings, auctions, auctionQueue, reports 스키마 + Firestore 보안 규칙 + RTDB 구조 설계</div>
+  </div>
+</div>
+<div class="timeline-item">
+  <div class="timeline-dot dot-todo">5</div>
+  <div>
+    <div class="timeline-title">Step 5 — 경매 Cloud Functions</div>
+    <div class="timeline-desc">registerAuction, startNextAuction, placeBid, finalizeAuction, requestAuctionOnListing, respondToAuctionRequest, forceLiquidate</div>
+  </div>
+</div>
+<div class="timeline-item">
+  <div class="timeline-dot dot-todo">6</div>
+  <div>
+    <div class="timeline-title">Step 6 — 메인 페이지 UI</div>
+    <div class="timeline-desc">현재 경매 실시간 표시 (RTDB onValue), 대기열, 입찰 UI, 검색바, 온보딩</div>
+  </div>
+</div>
+<div class="timeline-item">
+  <div class="timeline-dot dot-todo">7</div>
+  <div>
+    <div class="timeline-title">Step 7 — 매물 상세 + 마이페이지</div>
+    <div class="timeline-desc">listing.html, my.html, 신고/차단 UI</div>
+  </div>
+</div>
+<div class="timeline-item">
+  <div class="timeline-dot dot-todo">8</div>
+  <div>
+    <div class="timeline-title">Step 8 — 마무리</div>
+    <div class="timeline-desc">에러 처리, 모바일 반응형, 베타 테스트</div>
+  </div>
+</div>
+</div>
+
+<h3>MVP 출시 기준 (Definition of Done)</h3>
+<div class="card">
+<div class="checklist-item"><input type="checkbox"> <span>익명/구글 로그인 모두 정상 작동</span></div>
+<div class="checklist-item"><input type="checkbox"> <span>가입 시 보너스 자동 지급</span></div>
+<div class="checklist-item"><input type="checkbox"> <span>매물 검색 (닉네임/ID) 정상 작동</span></div>
+<div class="checklist-item"><input type="checkbox"> <span>경매 등록 → 대기열 → 5분 경매 → 낙찰 정상 작동</span></div>
+<div class="checklist-item"><input type="checkbox"> <span>에스크로 입찰금 처리 정확</span></div>
+<div class="checklist-item"><input type="checkbox"> <span>유찰 시 등록자 자동 낙찰 (신규) / 보유 유지 (손절)</span></div>
+<div class="checklist-item"><input type="checkbox"> <span>보유자 승인/거절/강제청산 정상 작동</span></div>
+<div class="checklist-item"><input type="checkbox"> <span>경매 수수료 5% 정확히 차감</span></div>
+<div class="checklist-item"><input type="checkbox"> <span>보유 한도 초과 시 입찰 차단</span></div>
+<div class="checklist-item"><input type="checkbox"> <span>자기 매물 입찰 차단</span></div>
+<div class="checklist-item"><input type="checkbox"> <span>스나이핑 방지 (15초 연장) 작동</span></div>
+<div class="checklist-item"><input type="checkbox"> <span>실시간 경매 UI 갱신 (RTDB onValue)</span></div>
+<div class="checklist-item"><input type="checkbox"> <span>모바일에서 정상 표시 및 동작</span></div>
+<div class="checklist-item"><input type="checkbox"> <span>Firestore/RTDB 보안 규칙으로 클라이언트 직접 조작 차단</span></div>
+</div>
+</div>
+
+<div id="s14" class="section-anchor">
+<h2>14. 미정 항목 (To-Do)</h2>
+<h3>우선순위 높음</h3>
+<ul>
+<li>Firestore / RTDB 데이터 구조 상세 설계 (auctions, auctionQueue 스키마)</li>
+<li>경매 타이머 구현 방식 결정 (클라이언트 vs Cloud Scheduler)</li>
+<li>경매 종료 자동 처리 아키텍처</li>
+<li>실시간 구독 비용 최적화 전략</li>
+</ul>
+<h3>우선순위 중간</h3>
+<ul>
+<li>퍼블리시티권 대응 정책</li>
+<li>soop 약관/API 검토</li>
+<li>미성년 스트리머 보호 정책</li>
+<li>UI/UX 와이어프레임</li>
+</ul>
+<h3>우선순위 낮음</h3>
+<ul>
+<li>강제청산 방어권/금고 가격 결정</li>
+<li>경매 히스토리 열람 가격 조정</li>
+<li>스킨/칭호 종류 및 가격</li>
+<li>시즌제 검토 / 모바일 앱 확장</li>
+</ul>
+</div>
+
+<hr>
+<p style="font-size:12px;color:#999;text-align:center;padding:1rem 0">
+  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-02 · 작성자: 프로젝트 오너 + Claude
+</p>
+
+</div>
+</body>
+</html>
