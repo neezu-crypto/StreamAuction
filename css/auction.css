@@ -1,0 +1,854 @@
+/* ============================================
+   auction.css - 경매 UI 스타일
+   ============================================ */
+
+/* ===== 레이아웃 =====  */
+.main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid #2a2e38;
+  margin: 32px 0;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.section-desc {
+  font-size: 0.875rem;
+  color: #9ba3b4;
+  margin-bottom: 16px;
+}
+
+/* ===== 경매 없음 상태 ===== */
+.auction-empty {
+  text-align: center;
+  padding: 48px 24px;
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 16px;
+}
+
+.auction-empty-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+}
+
+.auction-empty h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.auction-empty p {
+  color: #9ba3b4;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+}
+
+/* ===== 경매 카드 ===== */
+.auction-card {
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.auction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  background: #0f1115;
+  border-bottom: 1px solid #2a2e38;
+}
+
+.auction-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.auction-badge.live {
+  background: #3f1a1a;
+  color: #f87171;
+}
+
+.auction-timer {
+  font-size: 1.8rem;
+  font-weight: 700;
+  font-family: "SF Mono", Consolas, monospace;
+  color: #f5d142;
+  letter-spacing: 2px;
+}
+
+.auction-timer.urgent {
+  color: #f87171;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.auction-body {
+  padding: 20px;
+}
+
+.auction-profile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.profile-img {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #2a2e38;
+  border: 2px solid #353a47;
+}
+
+.auction-name {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.auction-id {
+  font-size: 0.85rem;
+  color: #9ba3b4;
+  font-family: "SF Mono", Consolas, monospace;
+}
+
+.auction-prices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.price-block {
+  background: #0f1115;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.price-label {
+  font-size: 0.75rem;
+  color: #9ba3b4;
+  margin-bottom: 4px;
+}
+
+.price-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #f5d142;
+}
+
+/* ===== 입찰 UI ===== */
+.bid-section {
+  border-top: 1px solid #2a2e38;
+  padding-top: 16px;
+}
+
+.bid-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.bid-input {
+  flex: 1;
+  padding: 10px 14px;
+  background: #0f1115;
+  border: 1px solid #2a2e38;
+  border-radius: 8px;
+  color: #e8e8e8;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.bid-input:focus {
+  outline: none;
+  border-color: #f5d142;
+}
+
+.bid-input::-webkit-inner-spin-button {
+  display: none;
+}
+
+.bid-btn {
+  padding: 10px 20px;
+  white-space: nowrap;
+}
+
+.bid-hint {
+  font-size: 0.8rem;
+  color: #9ba3b4;
+  margin-bottom: 10px;
+}
+
+.bid-error {
+  font-size: 0.8rem;
+  color: #f87171;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: #3f1a1a;
+  border-radius: 6px;
+}
+
+.quick-bids {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btn-quick {
+  padding: 6px 12px;
+  background: #2a2e38;
+  border: 1px solid #353a47;
+  border-radius: 6px;
+  color: #e8e8e8;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+.btn-quick:hover {
+  background: #353a47;
+}
+
+/* ===== 입찰 기록 ===== */
+.bids-history {
+  border-top: 1px solid #2a2e38;
+  padding: 16px 20px;
+}
+
+.bids-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #9ba3b4;
+  margin-bottom: 10px;
+}
+
+.bids-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.bids-empty {
+  font-size: 0.85rem;
+  color: #6b7280;
+  text-align: center;
+  padding: 16px;
+}
+
+.bid-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #0f1115;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.bid-item:first-child {
+  background: #1a2f1a;
+  border: 1px solid #2d4a2d;
+}
+
+.bid-item-name {
+  color: #9ba3b4;
+  font-family: "SF Mono", Consolas, monospace;
+}
+
+.bid-item-amount {
+  font-weight: 700;
+  color: #f5d142;
+}
+
+.bid-item-time {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-left: 8px;
+}
+
+/* ===== 경매 완료 ===== */
+.auction-completed {
+  text-align: center;
+  padding: 40px 24px;
+  background: #1a2f1a;
+  border: 1px solid #2d4a2d;
+  border-radius: 16px;
+}
+
+.completed-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+}
+
+.completed-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.completed-info {
+  font-size: 0.9rem;
+  color: #9ba3b4;
+  margin-bottom: 12px;
+}
+
+.completed-countdown {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+/* ===== 대기열 ===== */
+.queue-section {
+  margin-top: 16px;
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.queue-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #f5d142;
+}
+
+.queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.queue-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #0f1115;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.queue-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.queue-number {
+  width: 22px;
+  height: 22px;
+  background: #2a2e38;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.queue-name {
+  font-weight: 600;
+}
+
+.queue-id {
+  font-size: 0.8rem;
+  color: #9ba3b4;
+  font-family: "SF Mono", Consolas, monospace;
+}
+
+.queue-price {
+  font-size: 0.8rem;
+  color: #9ba3b4;
+}
+
+/* ===== 검색 ===== */
+.search-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 12px 16px;
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 10px;
+  color: #e8e8e8;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #f5d142;
+}
+
+.search-btn {
+  padding: 12px 20px;
+}
+
+/* ===== 검색 결과 ===== */
+.search-result {
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.search-result-found {
+  padding: 20px;
+}
+
+.search-result-not-found {
+  padding: 20px;
+}
+
+.search-listing-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.search-profile-img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #2a2e38;
+  border: 2px solid #353a47;
+  object-fit: cover;
+}
+
+.search-listing-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.search-listing-id {
+  font-size: 0.82rem;
+  color: #9ba3b4;
+  font-family: "SF Mono", Consolas, monospace;
+}
+
+.search-listing-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.search-stat {
+  background: #0f1115;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+
+.search-stat-label {
+  font-size: 0.75rem;
+  color: #9ba3b4;
+  margin-bottom: 3px;
+}
+
+.search-stat-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.search-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 신규 등록 안내 */
+.search-new-listing {
+  padding: 20px;
+  text-align: center;
+}
+
+.search-new-listing h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.search-new-listing p {
+  font-size: 0.85rem;
+  color: #9ba3b4;
+  margin-bottom: 16px;
+}
+
+/* ===== 경매 등록 모달 ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  padding: 16px;
+}
+
+.modal-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal {
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 460px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 20px 0;
+}
+
+.modal-header h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: #9ba3b4;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  background: #2a2e38;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-footer {
+  padding: 16px 20px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  border-top: 1px solid #2a2e38;
+}
+
+/* 등록 프리뷰 */
+.register-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: #0f1115;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.register-preview img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #2a2e38;
+}
+
+.register-name {
+  font-weight: 600;
+}
+
+.register-soop-id {
+  font-size: 0.82rem;
+  color: #9ba3b4;
+  font-family: "SF Mono", Consolas, monospace;
+}
+
+/* 폼 */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #9ba3b4;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px 14px;
+  background: #0f1115;
+  border: 1px solid #2a2e38;
+  border-radius: 8px;
+  color: #e8e8e8;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #f5d142;
+}
+
+.price-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.price-input-row input {
+  flex: 1;
+}
+
+.price-unit {
+  font-weight: 700;
+  color: #f5d142;
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.field-error {
+  font-size: 0.75rem;
+  color: #f87171;
+  margin-top: 4px;
+  min-height: 16px;
+}
+
+.register-notice {
+  background: #1a1f2f;
+  border: 1px solid #2a3450;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 0.82rem;
+}
+
+.register-notice strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.register-notice ul {
+  padding-left: 16px;
+  color: #9ba3b4;
+  line-height: 1.8;
+}
+
+/* ===== 환영 모달 ===== */
+.modal-message {
+  color: #9ba3b4;
+  font-size: 0.9rem;
+  margin: 8px 20px 16px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.bonus-card {
+  background: linear-gradient(135deg, #2a2e38 0%, #353a47 100%);
+  border: 1px solid rgba(245,209,66,0.2);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 0 20px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.bonus-label {
+  font-size: 0.75rem;
+  color: #9ba3b4;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.bonus-amount {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f5d142;
+}
+
+#welcomeTitle {
+  text-align: center;
+  padding: 20px 20px 0;
+  font-size: 1.3rem;
+}
+
+#welcomeAction {
+  padding: 0 20px;
+}
+
+.welcome-tip {
+  background: #0f1115;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 0.82rem;
+  color: #9ba3b4;
+  margin-bottom: 16px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.welcome-tip strong { color: #f5d142; }
+
+.modal-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding: 0 20px 20px;
+}
+
+/* ===== 버튼 ===== */
+.btn-primary {
+  padding: 10px 20px;
+  background: #f5d142;
+  color: #0f1115;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.btn-primary:hover { background: #ffe066; }
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  padding: 10px 20px;
+  background: #2a2e38;
+  color: #e8e8e8;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+.btn-secondary:hover { background: #353a47; }
+
+/* ===== 개발 패널 ===== */
+.dev-panel {
+  margin-top: 32px;
+  background: #1a1d24;
+  border: 1px dashed #353a47;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.dev-panel summary {
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: #6b7280;
+}
+
+.dev-panel summary:hover { background: #0f1115; }
+
+.dev-info {
+  padding: 0 16px 8px;
+  font-size: 0.82rem;
+  font-family: "SF Mono", Consolas, monospace;
+  color: #9ba3b4;
+  line-height: 1.8;
+}
+
+.dev-info span { color: #f5d142; }
+
+.dev-buttons {
+  padding: 0 16px 12px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dev-buttons button {
+  padding: 5px 10px;
+  background: #2a2e38;
+  border: none;
+  border-radius: 6px;
+  color: #e8e8e8;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.dev-log {
+  margin: 0 16px 12px;
+  background: #0f1115;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 0.75rem;
+  font-family: "SF Mono", Consolas, monospace;
+  color: #9ba3b4;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+/* ===== 반응형 ===== */
+@media (max-width: 640px) {
+  .main { padding: 16px; }
+  .auction-prices { grid-template-columns: 1fr 1fr; }
+  .search-listing-stats { grid-template-columns: 1fr 1fr; }
+  .search-listing-stats > :last-child {
+    grid-column: 1 / -1;
+  }
+  .bid-row { flex-direction: column; }
+  .bid-btn { width: 100%; }
+  .quick-bids { justify-content: center; }
+  .modal { max-height: 85vh; }
+}

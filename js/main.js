@@ -1,344 +1,722 @@
 // ============================================
-// 메인 진입점
-// 동작:
-//   1. 페이지 로드 시 인증 상태 확인
-//   2. 비로그인 → 자동 익명 로그인
-//   3. 로그인 직후 → initializeUser 호출
-//   4. 신규 유저면 환영 모달 표시
-//   5. 익명 → Google 전환 시 자산 승계 + 보너스
-//   6. switched (이미 사용 중인 Google) → 즉시 UI 갱신
+// main.js - StreamAuction 메인 진입점
+// 인증 + 경매 시스템 통합
 // ============================================
 
-import { auth, db, functions } from "./firebase-config.js";
+import {auth, functions} from "./firebase-config.js";
 import {
-  loginAnonymous,
-  loginGoogle,
-  linkAnonymousToGoogle,
-  logout,
-  watchAuthState,
-  isAnonymousUser,
-  isGoogleUser
+  loginAnonymous, loginGoogle, linkAnonymousToGoogle,
+  logout, watchAuthState,
 } from "./auth.js";
+import {httpsCallable} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-functions.js";
 import {
-  doc,
-  getDoc
-} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
-import {
-  httpsCallable
-} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-functions.js";
+  subscribeAuction, unsubscribeAuction,
+  searchListing, registerAuction, placeBid,
+  formatG, formatTimeRemaining,
+  validateSoopId, validateNickname,
+  getSoopProfileUrl, loadInitialState,
+} from "./auction.js";
 
-// ===== DOM 요소 참조 =====
+// ===== DOM 참조 =====
 const $ = (id) => document.getElementById(id);
-
-// 개발 패널
-const authStatus = $("authStatus");
-const userIdEl = $("userId");
-const userTypeEl = $("userType");
-const authArea = $("authArea");
-const devLog = $("devLog");
-const balanceEl = $("balance");
-
-const btnAnonymous = $("btnAnonymousLogin");
-const btnGoogle = $("btnGoogleLogin");
-const btnLogout = $("btnLogout");
-const btnTestFirestore = $("btnTestFirestore");
-
-// 환영 모달
-const welcomeModal = $("welcomeModal");
-const welcomeTitle = $("welcomeTitle");
-const welcomeMessage = $("welcomeMessage");
-const welcomeBonus = $("welcomeBonus");
-const welcomeAction = $("welcomeAction");
-const btnWelcomeClose = $("btnWelcomeClose");
-const btnWelcomeUpgrade = $("btnWelcomeUpgrade");
 
 // ===== 상태 =====
 let currentUserData = null;
+let currentAuction = null;
 let isProcessingLogin = false;
-let isConverting = false; // 전환 처리 중 플래그
+let isConverting = false;
+let isBidding = false;
+let isRegistering = false;
+let isSearching = false;
+let pendingRegisterData = null;
 
-// ===== 로그 헬퍼 =====
-function log(message, isError = false) {
+// ===== Cloud Functions =====
+const initializeUserFn = httpsCallable(functions, "initializeUser");
+const convertAnonymousToGoogleFn = httpsCallable(functions, "convertAnonymousToGoogle");
+
+// ===== 로그 =====
+function log(msg, isError = false) {
   const time = new Date().toLocaleTimeString("ko-KR");
-  const prefix = isError ? "❌" : "✅";
-  const newLine = `[${time}] ${prefix} ${message}\n`;
-  if (devLog) devLog.textContent = newLine + devLog.textContent;
-  if (isError) {
-    console.error(message);
-  } else {
-    console.log(message);
-  }
+  const line = `[${time}] ${isError ? "❌" : "✅"} ${msg}\n`;
+  const devLog = $("devLog");
+  if (devLog) devLog.textContent = line + devLog.textContent;
+  isError ? console.error(msg) : console.log(msg);
 }
 
-// ===== 화폐 표시 =====
-function formatG(amount) {
-  return amount.toLocaleString("ko-KR") + "G";
-}
+// ===== UI 유틸 =====
+function show(id) { const el = $(id); if (el) el.style.display = ""; }
+function hide(id) { const el = $(id); if (el) el.style.display = "none"; }
+function setText(id, text) { const el = $(id); if (el) el.textContent = text; }
 
-// ===== UI 갱신 =====
-function updateUI(user, userData) {
+// ===== 인증 UI 갱신 =====
+function updateAuthUI(user, userData) {
+  const authArea = $("authArea");
+  if (!authArea) return;
+
   if (user && userData) {
-    authStatus.textContent = "로그인됨";
-    userIdEl.textContent = user.uid.substring(0, 12) + "...";
-    userTypeEl.textContent = userData.authType === "anonymous" ? "익명 (체험판)" : "Google";
-    if (balanceEl) balanceEl.textContent = formatG(userData.balance);
+    setText("authStatus", "로그인됨");
+    setText("userId", user.uid.substring(0, 8) + "...");
+    setText("userType", userData.authType === "anonymous" ? "익명" : "Google");
+    setText("balance", formatG(userData.balance));
 
     const typeLabel = userData.authType === "anonymous" ? "익명 유저" : "Google 유저";
     authArea.innerHTML = `
-      <span class="auth-info">
-        <strong>${typeLabel}</strong> · ${formatG(userData.balance)}
+      <span style="font-size:.85rem;color:#9ba3b4">
+        <strong style="color:#f5d142">${typeLabel}</strong>
+        · ${formatG(userData.balance)}
       </span>
     `;
-
-    btnAnonymous.disabled = true;
-    btnGoogle.disabled = userData.authType === "google";
-    btnLogout.disabled = false;
-  } else if (user) {
-    authStatus.textContent = "초기화 중...";
-    userIdEl.textContent = user.uid.substring(0, 12) + "...";
-    userTypeEl.textContent = "확인 중";
-    if (balanceEl) balanceEl.textContent = "-";
-    authArea.innerHTML = `<span class="loading">초기화 중...</span>`;
   } else {
-    authStatus.textContent = "로그아웃 상태";
-    userIdEl.textContent = "-";
-    userTypeEl.textContent = "-";
-    if (balanceEl) balanceEl.textContent = "-";
-    authArea.innerHTML = `<span class="loading">로그인 중...</span>`;
-
-    btnAnonymous.disabled = false;
-    btnGoogle.disabled = false;
-    btnLogout.disabled = true;
+    setText("authStatus", "-");
+    setText("userId", "-");
+    setText("userType", "-");
+    setText("balance", "-");
+    authArea.innerHTML = `<span style="color:#6b7280;font-size:.85rem">로그인 중...</span>`;
   }
 }
 
-// ===== 환영 모달 =====
-function showWelcomeModal(userData, options = {}) {
-  if (!welcomeModal) return;
-
-  const { isConversion = false, conversionBonus = 0 } = options;
-
-  if (isConversion) {
-    welcomeTitle.textContent = "Google 계정 연동 완료! 🎉";
-    welcomeMessage.innerHTML = `
-      ${userData.displayName || "플레이어"}님, 환영합니다.<br>
-      익명 자산이 그대로 유지되었고, 전환 보너스가 지급됐어요.
-    `;
-    welcomeBonus.textContent = formatG(userData.balance);
-    welcomeAction.innerHTML = `
-      <p class="welcome-tip">
-        🎁 전환 보너스: <strong>+${formatG(conversionBonus)}</strong><br>
-        🎮 보유 한도가 <strong>${userData.ownedLimit}개</strong>로 확장됐어요
-      </p>
-    `;
-    btnWelcomeUpgrade.style.display = "none";
-  } else if (userData.authType === "anonymous") {
-    welcomeTitle.textContent = "환영합니다! 🎉";
-    welcomeMessage.innerHTML = `
-      체험판 모드로 시작했어요. <br>
-      매물 1개를 보유하고 거래를 경험해보세요.
-    `;
-    welcomeBonus.textContent = formatG(userData.balance);
-    welcomeAction.innerHTML = `
-      <p class="welcome-tip">
-        💡 더 많은 매물을 보유하고 다른 유저와 거래하려면<br>
-        <strong>Google 계정으로 전환</strong>하세요.
-      </p>
-    `;
-    btnWelcomeUpgrade.style.display = "inline-block";
-  } else {
-    welcomeTitle.textContent = "StreamAuction에 오신 것을 환영합니다! 🎉";
-    welcomeMessage.innerHTML = `
-      ${userData.displayName || "플레이어"}님, 가입을 축하드려요.<br>
-      스트리머 매물을 사고팔며 자산을 키워보세요!
-    `;
-    welcomeBonus.textContent = formatG(userData.balance);
-    welcomeAction.innerHTML = `
-      <p class="welcome-tip">
-        🎮 최대 ${userData.ownedLimit}개 매물 보유 가능
-      </p>
-    `;
-    btnWelcomeUpgrade.style.display = "none";
-  }
-
-  welcomeModal.classList.add("show");
-}
-
-function hideWelcomeModal() {
-  if (welcomeModal) welcomeModal.classList.remove("show");
-}
-
-// ===== 핵심: 유저 초기화 =====
+// ===== 유저 초기화 =====
 async function processUserLogin(user) {
-  if (isProcessingLogin) {
-    log("이미 처리 중이라 건너뜀");
-    return;
-  }
+  if (isProcessingLogin) return;
   isProcessingLogin = true;
 
   try {
-    log(`유저 초기화 시작: ${user.uid.substring(0, 8)}...`);
-    updateUI(user, null);
+    log(`유저 초기화: ${user.uid.substring(0, 8)}...`);
+    updateAuthUI(user, null);
 
-    const initializeUser = httpsCallable(functions, "initializeUser");
-    const result = await initializeUser();
+    const result = await initializeUserFn();
     const userData = result.data;
-
     currentUserData = userData;
-    log(`초기화 완료: ${userData.isNewUser ? "신규 가입" : "기존 유저"}, balance=${formatG(userData.balance)}`);
 
-    updateUI(user, userData);
+    log(`초기화 완료: ${userData.isNewUser ? "신규" : "기존"}, ${formatG(userData.balance)}`);
+    updateAuthUI(user, userData);
 
     if (userData.isNewUser) {
-      log("환영 모달 표시 (신규 가입)");
       showWelcomeModal(userData);
     }
-  } catch (error) {
-    log(`유저 초기화 실패: ${error.message}`, true);
-    console.error("initializeUser 에러:", error);
+
+    // 입찰 UI 갱신
+    updateBidUI();
+  } catch (e) {
+    log(`초기화 실패: ${e.message}`, true);
   } finally {
     isProcessingLogin = false;
   }
 }
 
-// ===== 익명 → Google 전환 =====
+// ===== 인증 상태 구독 =====
+watchAuthState(async (user) => {
+  if (isConverting) return;
+
+  if (user) {
+    log(`인증 감지: ${user.uid.substring(0, 8)}...`);
+    await processUserLogin(user);
+  } else {
+    log("로그아웃 상태, 자동 익명 로그인...");
+    currentUserData = null;
+    updateAuthUI(null, null);
+    try {
+      await loginAnonymous();
+    } catch (e) {
+      log(`익명 로그인 실패: ${e.message}`, true);
+    }
+  }
+});
+
+// ===== Google 전환 =====
 async function handleConvertToGoogle() {
   const currentUser = auth.currentUser;
-
-  if (!currentUser) {
-    log("로그인된 유저가 없습니다", true);
-    return;
-  }
-
-  if (!currentUser.isAnonymous) {
-    log("이미 Google 계정입니다");
-    return;
-  }
+  if (!currentUser || !currentUser.isAnonymous) return;
 
   isConverting = true;
   hideWelcomeModal();
 
   try {
     log("Google 계정 연결 시도...");
-
     const linkResult = await linkAnonymousToGoogle();
 
     if (linkResult.status === "linked") {
-      // ===== 케이스 A: 자산 승계 성공 =====
-      log("Google 계정 연결 성공, 서버에 전환 처리 요청...");
-
-      const convertFn = httpsCallable(functions, "convertAnonymousToGoogle");
-      const result = await convertFn();
+      log("연결 성공, 서버에 전환 요청...");
+      const result = await convertAnonymousToGoogleFn();
       const userData = result.data;
-
-      log(`전환 완료! balance=${formatG(userData.balance)}, 보너스=+${formatG(userData.conversionBonus)}`);
-
       currentUserData = userData;
-      updateUI(linkResult.user, userData);
-
-      showWelcomeModal(userData, {
-        isConversion: true,
-        conversionBonus: userData.conversionBonus,
-      });
-    } else if (linkResult.status === "switched") {
-      // ===== 케이스 B: 이미 사용 중인 Google 계정 =====
-      log("이미 사용 중인 Google 계정으로 전환됨 (이전 익명 자산 폐기)");
-
-      // 새 유저 데이터로 즉시 UI 갱신
-      // (watchAuthState가 isConverting=true 동안 무시했을 수 있어서 직접 호출)
-      isConverting = false; // 먼저 플래그 끄기
+      updateAuthUI(currentUser, userData);
+      showWelcomeModal(userData, {isConversion: true, conversionBonus: userData.conversionBonus});
+    } else {
+      isConverting = false;
       await processUserLogin(linkResult.user);
     }
-  } catch (error) {
-    if (error.code === "auth/popup-closed-by-user") {
-      log("Google 로그인 팝업 닫힘 (취소)");
-    } else if (error.code === "auth/cancelled-popup-request") {
-      log("팝업 요청 취소됨");
-    } else {
-      log(`Google 전환 실패: ${error.message}`, true);
-      console.error(error);
+  } catch (e) {
+    if (e.code !== "auth/popup-closed-by-user") {
+      log(`전환 실패: ${e.message}`, true);
     }
   } finally {
     isConverting = false;
   }
 }
 
-// ===== 인증 상태 구독 =====
-watchAuthState(async (user) => {
-  if (isConverting) {
-    log("전환 처리 중 (인증 상태 변경 무시)");
+// ===== 환영 모달 =====
+function showWelcomeModal(userData, options = {}) {
+  const {isConversion = false, conversionBonus = 0} = options;
+  const modal = $("welcomeModal");
+  if (!modal) return;
+
+  if (isConversion) {
+    setText("welcomeTitle", "Google 연동 완료! 🎉");
+    $("welcomeMessage").innerHTML = `자산이 승계됐고, 전환 보너스가 지급됐어요.`;
+    setText("welcomeBonus", formatG(userData.balance));
+    $("welcomeAction").innerHTML = `<p class="welcome-tip">🎁 전환 보너스: <strong>+${formatG(conversionBonus)}</strong><br>🎮 보유 한도 <strong>${userData.ownedLimit}개</strong>로 확장</p>`;
+    hide("btnWelcomeUpgrade");
+  } else if (userData.authType === "anonymous") {
+    setText("welcomeTitle", "환영합니다! 🎉");
+    $("welcomeMessage").innerHTML = `체험판 모드로 시작했어요.<br>경매에 참여해보세요!`;
+    setText("welcomeBonus", formatG(userData.balance));
+    $("welcomeAction").innerHTML = `<p class="welcome-tip">💡 Google 계정으로 전환 시 <strong>800,000G 보너스</strong> + 보유 한도 5개</p>`;
+    show("btnWelcomeUpgrade");
+  } else {
+    setText("welcomeTitle", "StreamAuction에 오신 것을 환영합니다! 🎉");
+    $("welcomeMessage").innerHTML = `${userData.displayName || "플레이어"}님, 스트리머 경매에 참여해보세요!`;
+    setText("welcomeBonus", formatG(userData.balance));
+    $("welcomeAction").innerHTML = `<p class="welcome-tip">🎮 최대 ${userData.ownedLimit}개 매물 보유 가능</p>`;
+    hide("btnWelcomeUpgrade");
+  }
+
+  modal.classList.add("show");
+}
+
+function hideWelcomeModal() {
+  const modal = $("welcomeModal");
+  if (modal) modal.classList.remove("show");
+}
+
+// ===== 경매 UI 갱신 =====
+function onAuctionUpdate(auction) {
+  currentAuction = auction;
+
+  const empty = $("auctionEmpty");
+  const card = $("auctionCard");
+  const completed = $("auctionCompleted");
+
+  if (!auction) {
+    // 경매 없음
+    if (empty) empty.style.display = "";
+    if (card) card.style.display = "none";
+    if (completed) completed.style.display = "none";
     return;
   }
 
-  if (user) {
-    log(`인증 감지: ${user.uid.substring(0, 8)}...`);
-    await processUserLogin(user);
-  } else {
-    log("인증 상태: 로그아웃");
-    currentUserData = null;
-    updateUI(null, null);
+  if (auction.status === "completed") {
+    // 경매 완료
+    if (empty) empty.style.display = "none";
+    if (card) card.style.display = "none";
+    if (completed) completed.style.display = "";
+    const info = $("completedInfo");
+    if (info) {
+      const winner = auction.winnerId ?
+        auction.winnerId.substring(0, 4) + "***" : "-";
+      info.textContent = `${formatG(auction.finalPrice)}에 낙찰 · 낙찰자: ${winner}`;
+    }
+    return;
+  }
 
-    log("자동 익명 로그인 시도...");
-    try {
-      await loginAnonymous();
-    } catch (e) {
-      log(`자동 익명 로그인 실패: ${e.message}`, true);
+  if (auction.status === "active") {
+    // 경매 진행 중
+    if (empty) empty.style.display = "none";
+    if (completed) completed.style.display = "none";
+    if (card) card.style.display = "";
+
+    // 프로필 이미지
+    const img = $("auctionProfileImg");
+    if (img) {
+      if (auction.profileImageUrl) {
+        img.src = auction.profileImageUrl;
+      } else {
+        img.src = "assets/images/default-avatar.svg";
+      }
+    }
+
+    setText("auctionName", auction.displayName || "-");
+    setText("auctionId", auction.soopId || "-");
+    setText("auctionCurrentPrice", formatG(auction.currentPrice));
+    setText("auctionBidCount", (auction.bidCount || 0) + "회");
+
+    updateBidUI();
+  }
+}
+
+function onQueueUpdate(queue) {
+  const section = $("queueSection");
+  const list = $("queueList");
+  if (!section || !list) return;
+
+  if (!queue || queue.length === 0) {
+    section.style.display = "none";
+    return;
+  }
+
+  section.style.display = "";
+  list.innerHTML = queue.map((item, i) => `
+    <div class="queue-item">
+      <div class="queue-item-left">
+        <span class="queue-number">${i + 1}</span>
+        <div>
+          <div class="queue-name">${escapeHtml(item.displayName)}</div>
+          <div class="queue-id">${item.soopId}</div>
+        </div>
+      </div>
+      <div class="queue-price">시작가 ${formatG(item.startPrice)}</div>
+    </div>
+  `).join("");
+}
+
+function onBidsUpdate(bids) {
+  const list = $("bidsList");
+  if (!list) return;
+
+  if (!bids || bids.length === 0) {
+    list.innerHTML = `<div class="bids-empty">입찰이 없습니다</div>`;
+    return;
+  }
+
+  list.innerHTML = bids.map((bid, i) => `
+    <div class="bid-item">
+      <span class="bid-item-name">${escapeHtml(bid.bidderName || "익명")}</span>
+      <div>
+        <span class="bid-item-amount">${formatG(bid.amount)}</span>
+        <span class="bid-item-time">${formatBidTime(bid.bidAt)}</span>
+      </div>
+    </div>
+  `).join("");
+}
+
+function onTimer(ms) {
+  const timerEl = $("auctionTimer");
+  if (!timerEl) return;
+
+  const formatted = formatTimeRemaining(ms);
+  timerEl.textContent = formatted;
+
+  // 30초 이하일 때 긴급 표시
+  if (ms !== null && ms <= 30000) {
+    timerEl.classList.add("urgent");
+  } else {
+    timerEl.classList.remove("urgent");
+  }
+}
+
+// ===== 입찰 UI 갱신 =====
+function updateBidUI() {
+  const bidSection = $("bidSection");
+  const bidInput = $("bidInput");
+  const bidHint = $("bidHint");
+
+  if (!bidSection) return;
+
+  if (!currentAuction || currentAuction.status !== "active") {
+    bidSection.style.display = "none";
+    return;
+  }
+
+  bidSection.style.display = "";
+
+  const minBid = (currentAuction.currentPrice || 50000) + 10000;
+  if (bidInput) {
+    bidInput.min = minBid;
+    bidInput.placeholder = `${minBid.toLocaleString()}G 이상`;
+  }
+  if (bidHint) {
+    bidHint.textContent = `최소 입찰가: ${formatG(minBid)}`;
+  }
+
+  // 자기 매물이면 입찰 불가 (ownerCheck는 서버에서도 하지만 UI에서도)
+  const isOwnAuction = currentAuction.registeredBy === auth.currentUser?.uid;
+  const bidBtn = $("bidBtn");
+  if (bidBtn) {
+    if (isOwnAuction) {
+      bidBtn.disabled = true;
+      bidBtn.textContent = "본인 등록 경매";
+    } else {
+      bidBtn.disabled = false;
+      bidBtn.textContent = "입찰하기";
     }
   }
-});
+}
 
-// ===== 버튼 핸들러 =====
-btnAnonymous.addEventListener("click", async () => {
-  log("익명 로그인 시도...");
-  try {
-    await loginAnonymous();
-  } catch (e) {
-    log(`익명 로그인 실패: ${e.message}`, true);
+// ===== 빠른 입찰 버튼 =====
+window.setQuickBid = function(multiplier) {
+  const input = $("bidInput");
+  if (!input || !currentAuction) return;
+  const current = currentAuction.currentPrice || 50000;
+  const amount = current + (multiplier * 10000);
+  input.value = amount;
+};
+
+// ===== 입찰 처리 =====
+window.handleBid = async function() {
+  if (isBidding) return;
+
+  const bidError = $("bidError");
+  if (bidError) bidError.style.display = "none";
+
+  const input = $("bidInput");
+  const amount = parseInt(input?.value || 0);
+
+  if (!amount || amount <= 0) {
+    showBidError("입찰가를 입력해주세요.");
+    return;
   }
-});
 
-btnGoogle.addEventListener("click", async () => {
-  if (auth.currentUser && auth.currentUser.isAnonymous) {
+  if (!currentAuction) {
+    showBidError("진행 중인 경매가 없습니다.");
+    return;
+  }
+
+  const minBid = currentAuction.currentPrice + 10000;
+  if (amount < minBid) {
+    showBidError(`최소 ${formatG(minBid)} 이상 입찰해주세요.`);
+    return;
+  }
+
+  if (currentUserData && currentUserData.balance < amount) {
+    showBidError(`잔액이 부족합니다. 현재 잔액: ${formatG(currentUserData.balance)}`);
+    return;
+  }
+
+  isBidding = true;
+  const bidBtn = $("bidBtn");
+  if (bidBtn) {
+    bidBtn.disabled = true;
+    bidBtn.textContent = "입찰 처리 중...";
+  }
+
+  try {
+    const result = await placeBid(amount);
+    log(`입찰 성공: ${formatG(amount)} · ${result.message}`);
+
+    // 잔액 차감 반영 (서버에서 실제 처리됐지만 UI 즉시 반영)
+    if (currentUserData) {
+      currentUserData.balance -= amount;
+      updateAuthUI(auth.currentUser, currentUserData);
+    }
+
+    if (input) input.value = "";
+    if (result.isExtended) {
+      log("스나이핑 방지: 15초 연장!");
+    }
+  } catch (e) {
+    log(`입찰 실패: ${e.message}`, true);
+    showBidError(e.message || "입찰에 실패했습니다.");
+    // 잔액 복원
+    if (currentUserData) {
+      try {
+        const r = await initializeUserFn();
+        currentUserData = r.data;
+        updateAuthUI(auth.currentUser, currentUserData);
+      } catch (_) {}
+    }
+  } finally {
+    isBidding = false;
+    if (bidBtn) {
+      bidBtn.disabled = false;
+      bidBtn.textContent = "입찰하기";
+    }
+  }
+};
+
+function showBidError(msg) {
+  const el = $("bidError");
+  if (el) {
+    el.textContent = msg;
+    el.style.display = "";
+  }
+}
+
+// ===== 검색 처리 =====
+window.handleSearch = async function() {
+  if (isSearching) return;
+
+  const input = $("searchInput");
+  const query = input?.value?.trim();
+  if (!query) return;
+
+  isSearching = true;
+  const searchBtn = $("searchBtn");
+  if (searchBtn) {
+    searchBtn.disabled = true;
+    searchBtn.textContent = "검색 중...";
+  }
+
+  const resultDiv = $("searchResult");
+  if (resultDiv) {
+    resultDiv.style.display = "";
+    resultDiv.innerHTML = `<div style="padding:20px;text-align:center;color:#9ba3b4">검색 중...</div>`;
+  }
+
+  try {
+    const result = await searchListing(query);
+
+    if (result.found) {
+      showSearchFoundResult(result.listing, query);
+    } else {
+      showSearchNewListing(query, result.isIdSearch);
+    }
+  } catch (e) {
+    log(`검색 실패: ${e.message}`, true);
+    if (resultDiv) {
+      resultDiv.innerHTML = `<div style="padding:20px;text-align:center;color:#f87171">검색 오류: ${escapeHtml(e.message)}</div>`;
+    }
+  } finally {
+    isSearching = false;
+    if (searchBtn) {
+      searchBtn.disabled = false;
+      searchBtn.textContent = "검색";
+    }
+  }
+};
+
+function showSearchFoundResult(listing, query) {
+  const resultDiv = $("searchResult");
+  if (!resultDiv) return;
+
+  const ownerText = listing.isOwnedByMe ?
+    "내 매물" : (listing.ownerId ? "보유자 있음" : "주인 없음");
+
+  resultDiv.innerHTML = `
+    <div class="search-result-found">
+      <div class="search-listing-profile">
+        <img class="search-profile-img"
+          src="${listing.profileImageUrl || ""}"
+          onerror="this.src='assets/images/default-avatar.svg'"
+          alt="프로필">
+        <div>
+          <div class="search-listing-name">${escapeHtml(listing.displayName)}</div>
+          <div class="search-listing-id">${escapeHtml(listing.soopId)}</div>
+        </div>
+      </div>
+
+      <div class="search-listing-stats">
+        <div class="search-stat">
+          <div class="search-stat-label">현재 시세</div>
+          <div class="search-stat-value">${formatG(listing.currentPrice)}</div>
+        </div>
+        <div class="search-stat">
+          <div class="search-stat-label">보유 현황</div>
+          <div class="search-stat-value">${ownerText}</div>
+        </div>
+        <div class="search-stat">
+          <div class="search-stat-label">거래 횟수</div>
+          <div class="search-stat-value">${listing.totalTradeCount}회</div>
+        </div>
+      </div>
+
+      <div class="search-actions">
+        ${!listing.isOwnedByMe && !listing.ownerId ? `
+          <button class="btn-primary" onclick="openRegisterModal('${escapeHtml(listing.soopId)}', '${escapeHtml(listing.displayName)}')">
+            경매 등록
+          </button>
+        ` : ""}
+        ${listing.isOwnedByMe ? `
+          <button class="btn-secondary" onclick="openRegisterModal('${escapeHtml(listing.soopId)}', '${escapeHtml(listing.displayName)}', true)">
+            손절 경매 등록
+          </button>
+        ` : ""}
+      </div>
+    </div>
+  `;
+}
+
+function showSearchNewListing(query, isIdSearch) {
+  const resultDiv = $("searchResult");
+  if (!resultDiv) return;
+
+  const typeText = isIdSearch ? "ID" : "닉네임";
+  const previewUrl = isIdSearch ? getSoopProfileUrl(query) : null;
+
+  resultDiv.innerHTML = `
+    <div class="search-new-listing">
+      <h3>매물이 없어요</h3>
+      <p>${typeText} "${escapeHtml(query)}"와 일치하는 매물이 없습니다.<br>직접 경매를 등록해보세요!</p>
+      <button class="btn-primary" onclick="openRegisterModal('${escapeHtml(isIdSearch ? query : "")}', '${escapeHtml(!isIdSearch ? query : "")}')">
+        이 스트리머로 경매 등록
+      </button>
+    </div>
+  `;
+}
+
+// ===== 경매 등록 모달 =====
+window.openRegisterModal = function(soopId = "", displayName = "", isSelloff = false) {
+  const modal = $("registerModal");
+  if (!modal) return;
+
+  const soopInput = $("regSoopId");
+  const nickInput = $("regNickname");
+  const priceInput = $("regStartPrice");
+
+  if (soopInput) soopInput.value = soopId;
+  if (nickInput) nickInput.value = displayName;
+  if (priceInput) priceInput.value = 50000;
+
+  clearRegisterErrors();
+  updateProfilePreview();
+
+  modal.classList.add("show");
+  pendingRegisterData = {isSelloff};
+};
+
+window.closeRegisterModal = function() {
+  const modal = $("registerModal");
+  if (modal) modal.classList.remove("show");
+};
+
+function clearRegisterErrors() {
+  ["regSoopIdError", "regNicknameError", "regStartPriceError"].forEach((id) => {
+    setText(id, "");
+  });
+}
+
+window.updateProfilePreview = function() {
+  const soopId = $("regSoopId")?.value?.trim();
+  const nickname = $("regNickname")?.value?.trim();
+
+  const img = $("registerProfileImg");
+  const nameEl = $("registerName");
+  const idEl = $("registerSoopId");
+
+  if (nameEl) nameEl.textContent = nickname || "닉네임";
+  if (idEl) idEl.textContent = soopId ? `@${soopId}` : "@soop-id";
+
+  if (img && soopId && /^[a-zA-Z0-9]+$/.test(soopId)) {
+    img.src = getSoopProfileUrl(soopId);
+    img.style.display = "";
+  } else if (img) {
+    img.style.display = "none";
+  }
+};
+
+// ===== 경매 등록 처리 =====
+window.handleRegisterAuction = async function() {
+  if (isRegistering) return;
+
+  clearRegisterErrors();
+
+  const soopId = $("regSoopId")?.value?.trim();
+  const displayName = $("regNickname")?.value?.trim();
+  const startPrice = parseInt($("regStartPrice")?.value || 0);
+
+  // 클라이언트 검증
+  let hasError = false;
+
+  const soopIdErr = validateSoopId(soopId);
+  if (soopIdErr) {
+    setText("regSoopIdError", soopIdErr);
+    hasError = true;
+  }
+
+  const nickErr = validateNickname(displayName);
+  if (nickErr) {
+    setText("regNicknameError", nickErr);
+    hasError = true;
+  }
+
+  if (!startPrice || startPrice < 50000) {
+    setText("regStartPriceError", "시작가는 최소 50,000G입니다.");
+    hasError = true;
+  }
+
+  if (hasError) return;
+
+  // 잔액 체크
+  if (currentUserData && currentUserData.balance < startPrice) {
+    setText("regStartPriceError",
+        `잔액 부족: 현재 ${formatG(currentUserData.balance)}`);
+    return;
+  }
+
+  // 보유 한도 체크
+  if (currentUserData && currentUserData.ownedCount >= currentUserData.ownedLimit) {
+    setText("regNicknameError",
+        `보유 한도 초과 (${currentUserData.ownedLimit}개 한도)`);
+    return;
+  }
+
+  isRegistering = true;
+  const btn = $("registerBtn");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "등록 중...";
+  }
+
+  try {
+    const profileUrl = getSoopProfileUrl(soopId);
+    const result = await registerAuction({
+      soopId: soopId.toLowerCase(),
+      displayName,
+      startPrice,
+      profileImageUrl: profileUrl,
+    });
+
+    log(`경매 등록 성공: ${displayName}, ${formatG(startPrice)}, 상태=${result.status}`);
+    closeRegisterModal();
+
+    // 결과 메시지
+    const msg = result.status === "started" ?
+      "경매가 시작됐습니다! 🎉" :
+      `대기열 ${result.queuePosition}번째에 등록됐습니다.`;
+    log(msg);
+  } catch (e) {
+    log(`경매 등록 실패: ${e.message}`, true);
+    // 에러 메시지 표시
+    if (e.message.includes("24시간")) {
+      setText("regSoopIdError", e.message);
+    } else if (e.message.includes("한도")) {
+      setText("regNicknameError", e.message);
+    } else {
+      setText("regStartPriceError", e.message || "등록에 실패했습니다.");
+    }
+  } finally {
+    isRegistering = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "경매 등록";
+    }
+  }
+};
+
+// ===== 검색 포커스 =====
+window.focusSearch = function() {
+  const input = $("searchInput");
+  if (input) {
+    input.focus();
+    input.scrollIntoView({behavior: "smooth", block: "center"});
+  }
+};
+
+// ===== 버튼 핸들러 (개발 패널) =====
+window.handleGoogleLogin = async function() {
+  if (auth.currentUser?.isAnonymous) {
     await handleConvertToGoogle();
   } else {
-    log("Google 로그인 시도...");
     try {
       await loginGoogle();
     } catch (e) {
-      if (e.code === "auth/popup-closed-by-user") {
-        log("로그인 팝업 닫힘 (취소)");
-      } else {
-        log(`Google 로그인 실패: ${e.message}`, true);
-      }
+      log(`구글 로그인 실패: ${e.message}`, true);
     }
   }
-});
+};
 
-btnLogout.addEventListener("click", async () => {
-  log("로그아웃 시도...");
+window.handleLogout = async function() {
   try {
+    unsubscribeAuction();
     await logout();
+    log("로그아웃 완료");
   } catch (e) {
     log(`로그아웃 실패: ${e.message}`, true);
   }
-});
+};
 
-btnTestFirestore.addEventListener("click", async () => {
-  log("Firestore 연결 테스트 (system/config 읽기)...");
-  try {
-    const configRef = doc(db, "system", "config");
-    const configSnap = await getDoc(configRef);
-
-    if (configSnap.exists()) {
-      const data = configSnap.data();
-      log(`Firestore OK: basePrice=${data.basePrice}, googleBonus=${data.googleBonus}`);
-    } else {
-      log("system/config 문서가 존재하지 않습니다", true);
-    }
-  } catch (e) {
-    log(`Firestore 연결 실패: ${e.message}`, true);
-  }
-});
+// ===== 이벤트 바인딩 =====
+const btnWelcomeClose = $("btnWelcomeClose");
+const btnWelcomeUpgrade = $("btnWelcomeUpgrade");
 
 if (btnWelcomeClose) {
   btnWelcomeClose.addEventListener("click", hideWelcomeModal);
@@ -348,5 +726,32 @@ if (btnWelcomeUpgrade) {
   btnWelcomeUpgrade.addEventListener("click", handleConvertToGoogle);
 }
 
-// ===== 초기 로그 =====
+// ===== 경매 실시간 구독 시작 =====
+subscribeAuction({
+  onAuctionUpdate,
+  onQueueUpdate,
+  onBidsUpdate,
+  onTimer,
+});
+
+// 초기 상태 로드 (만료 경매 정산 트리거 포함)
+loadInitialState().catch((e) => log(`초기 상태 로드 실패: ${e.message}`, true));
+
 log("앱 초기화 완료");
+
+// ===== 유틸 =====
+function escapeHtml(str) {
+  if (!str) return "";
+  return str.replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+}
+
+function formatBidTime(timestamp) {
+  if (!timestamp) return "";
+  const diff = Math.floor((Date.now() - timestamp) / 1000);
+  if (diff < 60) return `${diff}초 전`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+  return `${Math.floor(diff / 3600)}시간 전`;
+}

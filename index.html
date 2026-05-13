@@ -3,76 +3,240 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="StreamAuction - 스트리머 닉네임을 사고파는 경매 게임">
   <title>StreamAuction - 스트리머 경매시장</title>
   <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/auction.css">
 </head>
 <body>
-  <!-- 헤더 -->
-  <header class="header">
-    <div class="header-inner">
-      <h1 class="logo">StreamAuction</h1>
-      <div class="auth-area" id="authArea">
-        <span class="loading">로딩 중...</span>
-      </div>
-    </div>
-  </header>
 
-  <!-- 메인 콘텐츠 -->
-  <main class="main">
-    <section class="hero">
-      <h2>스트리머의 이름을 사고파세요</h2>
-      <p class="subtitle">soop 스트리머 닉네임 경매 게임</p>
-
-      <!-- 개발 테스트 패널 -->
-      <div class="dev-panel" id="devPanel">
-        <h3>개발 테스트 패널</h3>
-        <div class="dev-info">
-          <p>인증 상태: <span id="authStatus">확인 중...</span></p>
-          <p>유저 ID: <span id="userId">-</span></p>
-          <p>유저 타입: <span id="userType">-</span></p>
-          <p>보유 자산: <span id="balance">-</span></p>
-        </div>
-        <div class="dev-buttons">
-          <button id="btnAnonymousLogin">익명 로그인</button>
-          <button id="btnGoogleLogin">Google 로그인</button>
-          <button id="btnLogout">로그아웃</button>
-          <button id="btnTestFirestore">Firestore 연결 테스트</button>
-        </div>
-        <div class="dev-output">
-          <h4>로그</h4>
-          <pre id="devLog">대기 중...</pre>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <!-- 푸터 -->
-  <footer class="footer">
-    <p>&copy; 2026 StreamAuction. MVP Build.</p>
-  </footer>
-
-  <!-- 환영 모달 -->
-  <div class="modal-overlay" id="welcomeModal">
-    <div class="modal">
-      <h2 id="welcomeTitle">환영합니다!</h2>
-      <p id="welcomeMessage" class="modal-message">메시지</p>
-
-      <div class="bonus-card">
-        <span class="bonus-label">시작 자산</span>
-        <span class="bonus-amount" id="welcomeBonus">0G</span>
-      </div>
-
-      <div id="welcomeAction"></div>
-
-      <div class="modal-buttons">
-        <button id="btnWelcomeUpgrade" class="btn-primary">Google로 전환</button>
-        <button id="btnWelcomeClose" class="btn-secondary">시작하기</button>
-      </div>
+<!-- 헤더 -->
+<header class="header">
+  <div class="header-inner">
+    <h1 class="logo">StreamAuction</h1>
+    <div class="auth-area" id="authArea">
+      <span class="loading">로딩 중...</span>
     </div>
   </div>
+</header>
 
-  <!-- 메인 스크립트 -->
-  <script type="module" src="js/main.js"></script>
+<!-- 메인 -->
+<main class="main">
+
+  <!-- 현재 경매 섹션 -->
+  <section class="auction-section">
+    <div id="auctionDisplay">
+      <!-- 경매 없음 상태 -->
+      <div class="auction-empty" id="auctionEmpty">
+        <div class="auction-empty-icon">🏷️</div>
+        <h2>진행 중인 경매가 없어요</h2>
+        <p>스트리머를 검색해서 첫 경매를 등록해보세요!</p>
+        <button class="btn-primary" onclick="focusSearch()">스트리머 검색하기</button>
+      </div>
+
+      <!-- 경매 진행 중 상태 -->
+      <div class="auction-card" id="auctionCard" style="display:none">
+        <div class="auction-header">
+          <div class="auction-badge live">🔴 경매 진행 중</div>
+          <div class="auction-timer" id="auctionTimer">05:00</div>
+        </div>
+
+        <div class="auction-body">
+          <div class="auction-profile">
+            <img id="auctionProfileImg" src="" alt="프로필" class="profile-img"
+              onerror="this.src='assets/images/default-avatar.svg'">
+            <div class="auction-info">
+              <div class="auction-name" id="auctionName">-</div>
+              <div class="auction-id" id="auctionId">-</div>
+            </div>
+          </div>
+
+          <div class="auction-prices">
+            <div class="price-block">
+              <div class="price-label">현재 최고가</div>
+              <div class="price-value" id="auctionCurrentPrice">-</div>
+            </div>
+            <div class="price-block">
+              <div class="price-label">입찰 수</div>
+              <div class="price-value" id="auctionBidCount">0</div>
+            </div>
+          </div>
+
+          <!-- 입찰 UI -->
+          <div class="bid-section" id="bidSection">
+            <div class="bid-row">
+              <input type="number" id="bidInput" class="bid-input"
+                placeholder="입찰가 입력" min="60000" step="10000">
+              <button class="btn-primary bid-btn" id="bidBtn" onclick="handleBid()">
+                입찰하기
+              </button>
+            </div>
+            <div class="bid-hint" id="bidHint">최소 입찰가: -</div>
+            <div class="bid-error" id="bidError" style="display:none"></div>
+
+            <!-- 빠른 입찰 버튼 -->
+            <div class="quick-bids" id="quickBids">
+              <button class="btn-quick" onclick="setQuickBid(1)">+1만G</button>
+              <button class="btn-quick" onclick="setQuickBid(5)">+5만G</button>
+              <button class="btn-quick" onclick="setQuickBid(10)">+10만G</button>
+              <button class="btn-quick" onclick="setQuickBid(50)">+50만G</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 최근 입찰 기록 -->
+        <div class="bids-history">
+          <div class="bids-title">입찰 기록</div>
+          <div id="bidsList" class="bids-list">
+            <div class="bids-empty">입찰이 없습니다</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 경매 완료 상태 -->
+      <div class="auction-completed" id="auctionCompleted" style="display:none">
+        <div class="completed-icon">🎉</div>
+        <div class="completed-title">경매 완료!</div>
+        <div class="completed-info" id="completedInfo"></div>
+        <div class="completed-countdown">잠시 후 다음 경매가 시작됩니다...</div>
+      </div>
+    </div>
+
+    <!-- 대기열 -->
+    <div class="queue-section" id="queueSection" style="display:none">
+      <div class="queue-title">🟡 대기 중인 경매</div>
+      <div id="queueList" class="queue-list"></div>
+    </div>
+  </section>
+
+  <!-- 구분선 -->
+  <hr class="divider">
+
+  <!-- 검색 섹션 -->
+  <section class="search-section">
+    <h2 class="section-title">스트리머 검색</h2>
+    <p class="section-desc">닉네임 또는 soop ID로 검색하세요</p>
+
+    <div class="search-bar">
+      <input
+        type="text"
+        id="searchInput"
+        class="search-input"
+        placeholder="닉네임 또는 soop ID 입력"
+        onkeydown="if(event.key==='Enter') handleSearch()"
+      >
+      <button class="btn-primary search-btn" id="searchBtn" onclick="handleSearch()">
+        검색
+      </button>
+    </div>
+
+    <!-- 검색 결과 -->
+    <div id="searchResult" class="search-result" style="display:none"></div>
+  </section>
+
+  <!-- 개발 패널 (배포 시 제거 예정) -->
+  <section class="dev-panel" id="devPanel">
+    <details>
+      <summary>개발 테스트 패널</summary>
+      <div class="dev-info">
+        <p>인증: <span id="authStatus">-</span></p>
+        <p>UID: <span id="userId">-</span></p>
+        <p>타입: <span id="userType">-</span></p>
+        <p>잔액: <span id="balance">-</span></p>
+      </div>
+      <div class="dev-buttons">
+        <button onclick="handleGoogleLogin()">Google 로그인</button>
+        <button onclick="handleLogout()">로그아웃</button>
+      </div>
+      <pre id="devLog" class="dev-log">대기 중...</pre>
+    </details>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <p>&copy; 2026 StreamAuction. MVP Build.</p>
+</footer>
+
+<!-- 경매 등록 모달 -->
+<div class="modal-overlay" id="registerModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>경매 등록</h2>
+      <button class="modal-close" onclick="closeRegisterModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- 검색된 프로필 미리보기 -->
+      <div class="register-preview" id="registerPreview">
+        <img id="registerProfileImg" src="" alt="프로필"
+          onerror="this.style.display='none'">
+        <div class="register-info">
+          <div id="registerName" class="register-name"></div>
+          <div id="registerSoopId" class="register-soop-id"></div>
+        </div>
+      </div>
+
+      <!-- 정보 입력 -->
+      <div class="form-group">
+        <label>soop ID *</label>
+        <input type="text" id="regSoopId" placeholder="예: hwt1014"
+          oninput="updateProfilePreview()">
+        <div class="field-error" id="regSoopIdError"></div>
+      </div>
+
+      <div class="form-group">
+        <label>닉네임 *</label>
+        <input type="text" id="regNickname" placeholder="예: 홍길동">
+        <div class="field-error" id="regNicknameError"></div>
+      </div>
+
+      <div class="form-group">
+        <label>시작가 *</label>
+        <div class="price-input-row">
+          <input type="number" id="regStartPrice" value="50000"
+            min="50000" step="10000">
+          <span class="price-unit">G</span>
+        </div>
+        <div class="field-hint">최소 50,000G</div>
+        <div class="field-error" id="regStartPriceError"></div>
+      </div>
+
+      <div class="register-notice">
+        <strong>⚠️ 주의사항</strong>
+        <ul>
+          <li>유찰 시 시작가로 자동 낙찰됩니다</li>
+          <li>잔액에서 시작가가 차감될 수 있습니다</li>
+          <li>등록 후 취소는 불가합니다</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeRegisterModal()">취소</button>
+      <button class="btn-primary" id="registerBtn" onclick="handleRegisterAuction()">
+        경매 등록
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 환영 모달 -->
+<div class="modal-overlay" id="welcomeModal">
+  <div class="modal">
+    <h2 id="welcomeTitle">환영합니다! 🎉</h2>
+    <p id="welcomeMessage" class="modal-message"></p>
+    <div class="bonus-card">
+      <span class="bonus-label">시작 자산</span>
+      <span class="bonus-amount" id="welcomeBonus">0G</span>
+    </div>
+    <div id="welcomeAction"></div>
+    <div class="modal-buttons">
+      <button id="btnWelcomeUpgrade" class="btn-primary" style="display:none">Google로 전환</button>
+      <button id="btnWelcomeClose" class="btn-secondary">시작하기</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
