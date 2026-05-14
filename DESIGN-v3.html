@@ -123,6 +123,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 
 <nav class="nav-sticky">
   <div class="nav-inner">
+    <a class="nav-btn" href="#s0">구현 현황</a>
     <a class="nav-btn" href="#s1">1. 개요</a>
     <a class="nav-btn" href="#s2">2. 기술 스택</a>
     <a class="nav-btn" href="#s3">3. 게임 컨셉</a>
@@ -154,6 +155,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <div class="toc">
   <div class="toc-title">목차</div>
   <div class="toc-grid">
+    <a class="toc-item" href="#s0">구현 현황 요약</a>
     <a class="toc-item" href="#s1">1. 프로젝트 개요</a>
     <a class="toc-item" href="#s2">2. 기술 스택</a>
     <a class="toc-item" href="#s3">3. 게임 컨셉</a>
@@ -169,6 +171,46 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
     <a class="toc-item" href="#s13">13. MVP 로드맵</a>
     <a class="toc-item" href="#s14">14. 미정 항목</a>
   </div>
+</div>
+
+<div id="s0" class="section-anchor">
+<h2>구현 현황 요약 <span class="badge badge-new">2026-05-14 기준</span></h2>
+
+<h3>✅ 구현 완료</h3>
+<table>
+<tr><th>영역</th><th>항목</th></tr>
+<tr><td>인증</td><td>익명/구글 로그인, 익명→구글 전환 (자산 승계 + 보너스), 신규 유저 환영 모달</td></tr>
+<tr><td>경매 핵심</td><td>등록 → 대기열(최대 5개) → 5분 경매 → 낙찰/유찰 자동 정산</td></tr>
+<tr><td>경매 유형</td><td>유형 A (신규/보유자 없는 매물) 완전 구현</td></tr>
+<tr><td>입찰</td><td>에스크로 방식 (즉시 차감, 갱신 시 환불), 스나이핑 방지 15초 연장</td></tr>
+<tr><td>보호 규칙</td><td>자기 매물 입찰 차단, 보유 한도 초과 차단, 계정 정지(isBanned) 체크</td></tr>
+<tr><td>등록 정책</td><td>보유자 없는 매물 등록 시 50,000G 차감 · 타 유저 낙찰 시 환급</td></tr>
+<tr><td>익명 제한</td><td>경매 등록 후 1시간 재등록 쿨다운 (구글 면제)</td></tr>
+<tr><td>메인 UI</td><td>실시간 경매 표시(RTDB), 대기열, 입찰 기록, 스트리머 검색, 내 보유 매물 패널</td></tr>
+<tr><td>튜토리얼</td><td>첫 낙찰 보상 지급</td></tr>
+<tr><td>기반</td><td>Firestore/RTDB 보안 규칙, 모바일 반응형 UI</td></tr>
+</table>
+
+<h3>🔄 부분 구현</h3>
+<table>
+<tr><th>항목</th><th>구현된 부분</th><th>미구현 부분</th></tr>
+<tr><td>유형 C 손절 경매</td><td>검색 결과에 "손절 경매 등록" 버튼 노출</td><td>Cloud Function 미구현 (registerAuction이 신규만 처리)</td></tr>
+<tr><td>튜토리얼 보상</td><td>첫 낙찰(firstPurchase)</td><td>첫 등록, 첫 손절, 첫 강제청산 보상</td></tr>
+</table>
+
+<h3>❌ 미구현</h3>
+<table>
+<tr><th>항목</th><th>비고</th></tr>
+<tr><td>유형 B — 보유자 승인 경매</td><td>requestAuctionOnListing, respondToAuctionRequest 미작성</td></tr>
+<tr><td>유형 C — 손절 경매 Cloud Function</td><td>손절 등록/유찰 처리 로직 없음</td></tr>
+<tr><td>강제청산 시스템</td><td>forceLiquidate 미작성</td></tr>
+<tr><td>경매 수수료 5%</td><td>FEE_RATE 상수만 선언, 낙찰 정산 시 미적용</td></tr>
+<tr><td>신고/차단 시스템</td><td>isMosaicked 필드만 존재, reportListing 미작성</td></tr>
+<tr><td>경매 히스토리 열람 (BM)</td><td>auctionHistory 저장만 됨, 열람 기능 없음</td></tr>
+<tr><td>매물 상세 페이지</td><td>listing.html 없음</td></tr>
+<tr><td>마이 페이지</td><td>my.html 없음</td></tr>
+<tr><td>Phase 2+ 전체</td><td>시세 감가상각, 출석/광고 보상, Cloud Scheduler 등</td></tr>
+</table>
 </div>
 
 <div id="s1" class="section-anchor">
@@ -269,7 +311,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 
 <h3>4.1 경매 유형 3가지</h3>
 
-<h4>유형 A — 신규 매물 경매</h4>
+<h4>유형 A — 신규 매물 경매 <span class="badge badge-done">구현 완료</span></h4>
 <pre>1. 유저가 스트리머 검색 → 매물 없음 (또는 보유자 없는 매물)
 2. 유저가 경매 등록 (시작가 5만G 이상) → 최소 시세 50,000G 즉시 차감
 3. 대기열에 추가 (선착순)
@@ -277,14 +319,14 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 5-A. 입찰 있음 → 최고 입찰자 낙찰
 5-B. 유찰 → 등록자가 시작가에 자동 낙찰 (반드시 보유자 생김)</pre>
 
-<h4>유형 B — 보유자 승인 경매</h4>
+<h4>유형 B — 보유자 승인 경매 <span class="badge badge-todo">미구현</span></h4>
 <pre>1. 유저B가 유저A의 매물에 경매 등록 요청
 2. 유저A에게 알림 (24시간 회신 기한)
 3-A. 승인 → 경매 대기열 추가, 시작가 5만G
 3-B. 거절 → 요청 취소 (24시간 면역, 3일 재요청 불가)
 3-C. 미회신 → 강제청산 발동 (§8 참고)</pre>
 
-<h4>유형 C — 손절 경매</h4>
+<h4>유형 C — 손절 경매 <span class="badge badge-new">UI만 부분 구현</span></h4>
 <pre>1. 보유자가 본인 매물 경매 등록 (시작가 5만G)
 2. 5분 경매 진행
 3-A. 입찰 있음 → 낙찰자에게 매물 이전, 보유자에게 낙찰가 × 95%
@@ -297,7 +339,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <div class="stat"><div class="stat-label">대기열</div><div class="stat-value">최대 5개</div></div>
 <div class="stat"><div class="stat-label">스나이핑 방지</div><div class="stat-value">15초 연장</div></div>
 <div class="stat"><div class="stat-label">연장 횟수</div><div class="stat-value">무제한</div></div>
-<div class="stat"><div class="stat-label">경매 수수료</div><div class="stat-value">5%</div></div>
+<div class="stat"><div class="stat-label">경매 수수료</div><div class="stat-value">5% <span class="badge badge-todo" style="font-size:10px">미적용</span></div></div>
 </div>
 
 <h3>4.3 입찰 규칙</h3>
@@ -427,19 +469,19 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <div id="s9" class="section-anchor">
 <h2>9. 어뷰징 방어 시스템</h2>
 <table>
-<tr><th>어뷰징</th><th>v3 방어</th></tr>
-<tr><td>자전거래</td><td>경매 공개 → 다른 유저가 끼어들 수 있음</td></tr>
-<tr><td>시세 펌핑</td><td>자기 매물 입찰 불가 + 공개 경매</td></tr>
-<tr><td>가격 조작</td><td>경매 기록 전부 공개 (Phase 2)</td></tr>
-<tr><td>허위 입찰</td><td>입찰 취소 불가 + 에스크로</td></tr>
-<tr><td>봇 트래픽</td><td>분당 N회 이상 입찰 차단 (Phase 2)</td></tr>
-<tr><td>익명 계정 재등록</td><td>경매 등록 후 1시간 쿨다운 (구글 계정 면제)</td></tr>
-<tr><td>동일 IP</td><td>같은 IP 경매 등록 + 입찰 동시 차단</td></tr>
+<tr><th>어뷰징</th><th>v3 방어</th><th>상태</th></tr>
+<tr><td>자전거래</td><td>경매 공개 → 다른 유저가 끼어들 수 있음</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>시세 펌핑</td><td>자기 매물 입찰 불가 + 공개 경매</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>허위 입찰</td><td>입찰 취소 불가 + 에스크로</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>익명 계정 재등록</td><td>경매 등록 후 1시간 쿨다운 (구글 계정 면제)</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>가격 조작</td><td>경매 기록 전부 공개</td><td><span class="badge badge-todo">미구현 Phase 2</span></td></tr>
+<tr><td>봇 트래픽</td><td>분당 N회 이상 입찰 차단</td><td><span class="badge badge-todo">미구현 Phase 2</span></td></tr>
+<tr><td>동일 IP</td><td>같은 IP 경매 등록 + 입찰 동시 차단</td><td><span class="badge badge-todo">미구현</span></td></tr>
 </table>
 </div>
 
 <div id="s10" class="section-anchor">
-<h2>10. 신고 및 숨기기 시스템</h2>
+<h2>10. 신고 및 숨기기 시스템 <span class="badge badge-todo">미구현</span></h2>
 <h3>개인 차단 (구글 유저만)</h3>
 <ul>
 <li>본인 화면에서만 안 보임, 사유 불필요, 무제한</li>
@@ -559,83 +601,100 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
   </div>
 </div>
 <div class="timeline-item">
-  <div class="timeline-dot dot-todo">4</div>
+  <div class="timeline-dot dot-done">4</div>
   <div>
-    <div class="timeline-title">Step 4 — 경매 데이터 구조</div>
-    <div class="timeline-desc">listings, auctions, auctionQueue, reports 스키마 + Firestore 보안 규칙 + RTDB 구조 설계</div>
+    <div class="timeline-title">Step 4 — 경매 데이터 구조 <span class="badge badge-done">완료</span></div>
+    <div class="timeline-desc">listings / users / auctionHistory Firestore 스키마, RTDB auction/current·queue·bids 구조, Firestore/RTDB 보안 규칙</div>
   </div>
 </div>
 <div class="timeline-item">
-  <div class="timeline-dot dot-todo">5</div>
+  <div class="timeline-dot dot-inprogress">5</div>
   <div>
-    <div class="timeline-title">Step 5 — 경매 Cloud Functions</div>
-    <div class="timeline-desc">registerAuction, startNextAuction, placeBid, finalizeAuction, requestAuctionOnListing, respondToAuctionRequest, forceLiquidate</div>
+    <div class="timeline-title">Step 5 — 경매 Cloud Functions <span class="badge badge-new">부분 완료</span></div>
+    <div class="timeline-desc">
+      <strong>완료:</strong> registerAuction(유형A), placeBid, finalizeAuction, searchListing, getAuctionState<br>
+      <strong>미구현:</strong> requestAuctionOnListing (유형B), respondToAuctionRequest (유형B), forceLiquidate (강제청산), 경매 수수료 5% 적용
+    </div>
   </div>
 </div>
 <div class="timeline-item">
-  <div class="timeline-dot dot-todo">6</div>
+  <div class="timeline-dot dot-done">6</div>
   <div>
-    <div class="timeline-title">Step 6 — 메인 페이지 UI</div>
-    <div class="timeline-desc">현재 경매 실시간 표시 (RTDB onValue), 대기열, 입찰 UI, 검색바, 온보딩</div>
+    <div class="timeline-title">Step 6 — 메인 페이지 UI <span class="badge badge-done">완료</span></div>
+    <div class="timeline-desc">실시간 경매 표시 (RTDB onValue), 대기열, 입찰 UI, 검색바, 온보딩, 내 보유 매물 패널</div>
   </div>
 </div>
 <div class="timeline-item">
   <div class="timeline-dot dot-todo">7</div>
   <div>
     <div class="timeline-title">Step 7 — 매물 상세 + 마이페이지</div>
-    <div class="timeline-desc">listing.html, my.html, 신고/차단 UI</div>
+    <div class="timeline-desc">listing.html, my.html, 신고/차단 UI, 경매 히스토리 열람 BM</div>
   </div>
 </div>
 <div class="timeline-item">
   <div class="timeline-dot dot-todo">8</div>
   <div>
     <div class="timeline-title">Step 8 — 마무리</div>
-    <div class="timeline-desc">에러 처리, 모바일 반응형, 베타 테스트</div>
+    <div class="timeline-desc">유형 B/C 완성, 강제청산, 경매 수수료, 에러 처리 강화, 베타 테스트</div>
   </div>
 </div>
 </div>
 
 <h3>MVP 출시 기준 (Definition of Done)</h3>
 <div class="card">
-<div class="checklist-item"><input type="checkbox"> <span>익명/구글 로그인 모두 정상 작동</span></div>
-<div class="checklist-item"><input type="checkbox"> <span>가입 시 보너스 자동 지급</span></div>
-<div class="checklist-item"><input type="checkbox"> <span>매물 검색 (닉네임/ID) 정상 작동</span></div>
-<div class="checklist-item"><input type="checkbox"> <span>경매 등록 → 대기열 → 5분 경매 → 낙찰 정상 작동</span></div>
-<div class="checklist-item"><input type="checkbox"> <span>에스크로 입찰금 처리 정확</span></div>
-<div class="checklist-item"><input type="checkbox"> <span>유찰 시 등록자 자동 낙찰 (신규) / 보유 유지 (손절)</span></div>
-<div class="checklist-item"><input type="checkbox"> <span>보유자 승인/거절/강제청산 정상 작동</span></div>
-<div class="checklist-item"><input type="checkbox"> <span>경매 수수료 5% 정확히 차감</span></div>
-<div class="checklist-item"><input type="checkbox"> <span>보유 한도 초과 시 입찰 차단</span></div>
-<div class="checklist-item"><input type="checkbox"> <span>자기 매물 입찰 차단</span></div>
-<div class="checklist-item"><input type="checkbox"> <span>스나이핑 방지 (15초 연장) 작동</span></div>
-<div class="checklist-item"><input type="checkbox"> <span>실시간 경매 UI 갱신 (RTDB onValue)</span></div>
-<div class="checklist-item"><input type="checkbox"> <span>모바일에서 정상 표시 및 동작</span></div>
-<div class="checklist-item"><input type="checkbox"> <span>Firestore/RTDB 보안 규칙으로 클라이언트 직접 조작 차단</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>익명/구글 로그인 모두 정상 작동</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>가입 시 보너스 자동 지급</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>매물 검색 (닉네임/ID) 정상 작동</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>경매 등록 → 대기열 → 5분 경매 → 낙찰 정상 작동 (유형 A)</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>에스크로 입찰금 처리 정확 (즉시 차감, 갱신 시 환불)</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>유찰 시 등록자 자동 낙찰 (신규 매물)</span></div>
+<div class="checklist-item"><input type="checkbox"> <span>유찰 시 보유 유지 (손절 경매) — 유형 C 미구현</span></div>
+<div class="checklist-item"><input type="checkbox"> <span>보유자 승인/거절/강제청산 정상 작동 — 유형 B 미구현</span></div>
+<div class="checklist-item"><input type="checkbox"> <span>경매 수수료 5% 정확히 차감 — FEE_RATE 선언만, 미적용</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>보유 한도 초과 시 입찰 차단</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>자기 매물 입찰 차단</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>스나이핑 방지 (15초 연장) 작동</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>실시간 경매 UI 갱신 (RTDB onValue)</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>모바일에서 정상 표시 및 동작</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>Firestore/RTDB 보안 규칙으로 클라이언트 직접 조작 차단</span></div>
 </div>
 </div>
 
 <div id="s14" class="section-anchor">
-<h2>14. 미정 항목 (To-Do)</h2>
-<h3>우선순위 높음</h3>
+<h2>14. 남은 개발 과제</h2>
+<h3>우선순위 높음 — MVP 완성을 위한 필수 항목</h3>
 <ul>
-<li>Firestore / RTDB 데이터 구조 상세 설계 (auctions, auctionQueue 스키마)</li>
-<li>경매 타이머 구현 방식 결정 (클라이언트 vs Cloud Scheduler)</li>
-<li>경매 종료 자동 처리 아키텍처</li>
-<li>실시간 구독 비용 최적화 전략</li>
+<li>유형 B — 보유자 승인 경매 (requestAuctionOnListing, respondToAuctionRequest)</li>
+<li>유형 C — 손절 경매 Cloud Function 구현</li>
+<li>강제청산 시스템 (forceLiquidate)</li>
+<li>경매 수수료 5% 낙찰 정산 적용</li>
+<li>신고/차단 시스템 (reportListing, blockListing)</li>
+<li>경매 히스토리 열람 BM (50,000G)</li>
+<li>매물 상세 페이지 (listing.html)</li>
+<li>마이 페이지 (my.html)</li>
 </ul>
-<h3>우선순위 중간</h3>
+<h3>우선순위 중간 — Phase 2</h3>
+<ul>
+<li>시세 감가상각 (7일 주기 -5%, 하한 50,000G)</li>
+<li>휴면 매물 강제 회수</li>
+<li>출석/광고 보상 시스템</li>
+<li>나머지 튜토리얼 보상 (첫 등록, 첫 손절, 첫 강제청산)</li>
+<li>Cloud Scheduler 도입 (클라이언트 트리거 대체)</li>
+<li>관리자 페이지</li>
+</ul>
+<h3>우선순위 낮음 — Phase 3</h3>
+<ul>
+<li>강제청산 방어권/금고 BM</li>
+<li>랭킹 시스템</li>
+<li>스킨/칭호</li>
+<li>닉네임 변경 투표</li>
+<li>시즌제 검토 / 모바일 앱 확장</li>
+</ul>
+<h3>정책 미결</h3>
 <ul>
 <li>퍼블리시티권 대응 정책</li>
 <li>soop 약관/API 검토</li>
 <li>미성년 스트리머 보호 정책</li>
-<li>UI/UX 와이어프레임</li>
-</ul>
-<h3>우선순위 낮음</h3>
-<ul>
-<li>강제청산 방어권/금고 가격 결정</li>
-<li>경매 히스토리 열람 가격 조정</li>
-<li>스킨/칭호 종류 및 가격</li>
-<li>시즌제 검토 / 모바일 앱 확장</li>
 </ul>
 </div>
 
