@@ -52,6 +52,77 @@ function show(id) { const el = $(id); if (el) el.style.display = ""; }
 function hide(id) { const el = $(id); if (el) el.style.display = "none"; }
 function setText(id, text) { const el = $(id); if (el) el.textContent = text; }
 
+// ===== 튜토리얼 섹션 렌더링 =====
+const TUTORIAL_ITEMS = [
+  {
+    key: "firstTrade",
+    title: "첫 경매 등록",
+    desc: "스트리머를 검색해 경매를 등록해보세요",
+    reward: 10000,
+    cta: {label: "검색하기", fn: "focusSearch()"},
+  },
+  {
+    key: "firstPurchase",
+    title: "첫 낙찰",
+    desc: "진행 중인 경매에 입찰해 낙찰을 받아보세요",
+    reward: 30000,
+    cta: null,
+  },
+  {
+    key: "firstSelloff",
+    title: "첫 손절 경매",
+    desc: "보유 매물을 손절 경매로 등록해보세요",
+    reward: 5000,
+    cta: null,
+  },
+  {
+    key: "firstForceLiquidation",
+    title: "강제청산 보상",
+    desc: "경매 요청에 24시간 미응답 시 자동 지급됩니다",
+    reward: 10000,
+    cta: null,
+  },
+];
+
+function renderTutorialSection(userData) {
+  const section = $("tutorialSection");
+  const list = $("tutorialList");
+  const progressBadge = $("tutorialProgress");
+  if (!section || !list) return;
+
+  if (!userData) {
+    section.style.display = "none";
+    return;
+  }
+
+  const rewards = userData.tutorialRewards || {};
+  const doneCount = TUTORIAL_ITEMS.filter((it) => rewards[it.key]).length;
+  const allDone = doneCount === TUTORIAL_ITEMS.length;
+
+  if (progressBadge) {
+    progressBadge.textContent = `${doneCount} / ${TUTORIAL_ITEMS.length}`;
+    progressBadge.className = "tutorial-progress-badge" + (allDone ? " all-done" : "");
+  }
+
+  list.innerHTML = TUTORIAL_ITEMS.map((it) => {
+    const done = !!rewards[it.key];
+    const ctaHtml = (!done && it.cta) ?
+      `<button class="tutorial-cta" onclick="${it.cta.fn}">${it.cta.label}</button>` : "";
+    return `
+      <div class="tutorial-item${done ? " tutorial-item--done" : ""}">
+        <div class="tutorial-item-top">
+          <span class="tutorial-check">${done ? "✅" : "⭕"}</span>
+          <span class="tutorial-title">${it.title}</span>
+          <span class="tutorial-reward">+${it.reward.toLocaleString("ko-KR")}G</span>
+        </div>
+        <div class="tutorial-desc">${it.desc}</div>
+        ${ctaHtml}
+      </div>`;
+  }).join("");
+
+  section.style.display = "";
+}
+
 // ===== 튜토리얼 토스트 =====
 const TUTORIAL_REWARD_LABELS = {
   firstTrade: "첫 경매 등록",
@@ -210,6 +281,9 @@ async function processUserLogin(user) {
     // 보유 매물 로드
     loadMyHoldings(user.uid);
 
+    // 튜토리얼 섹션 렌더링
+    renderTutorialSection(userData);
+
     // 입찰 UI 갱신
     updateBidUI();
   } catch (e) {
@@ -231,6 +305,7 @@ watchAuthState(async (user) => {
     currentUserData = null;
     updateAuthUI(null, null);
     loadMyHoldings(null);
+    renderTutorialSection(null);
     try {
       await loginAnonymous();
     } catch (e) {
@@ -836,7 +911,16 @@ window.handleRegisterAuction = async function() {
       `대기열 ${result.queuePosition}번째에 등록됐습니다.`;
     log(msg);
 
-    if (result.tutorialReward) showTutorialToast(result.tutorialReward);
+    if (result.tutorialReward) {
+      showTutorialToast(result.tutorialReward);
+      result.tutorialReward.forEach((r) => {
+        if (currentUserData) {
+          if (!currentUserData.tutorialRewards) currentUserData.tutorialRewards = {};
+          currentUserData.tutorialRewards[r.type] = true;
+        }
+      });
+      renderTutorialSection(currentUserData);
+    }
   } catch (e) {
     log(`경매 등록 실패: ${e.message}`, true);
     // 에러 메시지 표시

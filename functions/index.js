@@ -461,6 +461,7 @@ exports.initializeUser = onCall(
             displayName: userData.displayName || null,
             blockedListingIds: userData.blockedListingIds || [],
             onboardingStep: userData.onboardingStep ?? 4,
+            tutorialRewards: userData.tutorialRewards || {},
           };
         }
 
@@ -510,6 +511,7 @@ exports.initializeUser = onCall(
           displayName: newUser.displayName,
           blockedListingIds: [],
           onboardingStep: 0,
+          tutorialRewards: {},
         };
       });
 

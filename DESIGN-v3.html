@@ -191,14 +191,15 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>메인 UI</td><td>실시간 경매 표시(RTDB), 대기열, 입찰 기록, 스트리머 검색, 내 보유 매물 패널 (보류 요청 승인/거부 포함)</td></tr>
 <tr><td>검색 UI</td><td>보유자 있는 매물 → "경매 요청 보내기" 버튼 · 요청 접수됨 뱃지 · 면역 기간 표시</td></tr>
 <tr><td>경매 수수료 5%</td><td>유형 B·C 낙찰 시 판매자에게 낙찰가 × 95% 지급 (유형 A는 판매자 없어 해당 없음)</td></tr>
-<tr><td>튜토리얼</td><td>첫 낙찰 보상 지급</td></tr>
+<tr><td>튜토리얼 보상 (전체)</td><td>첫 낙찰 30,000G · 첫 경매 등록 10,000G · 첫 손절 5,000G · 첫 강제청산 10,000G — 서버에서 자동 지급, 토스트 알림</td></tr>
+<tr><td>튜토리얼 UI</td><td>메인페이지 내 튜토리얼 진행 현황 섹션 — 4개 미션 체크리스트, 완료 수 배지, 미완료 시 행동 유도 버튼</td></tr>
 <tr><td>기반</td><td>Firestore/RTDB 보안 규칙 (auctionRequests 포함), 모바일 반응형 UI</td></tr>
 </table>
 
 <h3>🔄 부분 구현</h3>
 <table>
 <tr><th>항목</th><th>구현된 부분</th><th>미구현 부분</th></tr>
-<tr><td>튜토리얼 보상</td><td>첫 낙찰(firstPurchase)</td><td>첫 등록, 첫 손절, 첫 강제청산 보상</td></tr>
+<tr><td colspan="3" style="color:#6b7280;font-style:italic;text-align:center">현재 미구현 항목 없음</td></tr>
 </table>
 
 <h3>❌ 미구현</h3>
@@ -677,7 +678,6 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <li>시세 감가상각 (7일 주기 -5%, 하한 50,000G)</li>
 <li>휴면 매물 강제 회수</li>
 <li>출석/광고 보상 시스템</li>
-<li>나머지 튜토리얼 보상 (첫 등록, 첫 손절, 첫 강제청산)</li>
 <li>Cloud Scheduler 도입 (클라이언트 트리거 대체)</li>
 <li>관리자 페이지</li>
 </ul>
