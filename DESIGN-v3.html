@@ -190,6 +190,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>익명 제한</td><td>경매 등록 후 1시간 재등록 쿨다운 (구글 면제)</td></tr>
 <tr><td>메인 UI</td><td>실시간 경매 표시(RTDB), 대기열, 입찰 기록, 스트리머 검색, 내 보유 매물 패널 (보류 요청 승인/거부 포함)</td></tr>
 <tr><td>검색 UI</td><td>보유자 있는 매물 → "경매 요청 보내기" 버튼 · 요청 접수됨 뱃지 · 면역 기간 표시</td></tr>
+<tr><td>경매 수수료 5%</td><td>유형 B·C 낙찰 시 판매자에게 낙찰가 × 95% 지급 (유형 A는 판매자 없어 해당 없음)</td></tr>
 <tr><td>튜토리얼</td><td>첫 낙찰 보상 지급</td></tr>
 <tr><td>기반</td><td>Firestore/RTDB 보안 규칙 (auctionRequests 포함), 모바일 반응형 UI</td></tr>
 </table>
@@ -197,14 +198,12 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <h3>🔄 부분 구현</h3>
 <table>
 <tr><th>항목</th><th>구현된 부분</th><th>미구현 부분</th></tr>
-<tr><td>경매 수수료 5%</td><td>FEE_RATE 상수, 유형 B·C 낙찰 정산 적용</td><td>유형 A는 판매자 없어 해당 없음 (완전 적용)</td></tr>
 <tr><td>튜토리얼 보상</td><td>첫 낙찰(firstPurchase)</td><td>첫 등록, 첫 손절, 첫 강제청산 보상</td></tr>
 </table>
 
 <h3>❌ 미구현</h3>
 <table>
 <tr><th>항목</th><th>비고</th></tr>
-<tr><td>유형 C — 손절 경매 Cloud Function</td><td>손절 등록/유찰 처리 로직 없음</td></tr>
 <tr><td>신고/차단 시스템</td><td>isMosaicked 필드만 존재, reportListing 미작성</td></tr>
 <tr><td>경매 히스토리 열람 (BM)</td><td>auctionHistory 저장만 됨, 열람 기능 없음</td></tr>
 <tr><td>매물 상세 페이지</td><td>listing.html 없음</td></tr>
@@ -342,7 +341,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <div class="stat"><div class="stat-label">대기열</div><div class="stat-value">최대 5개</div></div>
 <div class="stat"><div class="stat-label">스나이핑 방지</div><div class="stat-value">15초 연장</div></div>
 <div class="stat"><div class="stat-label">연장 횟수</div><div class="stat-value">무제한</div></div>
-<div class="stat"><div class="stat-label">경매 수수료</div><div class="stat-value">5% <span class="badge badge-todo" style="font-size:10px">미적용</span></div></div>
+<div class="stat"><div class="stat-label">경매 수수료</div><div class="stat-value">5% <span class="badge badge-done" style="font-size:10px">적용됨</span></div></div>
 </div>
 
 <h3>4.3 입찰 규칙</h3>
@@ -638,7 +637,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
   <div class="timeline-dot dot-todo">8</div>
   <div>
     <div class="timeline-title">Step 8 — 마무리</div>
-    <div class="timeline-desc">유형 B/C 완성, 강제청산, 경매 수수료, 에러 처리 강화, 베타 테스트</div>
+    <div class="timeline-desc">유형 B/C 완성 ✅, 강제청산 ✅, 경매 수수료 ✅, 에러 처리 강화, 베타 테스트</div>
   </div>
 </div>
 </div>
@@ -654,7 +653,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <div class="checklist-item"><input type="checkbox" checked> <span>유찰 시 보유 유지 (손절 경매) — 유형 C 구현 완료</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>보유자 승인/거절 정상 작동 (유형 B) — 경매 요청·승인·거부·24h 만료 구현</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>미회신 강제청산 작동 — 24h 미회신 시 시세 100% 환급 + 무보유 전환</span></div>
-<div class="checklist-item"><input type="checkbox"> <span>경매 수수료 5% 정확히 차감 — FEE_RATE 선언만, 미적용</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>경매 수수료 5% 적용 — 유형 B·C 낙찰 시 판매자 95% 정산 (유형 A는 판매자 없어 해당 없음)</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>보유 한도 초과 시 입찰 차단</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>자기 매물 입찰 차단</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>스나이핑 방지 (15초 연장) 작동</span></div>
