@@ -873,6 +873,13 @@
   background: #1a1d24;
   border: 1px solid #2a2e38;
   border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.holding-card:hover {
+  border-color: #f5d142;
+  background: #1f2330;
 }
 
 .holding-img {

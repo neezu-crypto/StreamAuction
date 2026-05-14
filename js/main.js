@@ -110,7 +110,7 @@ async function loadMyHoldings(uid) {
       const d = snap.data();
       const img = d.profileImageUrl || "assets/images/default-avatar.svg";
       return `
-        <div class="holding-card">
+        <div class="holding-card" onclick="searchByHolding('${d.soopId}')">
           <img class="holding-img" src="${img}"
             onerror="this.src='assets/images/default-avatar.svg'" alt="프로필">
           <div class="holding-info">
@@ -737,6 +737,16 @@ window.handleRegisterAuction = async function() {
       btn.textContent = "경매 등록";
     }
   }
+};
+
+// ===== 보유 매물 클릭 검색 =====
+window.searchByHolding = function(soopId) {
+  const input = $("searchInput");
+  if (input) {
+    input.value = soopId;
+    input.scrollIntoView({behavior: "smooth", block: "center"});
+  }
+  handleSearch();
 };
 
 // ===== 검색 포커스 =====
