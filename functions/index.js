@@ -122,9 +122,17 @@ async function doFinalizeAuction(current) {
     lastLoginAt: now,
   });
 
-  // 3. 신규 매물 경매는 판매자 없으므로 낙찰금 시스템 회수
-  //    (유찰 자동 낙찰이든 일반 낙찰이든 신규 매물은 G 회수)
-  //    → 낙찰자는 이미 에스크로로 차감됨 → 추가 처리 불필요
+  // 3. 신규 매물 경매: 낙찰금 시스템 회수
+  //    낙찰자는 이미 에스크로로 차감됨 → 추가 처리 불필요
+  //    단, 타 유저가 낙찰한 경우 등록자에게 basePrice 환급
+  if (isWon && winnerId !== registeredBy) {
+    const registrantRef = db.collection("users").doc(registeredBy);
+    const refundAmount = config.basePrice || 50000;
+    batch.update(registrantRef, {
+      balance: FieldValue.increment(refundAmount),
+    });
+    logger.info(`등록자 basePrice 환급: uid=${registeredBy}, amount=${refundAmount}`);
+  }
 
   // 4. auctionHistory 저장
   const historyRef = db.collection("auctionHistory").doc(auctionId);
