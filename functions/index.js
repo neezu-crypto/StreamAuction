@@ -43,29 +43,82 @@ async function checkAndFinalizeExpiredAuction() {
 }
 
 // ============================================
-// 헬퍼: 만료된 경매 요청 자동 처리
+// 헬퍼: 만료된 경매 요청 강제청산 처리
+// 24시간 미회신 → 보유자 시세 100% 환급 + 무보유 전환
 // ============================================
 async function checkAndFinalizeExpiredRequests() {
   const now = Date.now();
-  const expired = await db.collection("auctionRequests")
+  const expiredSnap = await db.collection("auctionRequests")
       .where("status", "==", "pending")
       .where("expiresAt", "<=", now)
       .get();
 
-  if (expired.empty) return;
+  if (expiredSnap.empty) return;
+
+  const requests = expiredSnap.docs.map((d) => ({ref: d.ref, data: d.data()}));
+
+  // 리스팅 일괄 조회
+  const listingSnaps = await Promise.all(
+      requests.map((r) => db.collection("listings").doc(r.data.listingId).get()),
+  );
 
   const batch = db.batch();
-  expired.docs.forEach((docSnap) => {
-    const data = docSnap.data();
-    batch.update(docSnap.ref, {
+  // 같은 보유자의 복수 만료를 합산하기 위해 누적
+  const ownerUpdates = {}; // ownerId → {balance, listingIds}
+
+  requests.forEach((req, i) => {
+    const listingSnap = listingSnaps[i];
+    const reqData = req.data;
+
+    // 요청 상태 만료로 변경
+    batch.update(req.ref, {
       status: "expired",
       respondedAt: FieldValue.serverTimestamp(),
     });
-    const listingRef = db.collection("listings").doc(data.listingId);
-    batch.update(listingRef, {pendingRequestId: null});
+
+    if (!listingSnap.exists) return;
+    const listing = listingSnap.data();
+
+    // 소유자가 요청 당시와 다르면 강제청산 건너뜀 (소유권 이미 변경됨)
+    if (!listing.ownerId || listing.ownerId !== reqData.ownerId) {
+      batch.update(listingSnap.ref, {pendingRequestId: null});
+      logger.info(`만료 요청 ${reqData.requestId}: 소유자 변경됨, 강제청산 건너뜀`);
+      return;
+    }
+
+    const refundAmount = listing.currentPrice || 0;
+
+    // 매물 무보유 전환
+    batch.update(listingSnap.ref, {
+      ownerId: null,
+      pendingRequestId: null,
+      immunityUntil: null,
+    });
+
+    // 보유자 잔액/보유 목록 업데이트 누적
+    if (!ownerUpdates[listing.ownerId]) {
+      ownerUpdates[listing.ownerId] = {balance: 0, listingIds: []};
+    }
+    ownerUpdates[listing.ownerId].balance += refundAmount;
+    ownerUpdates[listing.ownerId].listingIds.push(reqData.listingId);
+
+    logger.info(
+        `강제청산: listingId=${reqData.listingId}, ownerId=${listing.ownerId}, 환급=${refundAmount}G`,
+    );
   });
+
+  // 보유자별 잔액 환급 + 보유 목록 제거 (소유자가 동일한 경우 합산 적용)
+  for (const [ownerId, updates] of Object.entries(ownerUpdates)) {
+    const ownerRef = db.collection("users").doc(ownerId);
+    batch.update(ownerRef, {
+      balance: FieldValue.increment(updates.balance),
+      ownedListingIds: FieldValue.arrayRemove(...updates.listingIds),
+      ownedCount: FieldValue.increment(-updates.listingIds.length),
+    });
+  }
+
   await batch.commit();
-  logger.info(`만료된 경매 요청 ${expired.size}건 처리`);
+  logger.info(`만료된 경매 요청 ${expiredSnap.size}건 강제청산 처리 완료`);
 }
 
 // ============================================

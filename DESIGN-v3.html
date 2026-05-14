@@ -183,7 +183,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>인증</td><td>익명/구글 로그인, 익명→구글 전환 (자산 승계 + 보너스), 신규 유저 환영 모달</td></tr>
 <tr><td>경매 핵심</td><td>등록 → 대기열(최대 5개) → 5분 경매 → 낙찰/유찰 자동 정산</td></tr>
 <tr><td>경매 유형 A</td><td>신규/보유자 없는 매물 경매 — 등록비 50,000G 차감 · 타 유저 낙찰 시 환급 · 유찰 시 등록자 자동 낙찰</td></tr>
-<tr><td>경매 유형 B</td><td>보유자 승인 경매 — 요청(requestAuction) · 승인/거부(respondToAuctionRequest) · 낙찰 시 판매자 95% 정산 · 유찰 시 소유 유지 + 24h 면역 · 24h 미회신 시 요청 자동 만료</td></tr>
+<tr><td>경매 유형 B</td><td>보유자 승인 경매 — 요청(requestAuction) · 승인/거부(respondToAuctionRequest) · 낙찰 시 판매자 95% 정산 · 유찰 시 소유 유지 + 24h 면역 · 24h 미회신 시 강제청산(보유자 시세 100% 환급 + 무보유 전환)</td></tr>
 <tr><td>입찰</td><td>에스크로 방식 (즉시 차감, 갱신 시 환불), 스나이핑 방지 15초 연장</td></tr>
 <tr><td>보호 규칙</td><td>자기 매물 입찰 차단, 보유 한도 초과 차단, 계정 정지(isBanned) 체크</td></tr>
 <tr><td>익명 제한</td><td>경매 등록 후 1시간 재등록 쿨다운 (구글 면제)</td></tr>
@@ -196,7 +196,6 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <h3>🔄 부분 구현</h3>
 <table>
 <tr><th>항목</th><th>구현된 부분</th><th>미구현 부분</th></tr>
-<tr><td>유형 B 강제청산</td><td>24h 미회신 시 요청 자동 만료(expired) 처리</td><td>만료 시 보유자에게 시세 100% 환급 후 무보유 전환(forceLiquidate) 미작성</td></tr>
 <tr><td>유형 C 손절 경매</td><td>검색 결과에 "손절 경매 등록" 버튼 노출</td><td>Cloud Function 미구현 (registerAuction이 신규만 처리)</td></tr>
 <tr><td>경매 수수료 5%</td><td>FEE_RATE 상수 선언, 유형 B 낙찰 정산에 적용</td><td>유형 A/C에는 미적용 (신규 매물은 판매자 없어 해당 없음, C 미구현)</td></tr>
 <tr><td>튜토리얼 보상</td><td>첫 낙찰(firstPurchase)</td><td>첫 등록, 첫 손절, 첫 강제청산 보상</td></tr>
@@ -205,7 +204,6 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <h3>❌ 미구현</h3>
 <table>
 <tr><th>항목</th><th>비고</th></tr>
-<tr><td>유형 B 강제청산 (forceLiquidate)</td><td>24h 미회신 → 시세 환급 + 무보유 전환 로직 없음 (현재는 만료만)</td></tr>
 <tr><td>유형 C — 손절 경매 Cloud Function</td><td>손절 등록/유찰 처리 로직 없음</td></tr>
 <tr><td>신고/차단 시스템</td><td>isMosaicked 필드만 존재, reportListing 미작성</td></tr>
 <tr><td>경매 히스토리 열람 (BM)</td><td>auctionHistory 저장만 됨, 열람 기능 없음</td></tr>
@@ -327,8 +325,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 2. 유저A에게 내 보유 매물 패널에 승인/거부 버튼 노출 (24시간 기한)
 3-A. 승인 (respondToAuctionRequest approve) → 경매 대기열 추가, 시작가는 유저A가 지정
 3-B. 거부 (respondToAuctionRequest reject) → 해당 매물 24시간 면역 설정
-3-C. 24시간 미회신 → 요청 자동 만료(expired) ← 강제청산은 미구현</pre>
-<p style="font-size:12px;color:#888;margin:0 0 12px">⚠️ 미회신 강제청산(forceLiquidate)은 미구현 — 현재는 요청이 만료될 뿐 보유자에게 환급/무보유 전환은 없음</p>
+3-C. 24시간 미회신 → 강제청산 (보유자 시세 100% 환급 + 무보유 전환)</pre>
 
 <h4>유형 C — 손절 경매 <span class="badge badge-new">UI만 부분 구현</span></h4>
 <pre>1. 보유자가 본인 매물 경매 등록 (시작가 5만G)
@@ -617,7 +614,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
     <div class="timeline-title">Step 5 — 경매 Cloud Functions <span class="badge badge-new">부분 완료</span></div>
     <div class="timeline-desc">
       <strong>완료:</strong> registerAuction(유형A), placeBid, finalizeAuction, searchListing, getAuctionState, requestAuction(유형B), respondToAuctionRequest(유형B), checkAndFinalizeExpiredRequests<br>
-      <strong>미구현:</strong> forceLiquidate (강제청산 — 미회신 시 시세 환급+무보유 전환), 유형C registerAuction, 경매 수수료 A/C 적용
+      <strong>미구현:</strong> 유형C registerAuction, 경매 수수료 A/C 적용
     </div>
   </div>
 </div>
@@ -654,7 +651,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <div class="checklist-item"><input type="checkbox" checked> <span>유찰 시 등록자 자동 낙찰 (신규 매물)</span></div>
 <div class="checklist-item"><input type="checkbox"> <span>유찰 시 보유 유지 (손절 경매) — 유형 C 미구현</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>보유자 승인/거절 정상 작동 (유형 B) — 경매 요청·승인·거부·24h 만료 구현</span></div>
-<div class="checklist-item"><input type="checkbox"> <span>미회신 강제청산 작동 — forceLiquidate 미구현 (만료만 처리)</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>미회신 강제청산 작동 — 24h 미회신 시 시세 100% 환급 + 무보유 전환</span></div>
 <div class="checklist-item"><input type="checkbox"> <span>경매 수수료 5% 정확히 차감 — FEE_RATE 선언만, 미적용</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>보유 한도 초과 시 입찰 차단</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>자기 매물 입찰 차단</span></div>
@@ -669,7 +666,6 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <h2>14. 남은 개발 과제</h2>
 <h3>우선순위 높음 — MVP 완성을 위한 필수 항목</h3>
 <ul>
-<li>유형 B 강제청산 (forceLiquidate) — 24h 미회신 시 시세 100% 환급 + 무보유 전환</li>
 <li>유형 C — 손절 경매 Cloud Function 구현 (registerAuction 유형C 분기, 유찰 처리)</li>
 <li>경매 수수료 5% — 유형 C 낙찰 정산 시 적용 (유형 B는 이미 적용)</li>
 <li>신고/차단 시스템 (reportListing, blockListing)</li>
