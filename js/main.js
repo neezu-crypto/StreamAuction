@@ -573,9 +573,12 @@ function showSearchFoundResult(listing, query) {
   const ownerText = listing.isOwnedByMe ?
     "내 매물" : (listing.ownerId ? "보유자 있음" : "주인 없음");
 
+  const isAnonymous = currentUserData?.authType === "anonymous";
   let requestBtn = "";
   if (!listing.isOwnedByMe && listing.ownerId) {
-    if (listing.pendingRequestId) {
+    if (isAnonymous) {
+      requestBtn = `<span class="request-status-badge">경매 요청은 Google 계정만 가능합니다</span>`;
+    } else if (listing.pendingRequestId) {
       requestBtn = `<span class="request-status-badge">요청 접수됨 · 보유자 응답 대기 중</span>`;
     } else if (listing.immunityUntil && Date.now() < listing.immunityUntil) {
       const mins = Math.ceil((listing.immunityUntil - Date.now()) / 60000);

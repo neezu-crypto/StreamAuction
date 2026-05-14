@@ -1071,6 +1071,15 @@ exports.requestAuction = onCall(
         throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
       }
 
+      // 익명 계정은 경매 요청 불가
+      const authProvider = request.auth.token.firebase.sign_in_provider;
+      if (authProvider === "anonymous") {
+        throw new HttpsError(
+            "permission-denied",
+            "경매 요청은 Google 계정에서만 가능합니다. 계정을 전환해주세요.",
+        );
+      }
+
       await checkAndFinalizeExpiredAuction();
       await checkAndFinalizeExpiredRequests();
 
