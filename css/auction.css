@@ -938,6 +938,32 @@
   color: #6b7280;
 }
 
+/* ===== Type C: 손절 경매 버튼 ===== */
+.btn-selloff {
+  padding: 10px 20px;
+  background: #b45309;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-selloff:hover {
+  background: #92400e;
+}
+
+.btn-selloff--small {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  border-radius: 6px;
+  margin-top: 4px;
+  display: block;
+  width: 100%;
+}
+
 /* ===== Type B: 경매 요청 UI ===== */
 .btn-request {
   padding: 10px 20px;

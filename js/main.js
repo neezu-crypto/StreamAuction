@@ -136,6 +136,12 @@ async function loadMyHoldings(uid) {
           </div>
         </div>` : "";
 
+      const selloffBtn = !d.isLocked ? `
+        <button class="btn-selloff btn-selloff--small"
+          onclick="event.stopPropagation();openRegisterModal('${d.soopId}','${escapeHtml(d.displayName)}',true,${d.currentPrice||50000})">
+          손절 등록
+        </button>` : `<span class="request-status-badge">경매 진행 중</span>`;
+
       return `
         <div class="holding-card${pending ? " holding-card--has-request" : ""}" onclick="searchByHolding('${d.soopId}')">
           <img class="holding-img" src="${img}"
@@ -147,6 +153,7 @@ async function loadMyHoldings(uid) {
           <div class="holding-price">
             <div class="holding-price-label">현재 시세</div>
             <div class="holding-price-value">${formatG(d.currentPrice)}</div>
+            ${selloffBtn}
           </div>
           ${requestBanner}
         </div>`;
@@ -616,7 +623,7 @@ function showSearchFoundResult(listing, query) {
           </button>
         ` : ""}
         ${listing.isOwnedByMe ? `
-          <button class="btn-secondary" onclick="openRegisterModal('${escapeHtml(listing.soopId)}', '${escapeHtml(listing.displayName)}', true)">
+          <button class="btn-selloff" onclick="openRegisterModal('${escapeHtml(listing.soopId)}', '${escapeHtml(listing.displayName)}', true, ${listing.currentPrice || 50000})">
             손절 경매 등록
           </button>
         ` : ""}
@@ -645,17 +652,45 @@ function showSearchNewListing(query, isIdSearch) {
 }
 
 // ===== 경매 등록 모달 =====
-window.openRegisterModal = function(soopId = "", displayName = "", isSelloff = false) {
+window.openRegisterModal = function(soopId = "", displayName = "", isSelloff = false, currentPrice = null) {
   const modal = $("registerModal");
   if (!modal) return;
 
   const soopInput = $("regSoopId");
   const nickInput = $("regNickname");
   const priceInput = $("regStartPrice");
+  const noticeEl = modal.querySelector(".register-notice ul");
+  const modalTitle = modal.querySelector(".modal-header h2");
 
-  if (soopInput) soopInput.value = soopId;
-  if (nickInput) nickInput.value = displayName;
-  if (priceInput) priceInput.value = 50000;
+  if (soopInput) {
+    soopInput.value = soopId;
+    soopInput.disabled = isSelloff;
+  }
+  if (nickInput) {
+    nickInput.value = displayName;
+    nickInput.disabled = isSelloff;
+  }
+  if (priceInput) {
+    priceInput.value = isSelloff && currentPrice ? currentPrice : 50000;
+  }
+
+  if (modalTitle) {
+    modalTitle.textContent = isSelloff ? "손절 경매 등록" : "경매 등록";
+  }
+
+  if (noticeEl) {
+    if (isSelloff) {
+      noticeEl.innerHTML = `
+        <li>낙찰 시 낙찰가의 <strong>95%</strong>가 즉시 지급됩니다 (수수료 5%)</li>
+        <li>유찰 시 경매가 취소되고 <strong>매물은 그대로 유지</strong>됩니다</li>
+        <li>등록 후 취소는 불가합니다</li>`;
+    } else {
+      noticeEl.innerHTML = `
+        <li>유찰 시 시작가로 자동 낙찰됩니다</li>
+        <li>잔액에서 시작가가 차감될 수 있습니다</li>
+        <li>등록 후 취소는 불가합니다</li>`;
+    }
+  }
 
   clearRegisterErrors();
   updateProfilePreview();
@@ -666,7 +701,13 @@ window.openRegisterModal = function(soopId = "", displayName = "", isSelloff = f
 
 window.closeRegisterModal = function() {
   const modal = $("registerModal");
-  if (modal) modal.classList.remove("show");
+  if (!modal) return;
+  modal.classList.remove("show");
+  // 비활성화된 입력 필드 복원
+  const soopInput = $("regSoopId");
+  const nickInput = $("regNickname");
+  if (soopInput) soopInput.disabled = false;
+  if (nickInput) nickInput.disabled = false;
 };
 
 function clearRegisterErrors() {
@@ -748,16 +789,19 @@ window.handleRegisterAuction = async function() {
   }
 
   try {
+    const isSelloff = pendingRegisterData?.isSelloff;
     const profileUrl = getSoopProfileUrl(soopId);
     const result = await registerAuction({
       soopId: soopId.toLowerCase(),
       displayName,
       startPrice,
       profileImageUrl: profileUrl,
+      type: isSelloff ? "selloff" : "new",
     });
 
     log(`경매 등록 성공: ${displayName}, ${formatG(startPrice)}, 상태=${result.status}`);
     closeRegisterModal();
+    if (isSelloff) loadMyHoldings(auth.currentUser?.uid);
 
     // 결과 메시지
     const msg = result.status === "started" ?

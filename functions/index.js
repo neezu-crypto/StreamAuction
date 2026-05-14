@@ -134,10 +134,11 @@ async function doFinalizeAuction(current) {
     bidCount, startedAt,
   } = current;
 
-  const isHolder = type === "holder";
+  // holder = Type B (보유자 승인), selloff = Type C (손절)
+  const isHolder = type === "holder" || type === "selloff";
   const isWon = bidCount > 0 && !!highestBidderId;
   const finalPrice = isWon ? currentPrice : startPrice;
-  // Type A 유찰: 등록자 자동 낙찰 / Type B 유찰: 승자 없음
+  // Type A 유찰: 등록자 자동 낙찰 / Type B·C 유찰: 승자 없음 (소유 유지)
   const winnerId = isWon ? highestBidderId : (isHolder ? null : registeredBy);
 
   logger.info(`경매 정산: ${auctionId}, type=${type}, 낙찰=${isWon}, 낙찰자=${winnerId}, 가격=${finalPrice}`);
@@ -169,12 +170,13 @@ async function doFinalizeAuction(current) {
         immunityUntil: null,
       });
     } else {
-      // 유찰: 소유권 유지, 면역 기간 24시간 설정
-      batch.update(listingRef, {
-        pendingRequestId: null,
-        isLocked: false,
-        immunityUntil: Date.now() + 24 * 60 * 60 * 1000,
-      });
+      // 유찰: 소유권 유지
+      // Type B(holder)만 면역 기간 설정, Type C(selloff)는 자발적 등록이므로 불필요
+      const listingUpdate = {pendingRequestId: null, isLocked: false};
+      if (type === "holder") {
+        listingUpdate.immunityUntil = Date.now() + 24 * 60 * 60 * 1000;
+      }
+      batch.update(listingRef, listingUpdate);
     }
   } else {
     // Type A
@@ -646,21 +648,13 @@ exports.registerAuction = onCall(
 
       await checkAndFinalizeExpiredAuction();
 
-      const {soopId, displayName, startPrice, profileImageUrl} = request.data;
+      const {soopId, displayName, startPrice, profileImageUrl, type: auctionType} = request.data;
       const uid = request.auth.uid;
+      const isSelloff = auctionType === "selloff";
 
-      // 입력 검증
+      // 공통 입력 검증
       if (!soopId || !/^[a-zA-Z0-9]+$/.test(soopId)) {
         throw new HttpsError("invalid-argument", "유효하지 않은 soop ID입니다.");
-      }
-
-      if (!displayName || typeof displayName !== "string") {
-        throw new HttpsError("invalid-argument", "닉네임을 입력해주세요.");
-      }
-
-      // 이모지 차단
-      if (/\p{Extended_Pictographic}/u.test(displayName)) {
-        throw new HttpsError("invalid-argument", "닉네임에 이모지를 사용할 수 없습니다.");
       }
 
       if (!startPrice || startPrice < 50000) {
@@ -674,9 +668,84 @@ exports.registerAuction = onCall(
         throw new HttpsError("not-found", "유저 정보를 찾을 수 없습니다.");
       }
       const userData = userSnap.data();
-
       if (userData.isBanned) {
         throw new HttpsError("permission-denied", "이용이 제한된 계정입니다.");
+      }
+
+      const listingId = soopId.toLowerCase();
+      const listingRef = db.collection("listings").doc(listingId);
+
+      // ===== Type C: 손절 경매 =====
+      if (isSelloff) {
+        const listingSnap = await listingRef.get();
+        if (!listingSnap.exists || listingSnap.data().ownerId !== uid) {
+          throw new HttpsError(
+              "permission-denied",
+              "본인 소유 매물만 손절 경매를 등록할 수 있습니다.",
+          );
+        }
+        if (listingSnap.data().isLocked) {
+          throw new HttpsError(
+              "failed-precondition",
+              "해당 매물은 이미 경매가 진행 중입니다.",
+          );
+        }
+
+        // 대기열 크기 체크
+        const queueSnap = await rtdb.ref("auction/queue").once("value");
+        const queue = queueSnap.val() || {};
+        const queueSize = Object.keys(queue).length;
+        if (queueSize >= 5) {
+          throw new HttpsError("resource-exhausted", "대기열이 가득 찼습니다.");
+        }
+
+        // 현재 경매 / 대기열 중복 체크
+        const currentSnap = await rtdb.ref("auction/current").once("value");
+        const current = currentSnap.val();
+        if (current && current.status === "active" && current.listingId === listingId) {
+          throw new HttpsError("already-exists", "해당 매물은 현재 경매 중입니다.");
+        }
+        for (const key of Object.keys(queue)) {
+          if (queue[key].listingId === listingId) {
+            throw new HttpsError("already-exists", "해당 매물은 이미 대기열에 있습니다.");
+          }
+        }
+
+        const listingData = listingSnap.data();
+        const auctionId = db.collection("_").doc().id;
+        await rtdb.ref(`auction/queue/${auctionId}`).set({
+          auctionId,
+          listingId,
+          type: "selloff",
+          soopId: listingData.soopId,
+          displayName: listingData.displayName,
+          profileImageUrl: listingData.profileImageUrl || null,
+          registeredBy: uid,
+          sellerId: uid,
+          requestId: null,
+          startPrice,
+          queuedAt: Date.now(),
+        });
+
+        // 매물 잠금
+        await listingRef.update({isLocked: true});
+
+        logger.info(`손절 경매 등록: ${auctionId}, ${listingData.displayName}, 시작가=${startPrice}`);
+
+        if (!current || current.status !== "active") {
+          await startNextFromQueue();
+          return {success: true, auctionId, status: "started", message: "손절 경매가 시작됐습니다!"};
+        }
+        return {success: true, auctionId, status: "queued", queuePosition: queueSize + 1,
+          message: `대기열 ${queueSize + 1}번째에 등록됐습니다.`};
+      }
+
+      // ===== Type A: 신규/보유자 없는 매물 경매 =====
+      if (!displayName || typeof displayName !== "string") {
+        throw new HttpsError("invalid-argument", "닉네임을 입력해주세요.");
+      }
+      if (/\p{Extended_Pictographic}/u.test(displayName)) {
+        throw new HttpsError("invalid-argument", "닉네임에 이모지를 사용할 수 없습니다.");
       }
 
       // 익명 계정: 1시간 재등록 쿨다운
@@ -708,25 +777,18 @@ exports.registerAuction = onCall(
         );
       }
 
-      // 이미 매물 있으면 등록 불가
-      const listingId = soopId.toLowerCase();
-      const existingListing = await db.collection("listings").doc(listingId).get();
+      // 이미 보유자 있는 매물은 등록 불가
+      const existingListing = await listingRef.get();
       if (existingListing.exists && existingListing.data().ownerId) {
-        throw new HttpsError(
-            "already-exists",
-            "이미 보유자가 있는 매물입니다.",
-        );
+        throw new HttpsError("already-exists", "이미 보유자가 있는 매물입니다.");
       }
 
-      // 보유자 없는 매물 여부 확인 (등록 시 최소 시세 차감 대상)
       const isNoHolder = !existingListing.exists || !existingListing.data().ownerId;
 
-      // 최소 시세(basePrice) 로드
       const configSnap = await db.collection("system").doc("config").get();
       const config = configSnap.data();
       const basePrice = (config && config.basePrice) || 50000;
 
-      // 보유자 없는 경매 등록 시 basePrice 차감을 위한 잔액 체크
       if (isNoHolder && userData.balance < basePrice) {
         throw new HttpsError(
             "failed-precondition",
@@ -734,42 +796,27 @@ exports.registerAuction = onCall(
         );
       }
 
-      // 대기열 크기 체크 (최대 5개)
+      // 대기열 크기 체크
       const queueSnap = await rtdb.ref("auction/queue").once("value");
       const queue = queueSnap.val() || {};
       const queueSize = Object.keys(queue).length;
-
       if (queueSize >= 5) {
-        throw new HttpsError(
-            "resource-exhausted",
-            "대기열이 가득 찼습니다. 잠시 후 다시 시도해주세요.",
-        );
+        throw new HttpsError("resource-exhausted", "대기열이 가득 찼습니다. 잠시 후 다시 시도해주세요.");
       }
 
-      // 현재 경매에 이미 같은 매물이 있는지 체크
       const currentSnap = await rtdb.ref("auction/current").once("value");
       const current = currentSnap.val();
-      if (current && current.status === "active" &&
-          current.listingId === listingId) {
-        throw new HttpsError(
-            "already-exists",
-            "해당 매물은 현재 경매 중입니다.",
-        );
+      if (current && current.status === "active" && current.listingId === listingId) {
+        throw new HttpsError("already-exists", "해당 매물은 현재 경매 중입니다.");
       }
-
-      // 대기열에도 같은 매물 있는지 체크
       for (const key of Object.keys(queue)) {
         if (queue[key].listingId === listingId) {
-          throw new HttpsError(
-              "already-exists",
-              "해당 매물은 이미 대기열에 있습니다.",
-          );
+          throw new HttpsError("already-exists", "해당 매물은 이미 대기열에 있습니다.");
         }
       }
 
-      // 대기열에 추가
-      const auctionId = db.collection("_").doc().id; // 유니크 ID 생성
-      const newQueueItem = {
+      const auctionId = db.collection("_").doc().id;
+      await rtdb.ref(`auction/queue/${auctionId}`).set({
         auctionId,
         listingId,
         type: "new",
@@ -779,14 +826,12 @@ exports.registerAuction = onCall(
         registeredBy: uid,
         startPrice,
         queuedAt: Date.now(),
-      };
+      });
 
-      await rtdb.ref(`auction/queue/${auctionId}`).set(newQueueItem);
-
-      // 유저 문서 업데이트: 보유자 없는 경우 잔액 차감 + 익명 쿨다운 기록
       const userUpdate = {};
       if (isNoHolder) {
         userUpdate.balance = FieldValue.increment(-basePrice);
+        logger.info(`보유자 없는 경매 등록 차감: uid=${uid}, basePrice=${basePrice}`);
       }
       if (userData.authType === "anonymous") {
         userUpdate.lastAuctionRegisteredAt = Date.now();
@@ -794,28 +839,15 @@ exports.registerAuction = onCall(
       if (Object.keys(userUpdate).length > 0) {
         await userRef.update(userUpdate);
       }
-      if (isNoHolder) {
-        logger.info(`보유자 없는 경매 등록 차감: uid=${uid}, basePrice=${basePrice}`);
-      }
 
       logger.info(`경매 등록: ${auctionId}, ${displayName}, 시작가=${startPrice}`);
 
-      // 현재 경매가 없으면 즉시 시작
       if (!current || current.status !== "active") {
         await startNextFromQueue();
-        return {
-          success: true,
-          auctionId,
-          status: "started",
-          message: "경매가 시작됐습니다!",
-        };
+        return {success: true, auctionId, status: "started", message: "경매가 시작됐습니다!"};
       }
-
       return {
-        success: true,
-        auctionId,
-        status: "queued",
-        queuePosition: queueSize + 1,
+        success: true, auctionId, status: "queued", queuePosition: queueSize + 1,
         message: `대기열 ${queueSize + 1}번째에 등록됐습니다.`,
       };
     },

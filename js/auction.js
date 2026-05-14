@@ -136,8 +136,8 @@ export async function searchListing(query) {
 }
 
 // ===== 경매 등록 =====
-export async function registerAuction({soopId, displayName, startPrice, profileImageUrl}) {
-  const result = await registerAuctionFn({soopId, displayName, startPrice, profileImageUrl});
+export async function registerAuction({soopId, displayName, startPrice, profileImageUrl, type}) {
+  const result = await registerAuctionFn({soopId, displayName, startPrice, profileImageUrl, type});
   return result.data;
 }
 
