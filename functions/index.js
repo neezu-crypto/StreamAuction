@@ -528,13 +528,15 @@ exports.registerAuction = onCall(
         throw new HttpsError("permission-denied", "이용이 제한된 계정입니다.");
       }
 
-      // 신규 계정 24시간 제한 (익명만 적용, 구글은 면제)
-      if (userData.authType === "anonymous") {
-        const createdAt = userData.createdAt.toMillis();
-        if (Date.now() - createdAt < 24 * 60 * 60 * 1000) {
+      // 익명 계정: 1시간 재등록 쿨다운
+      if (userData.authType === "anonymous" && userData.lastAuctionRegisteredAt) {
+        const elapsed = Date.now() - userData.lastAuctionRegisteredAt;
+        const cooldownMs = 60 * 60 * 1000;
+        if (elapsed < cooldownMs) {
+          const remaining = Math.ceil((cooldownMs - elapsed) / 60000);
           throw new HttpsError(
-              "permission-denied",
-              "익명 계정은 가입 후 24시간 이후에 경매 등록이 가능합니다. Google 계정으로 전환하면 즉시 등록할 수 있어요!",
+              "resource-exhausted",
+              `익명 계정은 경매 등록 후 1시간 뒤 재등록할 수 있습니다. 약 ${remaining}분 후 가능합니다.`,
           );
         }
       }
@@ -630,11 +632,18 @@ exports.registerAuction = onCall(
 
       await rtdb.ref(`auction/queue/${auctionId}`).set(newQueueItem);
 
-      // 보유자 없는 매물 등록 시 최소 시세만큼 즉시 차감
+      // 유저 문서 업데이트: 보유자 없는 경우 잔액 차감 + 익명 쿨다운 기록
+      const userUpdate = {};
       if (isNoHolder) {
-        await userRef.update({
-          balance: FieldValue.increment(-basePrice),
-        });
+        userUpdate.balance = FieldValue.increment(-basePrice);
+      }
+      if (userData.authType === "anonymous") {
+        userUpdate.lastAuctionRegisteredAt = Date.now();
+      }
+      if (Object.keys(userUpdate).length > 0) {
+        await userRef.update(userUpdate);
+      }
+      if (isNoHolder) {
         logger.info(`보유자 없는 경매 등록 차감: uid=${uid}, basePrice=${basePrice}`);
       }
 

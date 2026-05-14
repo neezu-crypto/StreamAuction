@@ -723,7 +723,7 @@ window.handleRegisterAuction = async function() {
   } catch (e) {
     log(`경매 등록 실패: ${e.message}`, true);
     // 에러 메시지 표시
-    if (e.message.includes("24시간")) {
+    if (e.message.includes("재등록")) {
       setText("regSoopIdError", e.message);
     } else if (e.message.includes("한도")) {
       setText("regNicknameError", e.message);
