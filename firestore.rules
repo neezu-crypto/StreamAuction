@@ -43,6 +43,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // auctionRequests: 요청자 또는 보유자(ownerId)만 읽기, 쓰기는 Cloud Functions만
+    match /auctionRequests/{requestId} {
+      allow read: if isAuthenticated()
+        && (resource.data.requesterId == request.auth.uid
+            || resource.data.ownerId == request.auth.uid);
+      allow write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

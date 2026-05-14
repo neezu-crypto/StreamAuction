@@ -4,7 +4,9 @@
 // ============================================
 
 import {auth, db, functions} from "./firebase-config.js";
-import {doc, getDoc} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+import {
+  doc, getDoc, collection, query, where, getDocs,
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 import {
   loginAnonymous, loginGoogle, linkAnonymousToGoogle,
   logout, watchAuthState,
@@ -13,6 +15,7 @@ import {httpsCallable} from "https://www.gstatic.com/firebasejs/12.12.1/firebase
 import {
   subscribeAuction, unsubscribeAuction,
   searchListing, registerAuction, placeBid,
+  requestAuction, respondToAuctionRequest,
   formatG, formatTimeRemaining,
   validateSoopId, validateNickname,
   getSoopProfileUrl, loadInitialState,
@@ -104,13 +107,37 @@ async function loadMyHoldings(uid) {
       return;
     }
 
+    // 내 매물에 대한 대기 중인 경매 요청 조회
+    const reqQuery = query(
+        collection(db, "auctionRequests"),
+        where("ownerId", "==", uid),
+        where("status", "==", "pending"),
+    );
+    const reqSnap = await getDocs(reqQuery);
+    const pendingByListing = {};
+    reqSnap.forEach((d) => {
+      pendingByListing[d.data().listingId] = d.data();
+    });
+
     const snaps = await Promise.all(ids.map((id) => getDoc(doc(db, "listings", id))));
     list.innerHTML = snaps.map((snap) => {
       if (!snap.exists()) return "";
       const d = snap.data();
+      const listingId = snap.id;
       const img = d.profileImageUrl || "assets/images/default-avatar.svg";
+      const pending = pendingByListing[listingId];
+
+      const requestBanner = pending ? `
+        <div class="holding-request-banner">
+          <span class="request-badge">경매 요청 대기 중</span>
+          <div class="request-actions">
+            <button class="btn-approve" onclick="event.stopPropagation();handleApproveRequest('${pending.requestId}')">승인</button>
+            <button class="btn-reject" onclick="event.stopPropagation();handleRejectRequest('${pending.requestId}')">거부</button>
+          </div>
+        </div>` : "";
+
       return `
-        <div class="holding-card" onclick="searchByHolding('${d.soopId}')">
+        <div class="holding-card${pending ? " holding-card--has-request" : ""}" onclick="searchByHolding('${d.soopId}')">
           <img class="holding-img" src="${img}"
             onerror="this.src='assets/images/default-avatar.svg'" alt="프로필">
           <div class="holding-info">
@@ -121,6 +148,7 @@ async function loadMyHoldings(uid) {
             <div class="holding-price-label">현재 시세</div>
             <div class="holding-price-value">${formatG(d.currentPrice)}</div>
           </div>
+          ${requestBanner}
         </div>`;
     }).join("");
   } catch (e) {
@@ -538,6 +566,21 @@ function showSearchFoundResult(listing, query) {
   const ownerText = listing.isOwnedByMe ?
     "내 매물" : (listing.ownerId ? "보유자 있음" : "주인 없음");
 
+  let requestBtn = "";
+  if (!listing.isOwnedByMe && listing.ownerId) {
+    if (listing.pendingRequestId) {
+      requestBtn = `<span class="request-status-badge">요청 접수됨 · 보유자 응답 대기 중</span>`;
+    } else if (listing.immunityUntil && Date.now() < listing.immunityUntil) {
+      const mins = Math.ceil((listing.immunityUntil - Date.now()) / 60000);
+      requestBtn = `<span class="request-status-badge immunity">유찰 면역 중 (${mins}분 후 요청 가능)</span>`;
+    } else {
+      requestBtn = `
+        <button class="btn-request" onclick="handleRequestAuction('${escapeHtml(listing.listingId)}')">
+          경매 요청 보내기
+        </button>`;
+    }
+  }
+
   resultDiv.innerHTML = `
     <div class="search-result-found">
       <div class="search-listing-profile">
@@ -577,6 +620,7 @@ function showSearchFoundResult(listing, query) {
             손절 경매 등록
           </button>
         ` : ""}
+        ${requestBtn}
       </div>
     </div>
   `;
@@ -736,6 +780,43 @@ window.handleRegisterAuction = async function() {
       btn.disabled = false;
       btn.textContent = "경매 등록";
     }
+  }
+};
+
+// ===== 경매 요청 (Type B) =====
+window.handleRequestAuction = async function(listingId) {
+  try {
+    const result = await requestAuction(listingId);
+    log(`경매 요청 전송 완료: requestId=${result.requestId}`);
+    // 검색 결과 새로고침
+    handleSearch();
+  } catch (e) {
+    log(`경매 요청 실패: ${e.message}`, true);
+    alert(`경매 요청 실패: ${e.message}`);
+  }
+};
+
+window.handleApproveRequest = async function(requestId) {
+  if (!confirm("경매 요청을 승인하시겠습니까?\n경매가 대기열에 등록됩니다.")) return;
+  try {
+    const result = await respondToAuctionRequest({requestId, action: "approve"});
+    log(`경매 요청 승인: ${result.status === "started" ? "경매 시작" : "대기열 등록"}`);
+    loadMyHoldings(auth.currentUser?.uid);
+  } catch (e) {
+    log(`승인 실패: ${e.message}`, true);
+    alert(`승인 실패: ${e.message}`);
+  }
+};
+
+window.handleRejectRequest = async function(requestId) {
+  if (!confirm("경매 요청을 거부하시겠습니까?\n24시간 면역 기간이 설정됩니다.")) return;
+  try {
+    await respondToAuctionRequest({requestId, action: "reject"});
+    log("경매 요청 거부 완료");
+    loadMyHoldings(auth.currentUser?.uid);
+  } catch (e) {
+    log(`거부 실패: ${e.message}`, true);
+    alert(`거부 실패: ${e.message}`);
   }
 };
 

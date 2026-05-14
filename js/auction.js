@@ -23,6 +23,8 @@ const registerAuctionFn = httpsCallable(functions, "registerAuction");
 const placeBidFn = httpsCallable(functions, "placeBid");
 const finalizeAuctionFn = httpsCallable(functions, "finalizeAuction");
 const getAuctionStateFn = httpsCallable(functions, "getAuctionState");
+const requestAuctionFn = httpsCallable(functions, "requestAuction");
+const respondToAuctionRequestFn = httpsCallable(functions, "respondToAuctionRequest");
 
 // ===== 실시간 구독 시작 =====
 export function subscribeAuction({
@@ -142,6 +144,18 @@ export async function registerAuction({soopId, displayName, startPrice, profileI
 // ===== 입찰 =====
 export async function placeBid(bidAmount) {
   const result = await placeBidFn({bidAmount});
+  return result.data;
+}
+
+// ===== 경매 요청 (Type B) =====
+export async function requestAuction(listingId) {
+  const result = await requestAuctionFn({listingId});
+  return result.data;
+}
+
+// ===== 경매 요청 응답 (Type B) =====
+export async function respondToAuctionRequest({requestId, action, startPrice}) {
+  const result = await respondToAuctionRequestFn({requestId, action, startPrice});
   return result.data;
 }
 

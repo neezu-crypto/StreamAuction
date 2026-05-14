@@ -43,6 +43,32 @@ async function checkAndFinalizeExpiredAuction() {
 }
 
 // ============================================
+// 헬퍼: 만료된 경매 요청 자동 처리
+// ============================================
+async function checkAndFinalizeExpiredRequests() {
+  const now = Date.now();
+  const expired = await db.collection("auctionRequests")
+      .where("status", "==", "pending")
+      .where("expiresAt", "<=", now)
+      .get();
+
+  if (expired.empty) return;
+
+  const batch = db.batch();
+  expired.docs.forEach((docSnap) => {
+    const data = docSnap.data();
+    batch.update(docSnap.ref, {
+      status: "expired",
+      respondedAt: FieldValue.serverTimestamp(),
+    });
+    const listingRef = db.collection("listings").doc(data.listingId);
+    batch.update(listingRef, {pendingRequestId: null});
+  });
+  await batch.commit();
+  logger.info(`만료된 경매 요청 ${expired.size}건 처리`);
+}
+
+// ============================================
 // 헬퍼: 경매 정산 실행
 // ============================================
 async function doFinalizeAuction(current) {
@@ -50,102 +76,154 @@ async function doFinalizeAuction(current) {
     auctionId, listingId, type,
     displayName, soopId, profileImageUrl,
     registeredBy, startPrice,
+    sellerId, requestId: auctionRequestId,
     currentPrice, highestBidderId,
     bidCount, startedAt,
   } = current;
 
-  const isWon = bidCount > 0 && highestBidderId;
+  const isHolder = type === "holder";
+  const isWon = bidCount > 0 && !!highestBidderId;
   const finalPrice = isWon ? currentPrice : startPrice;
-  const winnerId = isWon ? highestBidderId : registeredBy;
+  // Type A 유찰: 등록자 자동 낙찰 / Type B 유찰: 승자 없음
+  const winnerId = isWon ? highestBidderId : (isHolder ? null : registeredBy);
 
-  logger.info(`경매 정산: ${auctionId}, 낙찰=${isWon}, 낙찰자=${winnerId}, 가격=${finalPrice}`);
+  logger.info(`경매 정산: ${auctionId}, type=${type}, 낙찰=${isWon}, 낙찰자=${winnerId}, 가격=${finalPrice}`);
 
   const configSnap = await db.collection("system").doc("config").get();
   const config = configSnap.data();
-
   const batch = db.batch();
 
-  // 1. listings 문서 생성 또는 갱신
   const listingRef = db.collection("listings").doc(listingId);
   const listingSnap = await listingRef.get();
-
+  const existingData = listingSnap.exists ? listingSnap.data() : {};
   const now = FieldValue.serverTimestamp();
 
-  if (!listingSnap.exists) {
-    // 신규 매물 생성
-    batch.set(listingRef, {
-      soopId,
-      displayName,
-      normalizedNickname: displayName.toLowerCase().replace(/\s/g, ""),
-      profileImageUrl: profileImageUrl || null,
-      ownerId: winnerId,
-      currentPrice: finalPrice,
-      basePrice: config.basePrice || 50000,
-      lastTradedAt: now,
-      totalTradeCount: 1,
-      totalTradeVolume: finalPrice,
-      highestPrice: finalPrice,
-      lowestPrice: finalPrice,
-      createdBy: registeredBy,
-      createdAt: now,
-      isLocked: false,
-      reportCount: 0,
-      isMosaicked: false,
-      reportReasons: {
-        inappropriateImage: 0,
-        profanity: 0,
-        misinformation: 0,
-        other: 0,
-      },
-      schemaVersion: 2,
-    });
+  // 1. listings 업데이트
+  if (isHolder) {
+    if (isWon) {
+      batch.update(listingRef, {
+        ownerId: winnerId,
+        currentPrice: finalPrice,
+        lastTradedAt: now,
+        totalTradeCount: FieldValue.increment(1),
+        totalTradeVolume: FieldValue.increment(finalPrice),
+        highestPrice: finalPrice > (existingData.highestPrice || 0) ?
+          finalPrice : existingData.highestPrice,
+        lowestPrice: finalPrice < (existingData.lowestPrice || Infinity) ?
+          finalPrice : existingData.lowestPrice,
+        pendingRequestId: null,
+        isLocked: false,
+        immunityUntil: null,
+      });
+    } else {
+      // 유찰: 소유권 유지, 면역 기간 24시간 설정
+      batch.update(listingRef, {
+        pendingRequestId: null,
+        isLocked: false,
+        immunityUntil: Date.now() + 24 * 60 * 60 * 1000,
+      });
+    }
   } else {
-    // 기존 매물 갱신
-    batch.update(listingRef, {
-      ownerId: winnerId,
-      currentPrice: finalPrice,
-      lastTradedAt: now,
-      totalTradeCount: FieldValue.increment(1),
-      totalTradeVolume: FieldValue.increment(finalPrice),
-      highestPrice: finalPrice > listingSnap.data().highestPrice ?
-        finalPrice : listingSnap.data().highestPrice,
-      lowestPrice: finalPrice < listingSnap.data().lowestPrice ?
-        finalPrice : listingSnap.data().lowestPrice,
+    // Type A
+    if (!listingSnap.exists) {
+      batch.set(listingRef, {
+        soopId,
+        displayName,
+        normalizedNickname: displayName.toLowerCase().replace(/\s/g, ""),
+        profileImageUrl: profileImageUrl || null,
+        ownerId: winnerId,
+        currentPrice: finalPrice,
+        basePrice: config.basePrice || 50000,
+        lastTradedAt: now,
+        totalTradeCount: 1,
+        totalTradeVolume: finalPrice,
+        highestPrice: finalPrice,
+        lowestPrice: finalPrice,
+        createdBy: registeredBy,
+        createdAt: now,
+        isLocked: false,
+        reportCount: 0,
+        isMosaicked: false,
+        reportReasons: {
+          inappropriateImage: 0,
+          profanity: 0,
+          misinformation: 0,
+          other: 0,
+        },
+        schemaVersion: 2,
+      });
+    } else {
+      batch.update(listingRef, {
+        ownerId: winnerId,
+        currentPrice: finalPrice,
+        lastTradedAt: now,
+        totalTradeCount: FieldValue.increment(1),
+        totalTradeVolume: FieldValue.increment(finalPrice),
+        highestPrice: finalPrice > existingData.highestPrice ?
+          finalPrice : existingData.highestPrice,
+        lowestPrice: finalPrice < existingData.lowestPrice ?
+          finalPrice : existingData.lowestPrice,
+      });
+    }
+  }
+
+  // 2. 낙찰자 users 문서 갱신
+  if (winnerId) {
+    const winnerRef = db.collection("users").doc(winnerId);
+    batch.update(winnerRef, {
+      ownedListingIds: FieldValue.arrayUnion(listingId),
+      ownedCount: FieldValue.increment(1),
+      lastLoginAt: now,
     });
   }
 
-  // 2. 낙찰자 users 문서 갱신 (매물 보유 등록)
-  const winnerRef = db.collection("users").doc(winnerId);
-  batch.update(winnerRef, {
-    ownedListingIds: FieldValue.arrayUnion(listingId),
-    ownedCount: FieldValue.increment(1),
-    lastLoginAt: now,
-  });
-
-  // 3. 신규 매물 경매: 낙찰금 시스템 회수
-  //    낙찰자는 이미 에스크로로 차감됨 → 추가 처리 불필요
-  //    단, 타 유저가 낙찰한 경우 등록자에게 basePrice 환급
-  if (isWon && winnerId !== registeredBy) {
-    const registrantRef = db.collection("users").doc(registeredBy);
-    const refundAmount = config.basePrice || 50000;
-    batch.update(registrantRef, {
-      balance: FieldValue.increment(refundAmount),
-    });
-    logger.info(`등록자 basePrice 환급: uid=${registeredBy}, amount=${refundAmount}`);
+  // 3. 잔액 처리
+  if (isHolder) {
+    if (isWon && sellerId) {
+      // 낙찰: 판매자에게 낙찰가의 (1-FEE_RATE) 지급 + 소유 해제
+      const sellerPayout = Math.floor(finalPrice * (1 - FEE_RATE));
+      const sellerRef = db.collection("users").doc(sellerId);
+      batch.update(sellerRef, {
+        balance: FieldValue.increment(sellerPayout),
+        ownedListingIds: FieldValue.arrayRemove(listingId),
+        ownedCount: FieldValue.increment(-1),
+      });
+      logger.info(`판매자 정산: uid=${sellerId}, amount=${sellerPayout}`);
+    }
+    // 유찰: 잔액 변동 없음
+  } else {
+    // Type A: 타인 낙찰 시 등록자에게 basePrice 환급
+    if (isWon && winnerId !== registeredBy) {
+      const registrantRef = db.collection("users").doc(registeredBy);
+      const refundAmount = config.basePrice || 50000;
+      batch.update(registrantRef, {balance: FieldValue.increment(refundAmount)});
+      logger.info(`등록자 basePrice 환급: uid=${registeredBy}, amount=${refundAmount}`);
+    }
   }
 
-  // 4. auctionHistory 저장
+  // 4. auctionRequests 상태 업데이트 (Type B)
+  if (isHolder && auctionRequestId) {
+    const requestRef = db.collection("auctionRequests").doc(auctionRequestId);
+    batch.update(requestRef, {
+      status: isWon ? "completed" : "failed",
+      respondedAt: now,
+    });
+  }
+
+  // 5. auctionHistory 저장
   const historyRef = db.collection("auctionHistory").doc(auctionId);
   batch.set(historyRef, {
     auctionId,
     listingId,
     soopId,
     displayName,
-    type,
+    type: type || "new",
     registeredBy,
+    sellerId: sellerId || null,
+    requestId: auctionRequestId || null,
     startPrice,
     finalPrice,
-    winnerId,
+    winnerId: winnerId || null,
     isWon,
     bidCount: bidCount || 0,
     startedAt: new Date(startedAt),
@@ -153,8 +231,9 @@ async function doFinalizeAuction(current) {
     schemaVersion: 1,
   });
 
-  // 5. 튜토리얼 보상 체크 (첫 낙찰) - 유찰 자동 낙찰 제외
+  // 6. 튜토리얼 보상 체크 (실제 입찰 낙찰만)
   if (isWon && highestBidderId) {
+    const winnerRef = db.collection("users").doc(highestBidderId);
     const winnerSnap = await winnerRef.get();
     const winnerData = winnerSnap.data();
     if (winnerData && !winnerData.tutorialRewards?.firstPurchase) {
@@ -163,28 +242,25 @@ async function doFinalizeAuction(current) {
         "balance": FieldValue.increment(tutorialBonus),
         "tutorialRewards.firstPurchase": true,
       });
-      logger.info(`튜토리얼 보상 지급: ${winnerId}, ${tutorialBonus}G`);
+      logger.info(`튜토리얼 보상 지급: ${highestBidderId}, ${tutorialBonus}G`);
     }
   }
 
   await batch.commit();
 
-  // RTDB: 현재 경매 완료 처리 후 다음 경매 시작
   await rtdb.ref("auction/current").set({
     status: "completed",
     auctionId,
     finalPrice,
-    winnerId,
+    winnerId: winnerId || null,
     completedAt: Date.now(),
   });
 
-  // 잠시 후 다음 경매 자동 시작
   setTimeout(async () => {
     await startNextFromQueue();
   }, 3000);
 
   logger.info(`경매 정산 완료: ${auctionId}`);
-
   return {auctionId, finalPrice, winnerId, isWon};
 }
 
@@ -223,6 +299,8 @@ async function startNextFromQueue() {
     soopId: next.soopId,
     profileImageUrl: next.profileImageUrl || null,
     registeredBy: next.registeredBy,
+    sellerId: next.sellerId || null,
+    requestId: next.requestId || null,
     startPrice: next.startPrice,
     currentPrice: next.startPrice,
     highestBidderId: null,
@@ -470,20 +548,32 @@ exports.searchListing = onCall(
       const data = listingSnap.data();
       logger.info(`검색 결과 찾음: ${data.soopId}`);
 
+      const uid = request.auth.uid;
+      const immunityUntil = data.immunityUntil || null;
+      const pendingRequestId = data.pendingRequestId || null;
+      const canRequest = !!data.ownerId &&
+        data.ownerId !== uid &&
+        !pendingRequestId &&
+        (!immunityUntil || Date.now() >= immunityUntil);
+
       return {
         found: true,
         listing: {
+          listingId: listingSnap.id,
           soopId: data.soopId,
           displayName: data.displayName,
           profileImageUrl: data.profileImageUrl,
           currentPrice: data.currentPrice,
           ownerId: data.ownerId,
           ownerName: data.ownerId ? "ab12***" : null,
-          isOwnedByMe: data.ownerId === request.auth.uid,
+          isOwnedByMe: data.ownerId === uid,
           totalTradeCount: data.totalTradeCount,
           lastTradedAt: data.lastTradedAt ?
             data.lastTradedAt.toMillis() : null,
           isMosaicked: data.isMosaicked,
+          pendingRequestId,
+          immunityUntil,
+          canRequest,
         },
       };
     },
@@ -866,6 +956,7 @@ exports.getAuctionState = onCall(
     {region: "asia-northeast3"},
     async (request) => {
       await checkAndFinalizeExpiredAuction();
+      await checkAndFinalizeExpiredRequests();
 
       const currentSnap = await rtdb.ref("auction/current").once("value");
       const queueSnap = await rtdb.ref("auction/queue").once("value");
@@ -880,5 +971,227 @@ exports.getAuctionState = onCall(
         queue,
         serverTime: Date.now(),
       };
+    },
+);
+
+
+// ============================================
+// requestAuction: 보유자 승인 경매 요청 (Type B)
+// 매물 보유자에게 경매 요청을 보냄
+// ============================================
+exports.requestAuction = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+      }
+
+      await checkAndFinalizeExpiredAuction();
+      await checkAndFinalizeExpiredRequests();
+
+      const {listingId} = request.data;
+      const uid = request.auth.uid;
+
+      if (!listingId || typeof listingId !== "string") {
+        throw new HttpsError("invalid-argument", "매물 ID가 필요합니다.");
+      }
+
+      const listingRef = db.collection("listings").doc(listingId);
+      const listingSnap = await listingRef.get();
+
+      if (!listingSnap.exists) {
+        throw new HttpsError("not-found", "매물을 찾을 수 없습니다.");
+      }
+
+      const listing = listingSnap.data();
+
+      if (!listing.ownerId) {
+        throw new HttpsError("failed-precondition", "보유자가 없는 매물입니다. 직접 경매를 등록하세요.");
+      }
+
+      if (listing.ownerId === uid) {
+        throw new HttpsError("permission-denied", "내 매물에는 요청할 수 없습니다.");
+      }
+
+      if (listing.pendingRequestId) {
+        throw new HttpsError("already-exists", "이미 진행 중인 경매 요청이 있습니다.");
+      }
+
+      if (listing.immunityUntil && Date.now() < listing.immunityUntil) {
+        const remaining = Math.ceil((listing.immunityUntil - Date.now()) / 60000);
+        throw new HttpsError(
+            "failed-precondition",
+            `유찰 후 면역 기간입니다. 약 ${remaining}분 후 요청 가능합니다.`,
+        );
+      }
+
+      // 유저 확인
+      const userSnap = await db.collection("users").doc(uid).get();
+      if (!userSnap.exists || userSnap.data().isBanned) {
+        throw new HttpsError("permission-denied", "이용이 제한된 계정입니다.");
+      }
+
+      const requestRef = db.collection("auctionRequests").doc();
+      const requestId = requestRef.id;
+      const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+
+      const batch = db.batch();
+
+      batch.set(requestRef, {
+        requestId,
+        listingId,
+        requesterId: uid,
+        ownerId: listing.ownerId,
+        soopId: listing.soopId,
+        displayName: listing.displayName,
+        profileImageUrl: listing.profileImageUrl || null,
+        status: "pending",
+        expiresAt,
+        createdAt: FieldValue.serverTimestamp(),
+        respondedAt: null,
+        auctionId: null,
+        schemaVersion: 1,
+      });
+
+      batch.update(listingRef, {pendingRequestId: requestId});
+
+      batch.update(db.collection("users").doc(uid), {
+        [`lastAuctionRequests.${listingId}`]: Date.now(),
+      });
+
+      await batch.commit();
+
+      logger.info(`경매 요청 생성: requestId=${requestId}, listingId=${listingId}, requester=${uid}`);
+
+      return {success: true, requestId, expiresAt};
+    },
+);
+
+
+// ============================================
+// respondToAuctionRequest: 경매 요청 승인/거부 (Type B)
+// 매물 보유자가 요청에 응답
+// ============================================
+exports.respondToAuctionRequest = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+      }
+
+      await checkAndFinalizeExpiredAuction();
+      await checkAndFinalizeExpiredRequests();
+
+      const {requestId, action, startPrice} = request.data;
+      const uid = request.auth.uid;
+
+      if (!requestId || typeof requestId !== "string") {
+        throw new HttpsError("invalid-argument", "요청 ID가 필요합니다.");
+      }
+
+      if (!["approve", "reject"].includes(action)) {
+        throw new HttpsError("invalid-argument", "action은 approve 또는 reject여야 합니다.");
+      }
+
+      const requestRef = db.collection("auctionRequests").doc(requestId);
+      const requestSnap = await requestRef.get();
+
+      if (!requestSnap.exists) {
+        throw new HttpsError("not-found", "요청을 찾을 수 없습니다.");
+      }
+
+      const req = requestSnap.data();
+
+      if (req.status !== "pending") {
+        throw new HttpsError("failed-precondition", "이미 처리된 요청입니다.");
+      }
+
+      if (req.ownerId !== uid) {
+        throw new HttpsError("permission-denied", "권한이 없습니다.");
+      }
+
+      const listingRef = db.collection("listings").doc(req.listingId);
+      const listingSnap = await listingRef.get();
+
+      if (!listingSnap.exists) {
+        throw new HttpsError("not-found", "매물을 찾을 수 없습니다.");
+      }
+
+      if (action === "reject") {
+        const batch = db.batch();
+        batch.update(requestRef, {
+          status: "rejected",
+          respondedAt: FieldValue.serverTimestamp(),
+        });
+        batch.update(listingRef, {
+          pendingRequestId: null,
+          immunityUntil: Date.now() + 24 * 60 * 60 * 1000,
+        });
+        await batch.commit();
+        logger.info(`경매 요청 거부: requestId=${requestId}`);
+        return {success: true, action: "rejected"};
+      }
+
+      // approve
+      const sp = (startPrice && startPrice >= 50000) ?
+        startPrice : (listingSnap.data().currentPrice || 50000);
+
+      // 대기열 크기 체크
+      const queueSnap = await rtdb.ref("auction/queue").once("value");
+      const queue = queueSnap.val() || {};
+      const queueSize = Object.keys(queue).length;
+
+      if (queueSize >= 5) {
+        throw new HttpsError("resource-exhausted", "대기열이 가득 찼습니다. 잠시 후 다시 시도해주세요.");
+      }
+
+      // 현재 경매/대기열 중복 체크
+      const currentSnap = await rtdb.ref("auction/current").once("value");
+      const current = currentSnap.val();
+
+      if (current && current.status === "active" && current.listingId === req.listingId) {
+        throw new HttpsError("already-exists", "해당 매물은 현재 경매 중입니다.");
+      }
+
+      for (const key of Object.keys(queue)) {
+        if (queue[key].listingId === req.listingId) {
+          throw new HttpsError("already-exists", "해당 매물은 이미 대기열에 있습니다.");
+        }
+      }
+
+      const auctionId = db.collection("_").doc().id;
+      const newQueueItem = {
+        auctionId,
+        listingId: req.listingId,
+        type: "holder",
+        soopId: req.soopId,
+        displayName: req.displayName,
+        profileImageUrl: req.profileImageUrl || null,
+        registeredBy: req.requesterId,
+        sellerId: uid,
+        requestId,
+        startPrice: sp,
+        queuedAt: Date.now(),
+      };
+
+      await rtdb.ref(`auction/queue/${auctionId}`).set(newQueueItem);
+
+      const batch = db.batch();
+      batch.update(requestRef, {
+        status: "approved",
+        auctionId,
+        respondedAt: FieldValue.serverTimestamp(),
+      });
+      batch.update(listingRef, {pendingRequestId: null, isLocked: true});
+      await batch.commit();
+
+      logger.info(`경매 요청 승인: requestId=${requestId}, auctionId=${auctionId}`);
+
+      if (!current || current.status !== "active") {
+        await startNextFromQueue();
+        return {success: true, action: "approved", auctionId, status: "started"};
+      }
+
+      return {success: true, action: "approved", auctionId, status: "queued"};
     },
 );
