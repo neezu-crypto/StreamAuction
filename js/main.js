@@ -3,7 +3,8 @@
 // 인증 + 경매 시스템 통합
 // ============================================
 
-import {auth, functions} from "./firebase-config.js";
+import {auth, db, functions} from "./firebase-config.js";
+import {doc, getDoc} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 import {
   loginAnonymous, loginGoogle, linkAnonymousToGoogle,
   logout, watchAuthState,
@@ -75,6 +76,58 @@ function updateAuthUI(user, userData) {
   }
 }
 
+// ===== 내 보유 매물 로드 =====
+async function loadMyHoldings(uid) {
+  const section = $("holdingsSection");
+  const list = $("holdingsList");
+  if (!section || !list) return;
+
+  if (!uid) {
+    section.style.display = "none";
+    return;
+  }
+
+  section.style.display = "";
+
+  try {
+    const userSnap = await getDoc(doc(db, "users", uid));
+    if (!userSnap.exists()) return;
+
+    const userData = userSnap.data();
+    const ids = userData.ownedListingIds || [];
+    const limit = userData.ownedLimit || 0;
+
+    setText("holdingsCount", `${ids.length} / ${limit}`);
+
+    if (ids.length === 0) {
+      list.innerHTML = `<div class="holdings-empty">보유 중인 매물이 없어요</div>`;
+      return;
+    }
+
+    const snaps = await Promise.all(ids.map((id) => getDoc(doc(db, "listings", id))));
+    list.innerHTML = snaps.map((snap) => {
+      if (!snap.exists()) return "";
+      const d = snap.data();
+      const img = d.profileImageUrl || "assets/images/default-avatar.svg";
+      return `
+        <div class="holding-card">
+          <img class="holding-img" src="${img}"
+            onerror="this.src='assets/images/default-avatar.svg'" alt="프로필">
+          <div class="holding-info">
+            <div class="holding-name">${d.displayName}</div>
+            <div class="holding-id">${d.soopId}</div>
+          </div>
+          <div class="holding-price">
+            <div class="holding-price-label">현재 시세</div>
+            <div class="holding-price-value">${formatG(d.currentPrice)}</div>
+          </div>
+        </div>`;
+    }).join("");
+  } catch (e) {
+    log(`보유 매물 로드 실패: ${e.message}`, true);
+  }
+}
+
 // ===== 유저 초기화 =====
 async function processUserLogin(user) {
   if (isProcessingLogin) return;
@@ -94,6 +147,9 @@ async function processUserLogin(user) {
     if (userData.isNewUser) {
       showWelcomeModal(userData);
     }
+
+    // 보유 매물 로드
+    loadMyHoldings(user.uid);
 
     // 입찰 UI 갱신
     updateBidUI();
@@ -115,6 +171,7 @@ watchAuthState(async (user) => {
     log("로그아웃 상태, 자동 익명 로그인...");
     currentUserData = null;
     updateAuthUI(null, null);
+    loadMyHoldings(null);
     try {
       await loginAnonymous();
     } catch (e) {

@@ -839,6 +839,98 @@
   white-space: pre-wrap;
 }
 
+/* ===== 내 보유 매물 ===== */
+.holdings-section {
+  margin-top: 24px;
+}
+
+.holdings-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.holdings-count {
+  font-size: 0.8rem;
+  color: #9ba3b4;
+  background: #2a2e38;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.holdings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.holding-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 12px;
+}
+
+.holding-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #2a2e38;
+  flex-shrink: 0;
+}
+
+.holding-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.holding-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.holding-id {
+  font-size: 0.8rem;
+  color: #9ba3b4;
+  font-family: "SF Mono", Consolas, monospace;
+}
+
+.holding-price {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.holding-price-label {
+  font-size: 0.72rem;
+  color: #9ba3b4;
+  margin-bottom: 2px;
+}
+
+.holding-price-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f5d142;
+}
+
+.holdings-empty {
+  text-align: center;
+  padding: 24px;
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
 /* ===== 반응형 ===== */
 @media (max-width: 640px) {
   .main { padding: 16px; }
