@@ -52,6 +52,30 @@ function show(id) { const el = $(id); if (el) el.style.display = ""; }
 function hide(id) { const el = $(id); if (el) el.style.display = "none"; }
 function setText(id, text) { const el = $(id); if (el) el.textContent = text; }
 
+// ===== 튜토리얼 토스트 =====
+const TUTORIAL_REWARD_LABELS = {
+  firstTrade: "첫 경매 등록",
+  firstSelloff: "첫 손절 경매",
+  firstPurchase: "첫 낙찰",
+  firstForceLiquidation: "첫 강제청산",
+};
+
+function showTutorialToast(rewards) {
+  const container = $("tutorialToastContainer");
+  if (!container || !rewards) return;
+  const list = Array.isArray(rewards) ? rewards : [rewards];
+  list.forEach((reward, idx) => {
+    setTimeout(() => {
+      const label = TUTORIAL_REWARD_LABELS[reward.type] || reward.type;
+      const toast = document.createElement("div");
+      toast.className = "tutorial-toast";
+      toast.innerHTML = `튜토리얼 달성! <strong>${label}</strong> · +<strong>${reward.amount.toLocaleString("ko-KR")}G</strong>`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3100);
+    }, idx * 400);
+  });
+}
+
 // ===== 인증 UI 갱신 =====
 function updateAuthUI(user, userData) {
   const authArea = $("authArea");
@@ -811,6 +835,8 @@ window.handleRegisterAuction = async function() {
       "경매가 시작됐습니다! 🎉" :
       `대기열 ${result.queuePosition}번째에 등록됐습니다.`;
     log(msg);
+
+    if (result.tutorialReward) showTutorialToast(result.tutorialReward);
   } catch (e) {
     log(`경매 등록 실패: ${e.message}`, true);
     // 에러 메시지 표시

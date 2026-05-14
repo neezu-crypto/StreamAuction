@@ -62,6 +62,28 @@ async function checkAndFinalizeExpiredRequests() {
       requests.map((r) => db.collection("listings").doc(r.data.listingId).get()),
   );
 
+  // 강제청산 대상 owner 수집 (config + owner user doc 병렬 조회를 위해 선행)
+  const affectedOwners = new Set();
+  requests.forEach((req, i) => {
+    const listingSnap = listingSnaps[i];
+    if (!listingSnap.exists) return;
+    const listing = listingSnap.data();
+    if (listing.ownerId && listing.ownerId === req.data.ownerId) {
+      affectedOwners.add(listing.ownerId);
+    }
+  });
+
+  const ownerIdList = [...affectedOwners];
+  const [configSnap, ...ownerUserSnaps] = await Promise.all([
+    db.collection("system").doc("config").get(),
+    ...ownerIdList.map((id) => db.collection("users").doc(id).get()),
+  ]);
+  const config = configSnap.data();
+  const ownerUserMap = {};
+  ownerIdList.forEach((id, i) => {
+    ownerUserMap[id] = ownerUserSnaps[i];
+  });
+
   const batch = db.batch();
   // 같은 보유자의 복수 만료를 합산하기 위해 누적
   const ownerUpdates = {}; // ownerId → {balance, listingIds}
@@ -107,14 +129,26 @@ async function checkAndFinalizeExpiredRequests() {
     );
   });
 
-  // 보유자별 잔액 환급 + 보유 목록 제거 (소유자가 동일한 경우 합산 적용)
+  // 보유자별 잔액 환급 + 보유 목록 제거 + 튜토리얼 보상
   for (const [ownerId, updates] of Object.entries(ownerUpdates)) {
     const ownerRef = db.collection("users").doc(ownerId);
-    batch.update(ownerRef, {
-      balance: FieldValue.increment(updates.balance),
+    const ownerData = ownerUserMap[ownerId]?.data();
+
+    let totalBalance = updates.balance;
+    const ownerBatchUpdate = {
       ownedListingIds: FieldValue.arrayRemove(...updates.listingIds),
       ownedCount: FieldValue.increment(-updates.listingIds.length),
-    });
+    };
+
+    if (ownerData && !ownerData.tutorialRewards?.firstForceLiquidation) {
+      const bonus = config?.tutorialRewards?.firstForceLiquidation || 10000;
+      totalBalance += bonus;
+      ownerBatchUpdate["tutorialRewards.firstForceLiquidation"] = true;
+      logger.info(`튜토리얼 보상(강제청산): uid=${ownerId}, ${bonus}G`);
+    }
+
+    ownerBatchUpdate.balance = FieldValue.increment(totalBalance);
+    batch.update(ownerRef, ownerBatchUpdate);
   }
 
   await batch.commit();
@@ -286,18 +320,18 @@ async function doFinalizeAuction(current) {
     schemaVersion: 1,
   });
 
-  // 6. 튜토리얼 보상 체크 (실제 입찰 낙찰만)
+  // 6. 튜토리얼 보상 체크 (실제 입찰 낙찰만, 유찰 자동 낙찰 제외)
   if (isWon && highestBidderId) {
     const winnerRef = db.collection("users").doc(highestBidderId);
     const winnerSnap = await winnerRef.get();
     const winnerData = winnerSnap.data();
     if (winnerData && !winnerData.tutorialRewards?.firstPurchase) {
-      const tutorialBonus = config.tutorialRewards?.firstPurchase || 10000;
+      const tutorialBonus = config.tutorialRewards?.firstPurchase || 30000;
       batch.update(winnerRef, {
         "balance": FieldValue.increment(tutorialBonus),
         "tutorialRewards.firstPurchase": true,
       });
-      logger.info(`튜토리얼 보상 지급: ${highestBidderId}, ${tutorialBonus}G`);
+      logger.info(`튜토리얼 보상(첫 낙찰): uid=${highestBidderId}, ${tutorialBonus}G`);
     }
   }
 
@@ -732,12 +766,41 @@ exports.registerAuction = onCall(
 
         logger.info(`손절 경매 등록: ${auctionId}, ${listingData.displayName}, 시작가=${startPrice}`);
 
+        // 튜토리얼 보상 체크 (firstTrade + firstSelloff)
+        const selloffConfigSnap = await db.collection("system").doc("config").get();
+        const selloffConfig = selloffConfigSnap.data();
+        let selloffBalanceDelta = 0;
+        const selloffTutorialFlags = {};
+        const selloffTutorialRewards = [];
+
+        if (!userData.tutorialRewards?.firstTrade) {
+          const bonus = selloffConfig?.tutorialRewards?.firstTrade || 10000;
+          selloffBalanceDelta += bonus;
+          selloffTutorialFlags["tutorialRewards.firstTrade"] = true;
+          selloffTutorialRewards.push({type: "firstTrade", amount: bonus});
+          logger.info(`튜토리얼 보상(첫 등록): uid=${uid}, ${bonus}G`);
+        }
+        if (!userData.tutorialRewards?.firstSelloff) {
+          const bonus = selloffConfig?.tutorialRewards?.firstSelloff || 5000;
+          selloffBalanceDelta += bonus;
+          selloffTutorialFlags["tutorialRewards.firstSelloff"] = true;
+          selloffTutorialRewards.push({type: "firstSelloff", amount: bonus});
+          logger.info(`튜토리얼 보상(첫 손절): uid=${uid}, ${bonus}G`);
+        }
+        if (selloffBalanceDelta > 0 || Object.keys(selloffTutorialFlags).length > 0) {
+          const selloffUpd = {...selloffTutorialFlags};
+          if (selloffBalanceDelta > 0) selloffUpd.balance = FieldValue.increment(selloffBalanceDelta);
+          await userRef.update(selloffUpd);
+        }
+
+        const selloffTutorialReward = selloffTutorialRewards.length > 0 ? selloffTutorialRewards : null;
+
         if (!current || current.status !== "active") {
           await startNextFromQueue();
-          return {success: true, auctionId, status: "started", message: "손절 경매가 시작됐습니다!"};
+          return {success: true, auctionId, status: "started", message: "손절 경매가 시작됐습니다!", tutorialReward: selloffTutorialReward};
         }
         return {success: true, auctionId, status: "queued", queuePosition: queueSize + 1,
-          message: `대기열 ${queueSize + 1}번째에 등록됐습니다.`};
+          message: `대기열 ${queueSize + 1}번째에 등록됐습니다.`, tutorialReward: selloffTutorialReward};
       }
 
       // ===== Type A: 신규/보유자 없는 매물 경매 =====
@@ -828,10 +891,26 @@ exports.registerAuction = onCall(
         queuedAt: Date.now(),
       });
 
+      // 잔액 변동 누적 (basePrice 차감 + firstTrade 보상 합산)
+      let newBalanceDelta = 0;
       const userUpdate = {};
+      const newTutorialRewards = [];
+
       if (isNoHolder) {
-        userUpdate.balance = FieldValue.increment(-basePrice);
+        newBalanceDelta -= basePrice;
         logger.info(`보유자 없는 경매 등록 차감: uid=${uid}, basePrice=${basePrice}`);
+      }
+
+      if (!userData.tutorialRewards?.firstTrade) {
+        const bonus = config?.tutorialRewards?.firstTrade || 10000;
+        newBalanceDelta += bonus;
+        userUpdate["tutorialRewards.firstTrade"] = true;
+        newTutorialRewards.push({type: "firstTrade", amount: bonus});
+        logger.info(`튜토리얼 보상(첫 등록): uid=${uid}, ${bonus}G`);
+      }
+
+      if (newBalanceDelta !== 0) {
+        userUpdate.balance = FieldValue.increment(newBalanceDelta);
       }
       if (userData.authType === "anonymous") {
         userUpdate.lastAuctionRegisteredAt = Date.now();
@@ -842,13 +921,15 @@ exports.registerAuction = onCall(
 
       logger.info(`경매 등록: ${auctionId}, ${displayName}, 시작가=${startPrice}`);
 
+      const newTutorialReward = newTutorialRewards.length > 0 ? newTutorialRewards : null;
+
       if (!current || current.status !== "active") {
         await startNextFromQueue();
-        return {success: true, auctionId, status: "started", message: "경매가 시작됐습니다!"};
+        return {success: true, auctionId, status: "started", message: "경매가 시작됐습니다!", tutorialReward: newTutorialReward};
       }
       return {
         success: true, auctionId, status: "queued", queuePosition: queueSize + 1,
-        message: `대기열 ${queueSize + 1}번째에 등록됐습니다.`,
+        message: `대기열 ${queueSize + 1}번째에 등록됐습니다.`, tutorialReward: newTutorialReward,
       };
     },
 );

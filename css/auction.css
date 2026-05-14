@@ -1060,6 +1060,47 @@
   flex-wrap: wrap;
 }
 
+/* ===== 튜토리얼 토스트 ===== */
+#tutorialToastContainer {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  align-items: center;
+  pointer-events: none;
+}
+
+.tutorial-toast {
+  background: linear-gradient(135deg, #1e3a5f 0%, #0f2a4a 100%);
+  border: 1px solid #f5d142;
+  border-radius: 10px;
+  padding: .75rem 1.25rem;
+  color: #fff;
+  font-size: .9rem;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,.5);
+  animation: toastSlideIn .3s ease, toastFadeOut .4s ease 2.6s forwards;
+  white-space: nowrap;
+}
+
+.tutorial-toast strong {
+  color: #f5d142;
+}
+
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toastFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
 /* ===== 반응형 ===== */
 @media (max-width: 640px) {
   .main { padding: 16px; }
