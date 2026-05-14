@@ -147,7 +147,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
   <p class="hero-sub">스트리머 닉네임을 사고파는 실시간 경매 게임 — Trade the Streamers You Love</p>
   <div class="hero-badges">
     <span class="badge badge-done">v3 경매 중심 재설계</span>
-    <span class="badge badge-phase">2026-05-02 최종 업데이트</span>
+    <span class="badge badge-phase">2026-05-14 최종 업데이트</span>
   </div>
 </div>
 
@@ -253,6 +253,9 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
   </div>
 </div>
 
+<h3>내 보유 매물 패널</h3>
+<p>메인 페이지 경매 섹션 하단에 로그인한 유저의 보유 매물 목록을 표시한다. 프로필 이미지 · 닉네임 · soop ID · 현재 시세와 함께 <code>보유수 / 한도</code> 배지를 상단에 노출한다. 보유 매물이 없으면 빈 안내 문구를 표시한다.</p>
+
 <h3>게임 화폐</h3>
 <div class="stat-grid">
 <div class="stat"><div class="stat-label">화폐 단위</div><div class="stat-value">G (Gold)</div></div>
@@ -267,8 +270,8 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <h3>4.1 경매 유형 3가지</h3>
 
 <h4>유형 A — 신규 매물 경매</h4>
-<pre>1. 유저가 스트리머 검색 → 매물 없음
-2. 유저가 경매 등록 (시작가 5만G 이상, 등록 수수료 없음)
+<pre>1. 유저가 스트리머 검색 → 매물 없음 (또는 보유자 없는 매물)
+2. 유저가 경매 등록 (시작가 5만G 이상) → 최소 시세 50,000G 즉시 차감
 3. 대기열에 추가 (선착순)
 4. 순서가 오면 경매 시작 (5분)
 5-A. 입찰 있음 → 최고 입찰자 낙찰
@@ -305,6 +308,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>경매 취소</td><td>불가 (등록 후 취소 안 됨)</td></tr>
 <tr><td>자기 매물 입찰</td><td>불가 (어뷰징 방지)</td></tr>
 <tr><td>익명 유저 입찰/등록</td><td>가능 (보유 한도 1개 적용)</td></tr>
+<tr><td>익명 유저 재등록 쿨다운</td><td>경매 등록 후 1시간 대기</td></tr>
 <tr><td>더 높은 입찰 시</td><td>이전 최고 입찰자에게 즉시 환불</td></tr>
 </table>
 
@@ -429,7 +433,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <tr><td>가격 조작</td><td>경매 기록 전부 공개 (Phase 2)</td></tr>
 <tr><td>허위 입찰</td><td>입찰 취소 불가 + 에스크로</td></tr>
 <tr><td>봇 트래픽</td><td>분당 N회 이상 입찰 차단 (Phase 2)</td></tr>
-<tr><td>신규 계정</td><td>가입 후 24시간 경매 등록 불가</td></tr>
+<tr><td>익명 계정 재등록</td><td>경매 등록 후 1시간 쿨다운 (구글 계정 면제)</td></tr>
 <tr><td>동일 IP</td><td>같은 IP 경매 등록 + 입찰 동시 차단</td></tr>
 </table>
 </div>
@@ -485,6 +489,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <table>
 <tr><th>항목</th><th>회수율</th></tr>
 <tr><td>경매 수수료</td><td>낙찰가의 5% (판매자 부담)</td></tr>
+<tr><td>보유자 없는 매물 등록비</td><td>최소 시세 50,000G 즉시 차감 (등록 시점)</td></tr>
 <tr><td>신규 매물 낙찰금</td><td>100% 시스템 회수</td></tr>
 <tr><td>경매 히스토리 열람</td><td>50,000G</td></tr>
 <tr><td>강제청산 시세 환급</td><td>0% 회수 (보유자에게 100%)</td></tr>
@@ -636,7 +641,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 
 <hr>
 <p style="font-size:12px;color:#999;text-align:center;padding:1rem 0">
-  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-02 · 작성자: 프로젝트 오너 + Claude
+  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-14 · 작성자: 프로젝트 오너 + Claude
 </p>
 
 </div>
