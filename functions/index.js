@@ -565,6 +565,22 @@ exports.registerAuction = onCall(
         );
       }
 
+      // 보유자 없는 매물 여부 확인 (등록 시 최소 시세 차감 대상)
+      const isNoHolder = !existingListing.exists || !existingListing.data().ownerId;
+
+      // 최소 시세(basePrice) 로드
+      const configSnap = await db.collection("system").doc("config").get();
+      const config = configSnap.data();
+      const basePrice = (config && config.basePrice) || 50000;
+
+      // 보유자 없는 경매 등록 시 basePrice 차감을 위한 잔액 체크
+      if (isNoHolder && userData.balance < basePrice) {
+        throw new HttpsError(
+            "failed-precondition",
+            `잔액이 부족합니다. 보유자 없는 매물 등록에는 최소 시세 ${basePrice.toLocaleString()}G가 필요합니다. 현재 잔액: ${userData.balance.toLocaleString()}G`,
+        );
+      }
+
       // 대기열 크기 체크 (최대 5개)
       const queueSnap = await rtdb.ref("auction/queue").once("value");
       const queue = queueSnap.val() || {};
@@ -613,6 +629,14 @@ exports.registerAuction = onCall(
       };
 
       await rtdb.ref(`auction/queue/${auctionId}`).set(newQueueItem);
+
+      // 보유자 없는 매물 등록 시 최소 시세만큼 즉시 차감
+      if (isNoHolder) {
+        await userRef.update({
+          balance: FieldValue.increment(-basePrice),
+        });
+        logger.info(`보유자 없는 경매 등록 차감: uid=${uid}, basePrice=${basePrice}`);
+      }
 
       logger.info(`경매 등록: ${auctionId}, ${displayName}, 시작가=${startPrice}`);
 
