@@ -172,10 +172,27 @@ async function doFinalizeAuction(current) {
   const isHolder = type === "holder" || type === "selloff";
   const isWon = bidCount > 0 && !!highestBidderId;
   const finalPrice = isWon ? currentPrice : startPrice;
-  // Type A 유찰: 등록자 자동 낙찰 / Type B·C 유찰: 승자 없음 (소유 유지)
-  const winnerId = isWon ? highestBidderId : (isHolder ? null : registeredBy);
 
-  logger.info(`경매 정산: ${auctionId}, type=${type}, 낙찰=${isWon}, 낙찰자=${winnerId}, 가격=${finalPrice}`);
+  // Type B(holder) 유찰 시: 신청자(registeredBy) 잔액이 충분하면 자동 낙찰
+  let holderAutoWin = false;
+  if (type === "holder" && !isWon && registeredBy) {
+    const requesterSnap = await db.collection("users").doc(registeredBy).get();
+    const requesterBalance = requesterSnap.exists ? (requesterSnap.data().balance || 0) : 0;
+    holderAutoWin = requesterBalance >= startPrice;
+  }
+
+  // winnerId 결정
+  // Type A 유찰: 등록자 자동 낙찰
+  // Type B 유찰 + 잔액 충분: 신청자 자동 낙찰
+  // Type B 유찰 + 잔액 부족 / Type C 유찰: null
+  const winnerId = isWon ? highestBidderId :
+    holderAutoWin ? registeredBy :
+    isHolder ? null :
+    registeredBy;
+
+  const effectiveIsWon = isWon || holderAutoWin;
+
+  logger.info(`경매 정산: ${auctionId}, type=${type}, 낙찰=${isWon}, autoWin=${holderAutoWin}, 낙찰자=${winnerId}, 가격=${finalPrice}`);
 
   const configSnap = await db.collection("system").doc("config").get();
   const config = configSnap.data();
@@ -188,7 +205,7 @@ async function doFinalizeAuction(current) {
 
   // 1. listings 업데이트
   if (isHolder) {
-    if (isWon) {
+    if (effectiveIsWon) {
       batch.update(listingRef, {
         ownerId: winnerId,
         currentPrice: finalPrice,
@@ -268,8 +285,7 @@ async function doFinalizeAuction(current) {
 
   // 3. 잔액 처리
   if (isHolder) {
-    if (isWon && sellerId) {
-      // 낙찰: 판매자에게 낙찰가의 (1-FEE_RATE) 지급 + 소유 해제
+    if (effectiveIsWon && sellerId) {
       const sellerPayout = Math.floor(finalPrice * (1 - FEE_RATE));
       const sellerRef = db.collection("users").doc(sellerId);
       batch.update(sellerRef, {
@@ -278,8 +294,16 @@ async function doFinalizeAuction(current) {
         ownedCount: FieldValue.increment(-1),
       });
       logger.info(`판매자 정산: uid=${sellerId}, amount=${sellerPayout}`);
+
+      // Type B 자동 낙찰(유찰 → 신청자 구매): 신청자 잔액 차감
+      if (holderAutoWin && registeredBy) {
+        const requesterRef = db.collection("users").doc(registeredBy);
+        batch.update(requesterRef, {balance: FieldValue.increment(-startPrice)});
+        logger.info(`신청자 자동낙찰 차감: uid=${registeredBy}, amount=${startPrice}`);
+      }
+      // isWon(실제 낙찰) 시엔 placeBid 에스크로에서 이미 차감됨
     }
-    // 유찰: 잔액 변동 없음
+    // 진짜 유찰(잔액 부족 포함): 잔액 변동 없음
   } else {
     // Type A: 타인 낙찰 시 등록자에게 basePrice 환급
     if (isWon && winnerId !== registeredBy) {
@@ -294,7 +318,7 @@ async function doFinalizeAuction(current) {
   if (isHolder && auctionRequestId) {
     const requestRef = db.collection("auctionRequests").doc(auctionRequestId);
     batch.update(requestRef, {
-      status: isWon ? "completed" : "failed",
+      status: effectiveIsWon ? "completed" : "failed",
       respondedAt: now,
     });
   }
@@ -313,14 +337,14 @@ async function doFinalizeAuction(current) {
     startPrice,
     finalPrice,
     winnerId: winnerId || null,
-    isWon,
+    isWon: effectiveIsWon,
     bidCount: bidCount || 0,
     startedAt: new Date(startedAt),
     endedAt: now,
     schemaVersion: 1,
   });
 
-  // 6. 튜토리얼 보상 체크 (실제 입찰 낙찰만, 유찰 자동 낙찰 제외)
+  // 6. 튜토리얼 보상 체크 (실제 입찰 낙찰만, 자동 낙찰 제외)
   if (isWon && highestBidderId) {
     const winnerRef = db.collection("users").doc(highestBidderId);
     const winnerSnap = await winnerRef.get();
