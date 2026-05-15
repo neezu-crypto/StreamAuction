@@ -75,11 +75,9 @@ function renderDailyRewardSection(userData) {
   if (!section) return;
 
   if (!userData) {
-    section.style.display = "none";
+    section.innerHTML = "";
     return;
   }
-
-  section.style.display = "";
 
   const isGoogle = userData.authType === "google";
   if (!isGoogle) {
@@ -173,7 +171,7 @@ function renderTutorialSection(userData) {
   if (!section) return;
 
   if (!userData) {
-    section.style.display = "none";
+    section.innerHTML = "";
     return;
   }
 
@@ -215,7 +213,6 @@ function renderTutorialSection(userData) {
       </div>`;
   }
 
-  section.style.display = "";
   section.innerHTML = `
     <div class="tutorial-section-header">
       <h2 class="section-title">튜토리얼 보상</h2>
@@ -383,11 +380,10 @@ async function processUserLogin(user) {
     // 보유 매물 로드
     loadMyHoldings(user.uid);
 
-    // 출석 보상 섹션 렌더링
+    // 보상 센터 렌더링 (모달 내부)
     renderDailyRewardSection(userData);
-
-    // 튜토리얼 섹션 렌더링
     renderTutorialSection(userData);
+    updateRewardBtn(userData);
 
     // 입찰 UI 갱신
     updateBidUI();
@@ -412,6 +408,7 @@ watchAuthState(async (user) => {
     loadMyHoldings(null);
     renderDailyRewardSection(null);
     renderTutorialSection(null);
+    updateRewardBtn(null);
     try {
       await loginAnonymous();
     } catch (e) {
@@ -1326,6 +1323,32 @@ window.handleViewHistory = async function(listingId, displayName) {
   }
 };
 
+// ===== 보상 센터 모달 =====
+function updateRewardBtn(userData) {
+  const btn = $("btnRewardCenter");
+  if (!btn) return;
+  if (!userData) {
+    btn.style.display = "none";
+    return;
+  }
+  btn.style.display = "";
+
+  // 오늘 출석 미수령 + Google 계정이면 점 표시
+  const isGoogle = userData.authType === "google";
+  const lastAtMs = userData.lastDailyRewardAt || null;
+  const claimedToday = lastAtMs && getKSTDateStr(new Date(lastAtMs)) === getKSTDateStr(new Date());
+  const hasDot = isGoogle && !claimedToday;
+  btn.classList.toggle("has-dot", hasDot);
+}
+
+window.openRewardModal = function() {
+  $("rewardModal").classList.add("show");
+};
+
+window.closeRewardModal = function() {
+  $("rewardModal").classList.remove("show");
+};
+
 // ===== 출석 체크 핸들러 =====
 window.handleClaimDailyReward = async function() {
   const btn = document.querySelector(".btn-daily-claim");
@@ -1342,6 +1365,7 @@ window.handleClaimDailyReward = async function() {
     }
     renderUserBalance();
     renderDailyRewardSection(currentUserData);
+    updateRewardBtn(currentUserData);
 
     let msg = `+${result.base.toLocaleString()}G 획득!`;
     if (result.bonus > 0) {

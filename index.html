@@ -13,8 +13,13 @@
 <header class="header">
   <div class="header-inner">
     <h1 class="logo">StreamAuction</h1>
-    <div class="auth-area" id="authArea">
-      <span class="loading">로딩 중...</span>
+    <div class="header-right">
+      <button class="btn-reward-center" id="btnRewardCenter" onclick="openRewardModal()" style="display:none">
+        🎁 보상
+      </button>
+      <div class="auth-area" id="authArea">
+        <span class="loading">로딩 중...</span>
+      </div>
     </div>
   </div>
 </header>
@@ -116,12 +121,6 @@
     </div>
     <div id="holdingsList" class="holdings-list"></div>
   </section>
-
-  <!-- 출석 보상 섹션 -->
-  <section id="dailyRewardSection" style="display:none"></section>
-
-  <!-- 튜토리얼 보상 섹션 -->
-  <section id="tutorialSection" style="display:none"></section>
 
   <!-- 구분선 -->
   <hr class="divider">
@@ -284,6 +283,20 @@
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeReportModal()">취소</button>
       <button class="btn-report-submit" id="reportSubmitBtn" onclick="handleSubmitReport()">신고 제출</button>
+    </div>
+  </div>
+</div>
+
+<!-- 보상 센터 모달 -->
+<div class="modal-overlay" id="rewardModal" onclick="if(event.target===this)closeRewardModal()">
+  <div class="modal modal-reward">
+    <div class="modal-header">
+      <h2>보상 센터</h2>
+      <button class="modal-close" onclick="closeRewardModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <section id="dailyRewardSection"></section>
+      <section id="tutorialSection"></section>
     </div>
   </div>
 </div>
