@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>관리자 — StreamAuction</title>
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="header-left">
+      <a href="index.html" class="logo">StreamAuction</a>
+      <span class="admin-badge-label">관리자</span>
+    </div>
+    <div id="adminAuthArea" class="admin-auth-area"></div>
+  </div>
+</header>
+
+<!-- 로딩 -->
+<div id="screenLoading" class="screen-center">
+  <p class="loading">로딩 중...</p>
+</div>
+
+<!-- 로그인 필요 -->
+<div id="screenLogin" class="screen-center" style="display:none">
+  <div class="center-card">
+    <div class="center-icon">🔐</div>
+    <h2>관리자 로그인</h2>
+    <p>Google 계정으로 로그인해주세요</p>
+    <button class="btn-primary" onclick="handleAdminLogin()">Google로 로그인</button>
+  </div>
+</div>
+
+<!-- 권한 없음 -->
+<div id="screenDenied" class="screen-center" style="display:none">
+  <div class="center-card">
+    <div class="center-icon">🔒</div>
+    <h2>접근 권한 없음</h2>
+    <p id="deniedMessage">관리자 권한이 없습니다.<br>Firestore <code>system/admin.adminUids</code>에 UID를 추가하세요.</p>
+    <a href="index.html" class="btn-secondary" style="display:inline-block;margin-top:12px">메인으로 돌아가기</a>
+  </div>
+</div>
+
+<!-- 관리자 패널 -->
+<div id="screenAdmin" style="display:none">
+
+  <nav class="admin-tabs">
+    <button class="admin-tab is-active" data-tab="dashboard" onclick="switchTab('dashboard')">대시보드</button>
+    <button class="admin-tab" data-tab="auction" onclick="switchTab('auction')">경매 제어</button>
+    <button class="admin-tab" data-tab="users" onclick="switchTab('users')">유저 관리</button>
+    <button class="admin-tab" data-tab="config" onclick="switchTab('config')">시스템 설정</button>
+  </nav>
+
+  <main class="admin-main">
+
+    <!-- 대시보드 -->
+    <div id="tab-dashboard" class="tab-pane">
+      <div id="statsRow" class="stats-row"></div>
+      <div class="admin-grid">
+        <div class="admin-card">
+          <div class="admin-card-hd">
+            <h3>현재 경매</h3>
+            <button class="btn-sm btn-ghost" onclick="refreshDashboard()">새로고침</button>
+          </div>
+          <div id="dashCurrentAuction"></div>
+        </div>
+        <div class="admin-card">
+          <div class="admin-card-hd"><h3>최근 경매 기록 (10건)</h3></div>
+          <div id="dashHistory"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 경매 제어 -->
+    <div id="tab-auction" class="tab-pane" style="display:none">
+      <div class="admin-grid">
+        <div class="admin-card">
+          <div class="admin-card-hd">
+            <h3>현재 경매</h3>
+            <button class="btn-sm btn-ghost" onclick="refreshAuctionTab()">새로고침</button>
+          </div>
+          <div id="auctionCurrentCard"></div>
+          <button class="btn-danger" id="btnForceFinalize" onclick="handleForceFinalize()" style="margin-top:14px">강제 종료</button>
+        </div>
+        <div class="admin-card">
+          <div class="admin-card-hd">
+            <h3>대기열</h3>
+            <button class="btn-danger btn-sm" id="btnClearQueue" onclick="handleClearQueue()">전체 비우기</button>
+          </div>
+          <div id="auctionQueueCard"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 유저 관리 -->
+    <div id="tab-users" class="tab-pane" style="display:none">
+      <div class="admin-card">
+        <h3 class="admin-card-title">유저 조회 (UID)</h3>
+        <div class="search-row">
+          <input type="text" id="userUidInput" class="admin-input" placeholder="Firebase UID 입력">
+          <button class="btn-primary btn-sm" onclick="handleUserSearch()">조회</button>
+        </div>
+        <div id="userSearchError" class="msg-error" style="display:none"></div>
+      </div>
+
+      <div id="userDetailCard" class="admin-card" style="display:none">
+        <h3 class="admin-card-title">유저 상세</h3>
+        <div id="userDetailContent"></div>
+
+        <hr class="admin-divider">
+        <div class="admin-section">
+          <h4>잔액 조정</h4>
+          <div class="search-row">
+            <input type="number" id="balanceDeltaInput" class="admin-input"
+              placeholder="±G (예: 10000 또는 -10000)" step="1000">
+            <button class="btn-primary btn-sm" onclick="handleAdjustBalance()">적용</button>
+          </div>
+          <div id="balanceResult" class="msg-ok" style="display:none"></div>
+        </div>
+
+        <hr class="admin-divider">
+        <div class="admin-section">
+          <h4>계정 정지 / 해제</h4>
+          <div id="banArea"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 시스템 설정 -->
+    <div id="tab-config" class="tab-pane" style="display:none">
+      <div class="admin-card">
+        <div class="admin-card-hd">
+          <h3>시스템 설정 <span style="font-size:.8rem;color:#6b7280;font-weight:400">(system/config)</span></h3>
+          <button class="btn-sm btn-ghost" onclick="loadConfig()">새로고침</button>
+        </div>
+        <div id="configForm"></div>
+        <div id="configResult" style="display:none;margin-top:8px"></div>
+        <button class="btn-primary" id="btnSaveConfig" onclick="handleSaveConfig()" style="margin-top:16px">설정 저장</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="tutorialToastContainer"></div>
+<script type="module" src="js/admin.js"></script>
+</body>
+</html>

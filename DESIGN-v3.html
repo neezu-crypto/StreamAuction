@@ -193,6 +193,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>경매 수수료 5%</td><td>유형 B·C 낙찰 시 판매자에게 낙찰가 × 95% 지급 (유형 A는 판매자 없어 해당 없음)</td></tr>
 <tr><td>튜토리얼 보상 (전체)</td><td>첫 낙찰 30,000G · 첫 경매 등록 10,000G · 첫 손절 5,000G · 첫 강제청산 10,000G — 서버에서 자동 지급, 토스트 알림</td></tr>
 <tr><td>튜토리얼 UI</td><td>메인페이지 내 튜토리얼 진행 현황 섹션 — 4개 미션 체크리스트, 완료 수 배지, 미완료 시 행동 유도 버튼</td></tr>
+<tr><td>관리자 페이지 (admin.html)</td><td>4개 탭: 대시보드(통계·경매·기록) / 경매 제어(강제종료·대기열 비우기) / 유저 관리(조회·잔액조정·정지) / 시스템 설정(config 편집) — <code>system/admin.adminUids</code>로 접근 제어</td></tr>
 <tr><td>기반</td><td>Firestore/RTDB 보안 규칙 (auctionRequests 포함), 모바일 반응형 UI</td></tr>
 </table>
 
@@ -679,7 +680,6 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <li>휴면 매물 강제 회수</li>
 <li>출석/광고 보상 시스템</li>
 <li>Cloud Scheduler 도입 (클라이언트 트리거 대체)</li>
-<li>관리자 페이지</li>
 </ul>
 <h3>우선순위 낮음 — Phase 3</h3>
 <ul>

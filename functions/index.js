@@ -1372,3 +1372,228 @@ exports.respondToAuctionRequest = onCall(
       return {success: true, action: "approved", auctionId, status: "queued"};
     },
 );
+
+// ============================================
+// 헬퍼: 관리자 권한 체크
+// system/admin.adminUids 배열에 UID가 있어야 함
+// ============================================
+async function requireAdmin(request) {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  }
+  const adminSnap = await db.collection("system").doc("admin").get();
+  const adminUids = adminSnap.exists ? (adminSnap.data().adminUids || []) : [];
+  if (!adminUids.includes(request.auth.uid)) {
+    throw new HttpsError("permission-denied", "관리자 권한이 필요합니다.");
+  }
+}
+
+// ============================================
+// adminGetDashboard: 대시보드 데이터
+// ============================================
+exports.adminGetDashboard = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      await requireAdmin(request);
+
+      const [userCountSnap, listingCountSnap, currentSnap, queueSnap, historySnap] =
+        await Promise.all([
+          db.collection("users").count().get(),
+          db.collection("listings").count().get(),
+          rtdb.ref("auction/current").once("value"),
+          rtdb.ref("auction/queue").once("value"),
+          db.collection("auctionHistory").orderBy("endedAt", "desc").limit(10).get(),
+        ]);
+
+      const queue = queueSnap.val() || {};
+      const history = historySnap.docs.map((d) => {
+        const data = d.data();
+        return {
+          auctionId: data.auctionId,
+          displayName: data.displayName,
+          type: data.type || "new",
+          finalPrice: data.finalPrice,
+          isWon: data.isWon,
+          bidCount: data.bidCount || 0,
+          endedAt: data.endedAt?.toMillis?.() || null,
+        };
+      });
+
+      return {
+        stats: {
+          userCount: userCountSnap.data().count,
+          listingCount: listingCountSnap.data().count,
+          queueSize: Object.keys(queue).length,
+        },
+        current: currentSnap.val(),
+        queue: Object.values(queue).sort((a, b) => a.queuedAt - b.queuedAt),
+        recentHistory: history,
+      };
+    },
+);
+
+// ============================================
+// adminForceFinalize: 경매 강제 종료
+// ============================================
+exports.adminForceFinalize = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      await requireAdmin(request);
+
+      const currentSnap = await rtdb.ref("auction/current").once("value");
+      const current = currentSnap.val();
+
+      if (!current || current.status !== "active") {
+        throw new HttpsError("not-found", "진행 중인 경매가 없습니다.");
+      }
+
+      const result = await doFinalizeAuction(current);
+      logger.info(`관리자 강제 종료: ${current.auctionId} by ${request.auth.uid}`);
+      return result;
+    },
+);
+
+// ============================================
+// adminClearQueue: 대기열 전체 삭제
+// ============================================
+exports.adminClearQueue = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      await requireAdmin(request);
+      await rtdb.ref("auction/queue").remove();
+      logger.info(`관리자 대기열 초기화 by ${request.auth.uid}`);
+      return {success: true};
+    },
+);
+
+// ============================================
+// adminGetUser: 유저 정보 조회
+// ============================================
+exports.adminGetUser = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      await requireAdmin(request);
+      const {uid} = request.data;
+      if (!uid || typeof uid !== "string") {
+        throw new HttpsError("invalid-argument", "UID가 필요합니다.");
+      }
+
+      const userSnap = await db.collection("users").doc(uid.trim()).get();
+      if (!userSnap.exists) {
+        throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+      }
+
+      const data = userSnap.data();
+      return {
+        uid: userSnap.id,
+        authType: data.authType || "anonymous",
+        displayName: data.displayName || null,
+        email: data.email || null,
+        balance: data.balance || 0,
+        ownedCount: data.ownedCount || 0,
+        ownedLimit: data.ownedLimit || 0,
+        ownedListingIds: data.ownedListingIds || [],
+        isBanned: data.isBanned || false,
+        banReason: data.banReason || null,
+        tutorialRewards: data.tutorialRewards || {},
+        createdAt: data.createdAt?.toMillis?.() || null,
+        lastLoginAt: data.lastLoginAt?.toMillis?.() || null,
+      };
+    },
+);
+
+// ============================================
+// adminBanUser: 유저 정지/해제
+// ============================================
+exports.adminBanUser = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      await requireAdmin(request);
+      const {uid, isBanned, banReason} = request.data;
+      if (!uid) throw new HttpsError("invalid-argument", "UID가 필요합니다.");
+
+      const userRef = db.collection("users").doc(uid);
+      const userSnap = await userRef.get();
+      if (!userSnap.exists) throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+
+      await userRef.update({
+        isBanned: !!isBanned,
+        banReason: isBanned ? (banReason || null) : null,
+      });
+
+      logger.info(`관리자: 유저 ${isBanned ? "정지" : "해제"} uid=${uid} by ${request.auth.uid}`);
+      return {success: true, uid, isBanned: !!isBanned};
+    },
+);
+
+// ============================================
+// adminAdjustBalance: 유저 잔액 조정
+// ============================================
+exports.adminAdjustBalance = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      await requireAdmin(request);
+      const {uid, delta} = request.data;
+      if (!uid) throw new HttpsError("invalid-argument", "UID가 필요합니다.");
+      if (!delta || typeof delta !== "number" || delta === 0) {
+        throw new HttpsError("invalid-argument", "0이 아닌 delta 숫자가 필요합니다.");
+      }
+
+      const userRef = db.collection("users").doc(uid);
+      const userSnap = await userRef.get();
+      if (!userSnap.exists) throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+
+      await userRef.update({balance: FieldValue.increment(delta)});
+      const newSnap = await userRef.get();
+
+      logger.info(`관리자 잔액 조정: uid=${uid}, delta=${delta} by ${request.auth.uid}`);
+      return {success: true, uid, delta, newBalance: newSnap.data().balance};
+    },
+);
+
+// ============================================
+// adminGetConfig: 시스템 설정 조회
+// ============================================
+exports.adminGetConfig = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      await requireAdmin(request);
+      const configSnap = await db.collection("system").doc("config").get();
+      if (!configSnap.exists) throw new HttpsError("not-found", "설정을 찾을 수 없습니다.");
+      return configSnap.data();
+    },
+);
+
+// ============================================
+// adminSetConfig: 시스템 설정 저장 (허용된 필드만)
+// ============================================
+exports.adminSetConfig = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      await requireAdmin(request);
+      const {updates} = request.data;
+      if (!updates || typeof updates !== "object" || Array.isArray(updates)) {
+        throw new HttpsError("invalid-argument", "updates 객체가 필요합니다.");
+      }
+
+      const allowed = [
+        "basePrice", "anonymousBonus", "googleBonus",
+        "anonymousOwnedLimit", "googleOwnedLimit",
+        "tutorialRewards.firstPurchase", "tutorialRewards.firstTrade",
+        "tutorialRewards.firstSelloff", "tutorialRewards.firstForceLiquidation",
+      ];
+      const filtered = {};
+      for (const key of allowed) {
+        if (key in updates && typeof updates[key] === "number" && updates[key] >= 0) {
+          filtered[key] = updates[key];
+        }
+      }
+      if (Object.keys(filtered).length === 0) {
+        throw new HttpsError("invalid-argument", "유효한 업데이트 항목이 없습니다.");
+      }
+
+      await db.collection("system").doc("config").update(filtered);
+      logger.info(`관리자 config 업데이트 by ${request.auth.uid}`, filtered);
+      return {success: true, updated: Object.keys(filtered)};
+    },
+);

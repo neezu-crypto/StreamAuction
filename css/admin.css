@@ -1,0 +1,454 @@
+/* ============================================
+   admin.css - StreamAuction 관리자 페이지 스타일
+   ============================================ */
+
+/* 헤더 */
+.header-left {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-badge-label {
+  background: #1e3a5f;
+  color: #93c5fd;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+.admin-auth-area {
+  display: flex;
+  align-items: center;
+}
+
+/* 화면 전환 */
+.screen-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  padding: 2rem;
+}
+
+.center-card {
+  text-align: center;
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 16px;
+  padding: 40px 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.center-icon {
+  font-size: 3rem;
+  margin-bottom: 8px;
+}
+
+.center-card h2 {
+  font-size: 1.4rem;
+  color: #fff;
+}
+
+.center-card p {
+  color: #9ba3b4;
+  line-height: 1.6;
+}
+
+/* 탭 네비게이션 */
+.admin-tabs {
+  position: sticky;
+  top: 57px;
+  background: #1a1d24;
+  border-bottom: 1px solid #2a2e38;
+  display: flex;
+  overflow-x: auto;
+  padding: 0 20px;
+  z-index: 50;
+}
+
+.admin-tab {
+  padding: 12px 20px;
+  font-size: .9rem;
+  color: #6b7280;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+
+.admin-tab.is-active {
+  color: #f5d142;
+  border-bottom-color: #f5d142;
+}
+
+.admin-tab:hover:not(.is-active) {
+  color: #e2e8f0;
+}
+
+/* 메인 레이아웃 */
+.admin-main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+
+/* 통계 카드 */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 10px;
+  padding: 16px 20px;
+}
+
+.stat-label {
+  font-size: .8rem;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #f5d142;
+}
+
+/* 그리드 & 카드 */
+.admin-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.admin-card {
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 12px;
+  padding: 20px 24px;
+}
+
+.admin-card-hd {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.admin-card-hd h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.admin-card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 14px;
+}
+
+/* 테이블 */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .82rem;
+}
+
+.admin-table th {
+  text-align: left;
+  padding: 6px 8px;
+  color: #6b7280;
+  border-bottom: 1px solid #2a2e38;
+  font-weight: 500;
+}
+
+.admin-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #1e2231;
+  color: #cbd5e1;
+}
+
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* 타입 태그 */
+.type-tag {
+  display: inline-block;
+  font-size: .75rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 5px;
+}
+
+.type-tag.type-new {
+  background: #1e3a5f;
+  color: #93c5fd;
+}
+
+.type-tag.type-holder {
+  background: #3b1f5e;
+  color: #c4b5fd;
+}
+
+.type-tag.type-selloff {
+  background: #451a03;
+  color: #fed7aa;
+}
+
+/* 정보 목록 */
+.info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.info-row {
+  display: flex;
+  gap: 12px;
+  font-size: .85rem;
+}
+
+.info-row dt {
+  min-width: 80px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.info-row dd {
+  color: #e2e8f0;
+  margin: 0;
+}
+
+.timer-val {
+  color: #f5d142;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+/* 공통 */
+.empty-msg {
+  color: #6b7280;
+  font-size: .85rem;
+}
+
+/* 검색 행 */
+.search-row {
+  display: flex;
+  gap: 8px;
+}
+
+/* 입력 */
+.admin-input {
+  background: #0f1115;
+  border: 1px solid #2a2e38;
+  color: #e8e8e8;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: .85rem;
+  font-family: inherit;
+  flex: 1;
+}
+
+.admin-input:focus {
+  outline: none;
+  border-color: #f5d142;
+}
+
+/* 버튼 변형 */
+.btn-sm {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-ghost {
+  background: #2a2e38;
+  color: #9ba3b4;
+}
+
+.btn-ghost:hover {
+  background: #353a47;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: .9rem;
+  cursor: pointer;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
+.btn-danger:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.btn-danger.btn-sm {
+  padding: 6px 14px;
+  font-size: .8rem;
+  border-radius: 6px;
+}
+
+/* 구분선 & 섹션 */
+.admin-divider {
+  border: none;
+  border-top: 1px solid #2a2e38;
+  margin: 16px 0;
+}
+
+.admin-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-section h4 {
+  font-size: .85rem;
+  color: #9ba3b4;
+  font-weight: 600;
+}
+
+/* 메시지 */
+.msg-ok {
+  font-size: .82rem;
+  color: #86efac;
+  padding: 4px 0;
+}
+
+.msg-error {
+  font-size: .82rem;
+  color: #f87171;
+  padding: 4px 0;
+}
+
+/* 모노 */
+.mono {
+  font-family: 'SF Mono', Consolas, monospace;
+  font-size: .82rem;
+}
+
+/* 튜토리얼 칩 */
+.tut-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tut-chip {
+  font-size: .75rem;
+  padding: 2px 8px;
+  background: #1a2030;
+  border: 1px solid #2a2e38;
+  border-radius: 20px;
+  color: #9ba3b4;
+}
+
+.tut-chip.done {
+  background: #0f2a1a;
+  border-color: #16a34a40;
+  color: #86efac;
+}
+
+/* 설정 폼 */
+.config-group {
+  margin-bottom: 20px;
+}
+
+.config-group-title {
+  font-size: .8rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #2a2e38;
+}
+
+.config-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.config-label {
+  min-width: 180px;
+  font-size: .85rem;
+  color: #9ba3b4;
+}
+
+.config-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.config-unit {
+  font-size: .8rem;
+  color: #6b7280;
+}
+
+/* 반응형 768px */
+@media (max-width: 768px) {
+  .stats-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-tabs {
+    padding: 0 12px;
+  }
+
+  .admin-main {
+    padding: 16px;
+  }
+
+  .config-label {
+    min-width: 140px;
+  }
+}
+
+/* 반응형 480px */
+@media (max-width: 480px) {
+  .stats-row {
+    grid-template-columns: 1fr;
+  }
+
+  .search-row {
+    flex-wrap: wrap;
+  }
+
+  .admin-input {
+    width: 100%;
+  }
+}
