@@ -1198,6 +1198,10 @@ function formatBidTime(timestamp) {
 
 // ===== 신고 모달 =====
 window.openReportModal = function(listingId, displayName) {
+  if (currentUserData?.authType === "anonymous") {
+    alert("신고는 Google 계정만 가능합니다.\n구글 로그인 후 이용해주세요.");
+    return;
+  }
   pendingReportListingId = listingId;
   pendingReportListingName = displayName;
   const modal = $("reportModal");

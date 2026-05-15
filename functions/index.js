@@ -1612,6 +1612,9 @@ exports.reportListing = onCall(
       if (!request.auth) {
         throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
       }
+      if (request.auth.token.firebase?.sign_in_provider === "anonymous") {
+        throw new HttpsError("permission-denied", "신고는 Google 계정만 가능합니다.");
+      }
 
       const {listingId, reason} = request.data;
       const uid = request.auth.uid;
@@ -1642,7 +1645,7 @@ exports.reportListing = onCall(
         throw new HttpsError("already-exists", "이미 신고한 매물입니다.");
       }
 
-      const MOSAIC_THRESHOLD = 5;
+      const MOSAIC_THRESHOLD = 10;
       const newCount = (listing.reportCount || 0) + 1;
 
       const batch = db.batch();
