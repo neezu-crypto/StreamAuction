@@ -10,7 +10,7 @@ import {httpsCallable} from "https://www.gstatic.com/firebasejs/12.12.1/firebase
 import {watchAuthState, logout} from "./auth.js";
 import {
   registerAuction, requestAuction, respondToAuctionRequest,
-  reportListing, blockListing, viewAuctionHistory,
+  reportListing, blockListing, viewAuctionHistory, viewListingDetail,
   formatG, validateSoopId, validateNickname, getSoopProfileUrl,
 } from "./auction.js";
 
@@ -26,6 +26,7 @@ let pendingReportListingId = null;
 let pendingReportListingName = null;
 let pendingRegisterData = {};
 let isRegistering = false;
+let isPaid = false;  // 50,000G 상세 열람 여부
 
 // ===== CF 참조 =====
 const initializeUserFn = httpsCallable(functions, "initializeUser");
@@ -52,7 +53,7 @@ async function init() {
       currentUserData = null;
     }
     renderAuthArea();
-    renderDetail();
+    renderView();
   });
 }
 
@@ -72,13 +73,72 @@ async function loadListing() {
   }
 }
 
-// ===== 매물 새로고침 =====
+// ===== 매물 새로고침 (isPaid 유지) =====
 async function refreshListing() {
   await loadListing();
-  // pendingRequest도 다시 로드
   pendingRequest = null;
-  await loadPendingRequest();
-  renderDetail();
+  if (isPaid) await loadPendingRequest();
+  isPaid ? renderDetail() : renderView();
+}
+
+// ===== 뷰 라우터 (게이트 or 상세) =====
+function renderView() {
+  if (!isPaid) {
+    renderGate();
+  } else {
+    renderDetail();
+  }
+}
+
+// ===== 게이트 화면 =====
+function renderGate() {
+  const container = $("listingContent");
+  if (!container) return;
+
+  if (!currentListing) {
+    container.innerHTML = `<div class="listing-error">매물을 찾을 수 없습니다.<br><a href="index.html" style="color:#f5d142">메인으로 돌아가기</a></div>`;
+    return;
+  }
+
+  const listing = currentListing;
+  const COST = 50000;
+  const balance = currentUserData?.balance ?? 0;
+  const imgSrc = listing.profileImageUrl || "assets/images/default-avatar.svg";
+  const imgClass = listing.isMosaicked ? "listing-hero-img img-mosaic" : "listing-hero-img";
+
+  let actionHtml;
+  if (!currentUserData) {
+    actionHtml = `<p class="gate-notice">로그인 후 이용할 수 있습니다</p>`;
+  } else if (balance < COST) {
+    actionHtml = `<p class="gate-notice">잔액 부족 · 보유 ${formatG(balance)} / 필요 ${formatG(COST)}</p>`;
+  } else {
+    actionHtml = `
+      <button class="btn-pay-gate" id="btnPayGate" onclick="handlePayToView()">
+        상세 정보 확인하기 · <span class="gate-cost-badge">50,000G</span>
+      </button>
+      <p class="gate-balance-hint">내 잔액: ${formatG(balance)}</p>`;
+  }
+
+  container.innerHTML = `
+    <div class="listing-card">
+      <div class="listing-hero">
+        <div class="listing-hero-img-wrap">
+          <img class="${imgClass}" src="${imgSrc}" alt="프로필"
+            onerror="this.src='assets/images/default-avatar.svg'">
+          ${listing.isMosaicked ? `<div class="listing-mosaic-label">신고됨</div>` : ""}
+        </div>
+        <div class="listing-hero-info">
+          <div class="listing-hero-name">${escapeHtml(listing.displayName)}</div>
+          <div class="listing-hero-id">@${escapeHtml(listing.soopId)}</div>
+        </div>
+      </div>
+      <div class="listing-gate">
+        <div class="gate-lock">🔒</div>
+        <div class="gate-title">상세 정보 열람</div>
+        <div class="gate-desc">시세 통계, 거래 기록, 액션 버튼을 확인하려면<br><strong>50,000G</strong>가 필요합니다</div>
+        ${actionHtml}
+      </div>
+    </div>`;
 }
 
 // ===== pendingRequest 로드 =====
@@ -114,6 +174,25 @@ function renderAuthArea() {
       <span style="color:#9ba3b4;font-size:.88rem">${formatG(currentUserData.balance ?? 0)}</span>
     </span>`;
 }
+
+// ===== 상세 열람 결제 =====
+window.handlePayToView = async function() {
+  const btn = $("btnPayGate");
+  if (btn) { btn.disabled = true; btn.textContent = "처리 중..."; }
+  try {
+    const result = await viewListingDetail(listingId);
+    if (currentUserData) currentUserData.balance = result.newBalance;
+    isPaid = true;
+    renderAuthArea();
+    await renderDetail();
+  } catch (e) {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `상세 정보 확인하기 · <span class="gate-cost-badge">50,000G</span>`;
+    }
+    alert(`열람 실패: ${e.message}`);
+  }
+};
 
 // ===== 메인 렌더 =====
 async function renderDetail() {

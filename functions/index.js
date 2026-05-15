@@ -1827,6 +1827,45 @@ exports.claimDailyReward = onCall(
 );
 
 // ============================================
+// viewListingDetail: 매물 상세 열람 BM (50,000G)
+// ============================================
+exports.viewListingDetail = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      const uid = request.auth?.uid;
+      if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+      const {listingId} = request.data;
+      if (!listingId || typeof listingId !== "string") {
+        throw new HttpsError("invalid-argument", "listingId가 필요합니다.");
+      }
+
+      const COST = 50000;
+      const userRef = db.collection("users").doc(uid);
+
+      let newBalance;
+      await db.runTransaction(async (tx) => {
+        const userSnap = await tx.get(userRef);
+        if (!userSnap.exists) throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+
+        const user = userSnap.data();
+        if (user.isBanned) throw new HttpsError("permission-denied", "정지된 계정입니다.");
+        if ((user.balance || 0) < COST) {
+          throw new HttpsError(
+              "failed-precondition",
+              `잔액이 부족합니다. (필요: ${COST.toLocaleString()}G, 보유: ${(user.balance || 0).toLocaleString()}G)`,
+          );
+        }
+        newBalance = user.balance - COST;
+        tx.update(userRef, {balance: FieldValue.increment(-COST)});
+      });
+
+      logger.info(`상세 열람: listingId=${listingId}, uid=${uid}, cost=${COST}G`);
+      return {success: true, newBalance};
+    },
+);
+
+// ============================================
 // viewAuctionHistory: 경매 히스토리 열람 BM (50,000G)
 // ============================================
 exports.viewAuctionHistory = onCall(

@@ -860,7 +860,7 @@ function showSearchFoundResult(listing, query) {
         ${requestBtn}
       </div>
       <div class="search-detail-history-row">
-        <a class="btn-detail" href="listing.html?id=${escapeHtml(listing.listingId)}" target="_blank">상세 페이지 →</a>
+        <a class="btn-detail" href="listing.html?id=${escapeHtml(listing.listingId)}" target="_blank">상세 페이지 <span class="detail-cost">50,000G</span></a>
         <button class="btn-history" onclick="handleViewHistory('${escapeHtml(listing.listingId)}', '${escapeHtml(listing.displayName)}')">
           경매 히스토리 열람 <span class="history-cost">50,000G</span>
         </button>
