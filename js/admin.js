@@ -88,6 +88,7 @@ window.switchTab = function(tab) {
   });
   if (tab === 'auction') refreshAuctionTab();
   if (tab === 'config') loadConfig();
+  if (tab === 'reports') loadReports();
 };
 
 // ===== 대시보드 =====
