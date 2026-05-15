@@ -170,9 +170,7 @@ const TUTORIAL_ITEMS = [
 
 function renderTutorialSection(userData) {
   const section = $("tutorialSection");
-  const list = $("tutorialList");
-  const progressBadge = $("tutorialProgress");
-  if (!section || !list) return;
+  if (!section) return;
 
   if (!userData) {
     section.style.display = "none";
@@ -180,31 +178,51 @@ function renderTutorialSection(userData) {
   }
 
   const rewards = userData.tutorialRewards || {};
-  const doneCount = TUTORIAL_ITEMS.filter((it) => rewards[it.key]).length;
-  const allDone = doneCount === TUTORIAL_ITEMS.length;
+  const doneItems = TUTORIAL_ITEMS.filter((it) => rewards[it.key]);
+  const currentItem = TUTORIAL_ITEMS.find((it) => !rewards[it.key]);
+  const doneCount = doneItems.length;
+  const total = TUTORIAL_ITEMS.length;
+  const allDone = doneCount === total;
 
-  if (progressBadge) {
-    progressBadge.textContent = `${doneCount} / ${TUTORIAL_ITEMS.length}`;
-    progressBadge.className = "tutorial-progress-badge" + (allDone ? " all-done" : "");
+  const doneChipsHtml = doneItems.length > 0 ? `
+    <div class="tut-done-chips">
+      ${doneItems.map((it) => `<span class="tut-step-chip">✅ ${it.title}</span>`).join("")}
+    </div>` : "";
+
+  let bodyHtml;
+  if (allDone) {
+    const totalReward = TUTORIAL_ITEMS.reduce((s, it) => s + it.reward, 0);
+    bodyHtml = `
+      <div class="tut-complete-card">
+        <div class="tut-complete-icon">🎉</div>
+        <div class="tut-complete-text">모든 튜토리얼 완료!</div>
+        <div class="tut-complete-sub">총 ${totalReward.toLocaleString("ko-KR")}G 획득</div>
+      </div>`;
+  } else {
+    const stepNum = doneCount + 1;
+    const ctaHtml = currentItem.cta
+      ? `<button class="tutorial-cta" onclick="${currentItem.cta.fn}">${currentItem.cta.label}</button>`
+      : "";
+    bodyHtml = `
+      <div class="tut-current-card">
+        <div class="tut-step-label">STEP ${stepNum} <span class="tut-step-total">/ ${total}</span></div>
+        <div class="tut-current-title">${currentItem.title}</div>
+        <div class="tut-current-desc">${currentItem.desc}</div>
+        <div class="tut-current-footer">
+          <span class="tut-current-reward">+${currentItem.reward.toLocaleString("ko-KR")}G</span>
+          ${ctaHtml}
+        </div>
+      </div>`;
   }
 
-  list.innerHTML = TUTORIAL_ITEMS.map((it) => {
-    const done = !!rewards[it.key];
-    const ctaHtml = (!done && it.cta) ?
-      `<button class="tutorial-cta" onclick="${it.cta.fn}">${it.cta.label}</button>` : "";
-    return `
-      <div class="tutorial-item${done ? " tutorial-item--done" : ""}">
-        <div class="tutorial-item-top">
-          <span class="tutorial-check">${done ? "✅" : "⭕"}</span>
-          <span class="tutorial-title">${it.title}</span>
-          <span class="tutorial-reward">+${it.reward.toLocaleString("ko-KR")}G</span>
-        </div>
-        <div class="tutorial-desc">${it.desc}</div>
-        ${ctaHtml}
-      </div>`;
-  }).join("");
-
   section.style.display = "";
+  section.innerHTML = `
+    <div class="tutorial-section-header">
+      <h2 class="section-title">튜토리얼 보상</h2>
+      <span class="tutorial-progress-badge${allDone ? " all-done" : ""}">${doneCount} / ${total}</span>
+    </div>
+    ${doneChipsHtml}
+    ${bodyHtml}`;
 }
 
 // ===== 튜토리얼 토스트 =====

@@ -1195,7 +1195,7 @@
 }
 
 /* ===== 튜토리얼 보상 섹션 ===== */
-.tutorial-section {
+#tutorialSection {
   margin-top: 2rem;
 }
 
@@ -1222,86 +1222,113 @@
   border-color: #16a34a;
 }
 
-.tutorial-list {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: .75rem;
-}
-
-.tutorial-item {
-  background: #1a1e2a;
-  border: 1px solid #2a2e3e;
-  border-radius: 12px;
-  padding: 14px 16px;
+/* 완료된 단계 칩 */
+.tut-done-chips {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 6px;
-  transition: border-color .2s;
+  margin-bottom: 12px;
 }
 
-.tutorial-item--done {
-  background: #111a14;
-  border-color: #16a34a40;
-  opacity: .75;
+.tut-step-chip {
+  font-size: .75rem;
+  color: #4ade80;
+  background: #052e16;
+  border: 1px solid #14532d;
+  border-radius: 20px;
+  padding: 2px 10px;
 }
 
-.tutorial-item-top {
+/* 현재 진행 단계 카드 */
+.tut-current-card {
+  background: linear-gradient(135deg, #1a1f2e 0%, #1c2236 100%);
+  border: 1.5px solid #3b4a6b;
+  border-radius: 14px;
+  padding: 20px 22px;
+}
+
+.tut-step-label {
+  font-size: .78rem;
+  font-weight: 700;
+  color: #60a5fa;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.tut-step-total {
+  color: #4b5563;
+  font-weight: 400;
+}
+
+.tut-current-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: 6px;
+}
+
+.tut-current-desc {
+  font-size: .85rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.tut-current-footer {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.tutorial-check {
-  font-size: 1rem;
-  flex-shrink: 0;
-  line-height: 1;
-}
-
-.tutorial-title {
-  font-size: .9rem;
-  font-weight: 600;
-  color: #e2e8f0;
-  flex: 1;
-}
-
-.tutorial-item--done .tutorial-title {
-  color: #6b7280;
-}
-
-.tutorial-reward {
-  font-size: .82rem;
-  font-weight: 700;
+.tut-current-reward {
+  font-size: .95rem;
+  font-weight: 800;
   color: #f5d142;
-  letter-spacing: .02em;
-}
-
-.tutorial-item--done .tutorial-reward {
-  color: #4b5563;
-  text-decoration: line-through;
-}
-
-.tutorial-desc {
-  font-size: .78rem;
-  color: #64748b;
-  line-height: 1.4;
 }
 
 .tutorial-cta {
-  margin-top: 4px;
-  padding: 5px 12px;
+  padding: 7px 16px;
   background: #1e3a5f;
   color: #93c5fd;
-  border: 1px solid #2563eb50;
-  border-radius: 6px;
-  font-size: .78rem;
+  border: 1px solid #2563eb60;
+  border-radius: 8px;
+  font-size: .82rem;
   font-weight: 600;
   cursor: pointer;
-  align-self: flex-start;
   transition: background .15s;
 }
 
 .tutorial-cta:hover {
   background: #1e40af;
+}
+
+/* 전체 완료 카드 */
+.tut-complete-card {
+  background: #052e16;
+  border: 1px solid #16a34a50;
+  border-radius: 14px;
+  padding: 24px;
+  text-align: center;
+}
+
+.tut-complete-icon {
+  font-size: 2rem;
+  margin-bottom: 6px;
+}
+
+.tut-complete-text {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #4ade80;
+  margin-bottom: 4px;
+}
+
+.tut-complete-sub {
+  font-size: .82rem;
+  color: #6b7280;
 }
 
 /* ===== 튜토리얼 토스트 ===== */
@@ -1555,5 +1582,5 @@
   .bid-btn { width: 100%; }
   .quick-bids { justify-content: center; }
   .modal { max-height: 85vh; }
-  .tutorial-list { grid-template-columns: 1fr; }
+  .tut-current-footer { flex-direction: column; align-items: flex-start; }
 }
