@@ -1345,6 +1345,90 @@
   to   { opacity: 0; }
 }
 
+/* ===== 경매 히스토리 ===== */
+.history-row {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+.btn-history {
+  background: none;
+  border: 1.5px solid #6b7280;
+  color: #d1d5db;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: .85rem;
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-history:hover {
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+.history-cost {
+  background: #374151;
+  color: #fbbf24;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: .78rem;
+  font-weight: 700;
+}
+.modal-history {
+  max-width: 640px;
+  width: 96%;
+}
+.history-loading,
+.history-empty,
+.history-error {
+  text-align: center;
+  padding: 24px;
+  color: #9ca3af;
+  font-size: .9rem;
+}
+.history-error { color: #f87171; }
+.history-cost-notice {
+  font-size: .8rem;
+  color: #6b7280;
+  margin-bottom: 12px;
+  text-align: right;
+}
+.history-table-wrap {
+  overflow-x: auto;
+}
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .88rem;
+}
+.history-table th {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid #374151;
+  color: #9ca3af;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.history-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #1f2937;
+  white-space: nowrap;
+}
+.history-table tbody tr:last-child td { border-bottom: none; }
+.history-table .price-final { font-weight: 700; color: #f59e0b; }
+.type-chip {
+  background: #1f2937;
+  border: 1px solid #374151;
+  color: #d1d5db;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: .78rem;
+}
+.outcome-won  { color: #34d399; font-weight: 700; }
+.outcome-failed { color: #f87171; }
+
 /* ===== 반응형 ===== */
 @media (max-width: 640px) {
   .main { padding: 16px; }

@@ -1741,3 +1741,73 @@ exports.adminSetMosaic = onCall(
       return {success: true, listingId, isMosaicked: !!isMosaicked};
     },
 );
+
+// ============================================
+// viewAuctionHistory: 경매 히스토리 열람 BM (50,000G)
+// ============================================
+exports.viewAuctionHistory = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      const uid = request.auth?.uid;
+      if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+      const {listingId} = request.data;
+      if (!listingId) throw new HttpsError("invalid-argument", "listingId가 필요합니다.");
+
+      const COST = 50000;
+      const userRef = db.collection("users").doc(uid);
+      const listingRef = db.collection("listings").doc(listingId);
+
+      const listingSnap = await listingRef.get();
+      if (!listingSnap.exists) throw new HttpsError("not-found", "매물을 찾을 수 없습니다.");
+
+      let newBalance;
+      await db.runTransaction(async (tx) => {
+        const userSnap = await tx.get(userRef);
+        if (!userSnap.exists) throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+
+        const user = userSnap.data();
+        if (user.isBanned) throw new HttpsError("permission-denied", "정지된 계정입니다.");
+        if (user.balance < COST) {
+          throw new HttpsError(
+              "failed-precondition",
+              `잔액이 부족합니다. (필요: ${COST.toLocaleString()}G, 보유: ${user.balance.toLocaleString()}G)`,
+          );
+        }
+        newBalance = user.balance - COST;
+        tx.update(userRef, {balance: FieldValue.increment(-COST)});
+      });
+
+      const historySnap = await db.collection("auctionHistory")
+          .where("listingId", "==", listingId)
+          .orderBy("endedAt", "desc")
+          .get();
+
+      const TYPE_LABEL = {new: "신규", holder: "보유자 승인", selloff: "손절"};
+      const history = historySnap.docs.map((docSnap) => {
+        const d = docSnap.data();
+        return {
+          auctionId: d.auctionId,
+          type: d.type,
+          typeLabel: TYPE_LABEL[d.type] || d.type,
+          startPrice: d.startPrice,
+          finalPrice: d.finalPrice,
+          isWon: d.isWon,
+          bidCount: d.bidCount || 0,
+          endedAt: d.endedAt?.toMillis?.() || null,
+        };
+      });
+
+      const listing = listingSnap.data();
+      logger.info(`히스토리 열람: listingId=${listingId}, uid=${uid}, cost=${COST}G`);
+      return {
+        cost: COST,
+        newBalance,
+        listing: {
+          displayName: listing.displayName,
+          soopId: listing.soopId,
+        },
+        history,
+      };
+    },
+);

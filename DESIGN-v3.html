@@ -195,6 +195,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>튜토리얼 UI</td><td>메인페이지 내 튜토리얼 진행 현황 섹션 — 4개 미션 체크리스트, 완료 수 배지, 미완료 시 행동 유도 버튼</td></tr>
 <tr><td>관리자 페이지 (admin.html)</td><td>5개 탭: 대시보드(통계·경매·기록) / 경매 제어(강제종료·대기열 비우기) / 유저 관리(조회·잔액조정·정지) / 시스템 설정(config 편집) / 신고 관리(모자이크 해제 포함) — <code>system/admin.adminUids</code>로 접근 제어</td></tr>
 <tr><td>신고/차단 시스템</td><td>reportListing (중복 방지 · 5회 누적 자동 모자이크) · blockListing · 검색 결과 차단/신고 UI · 모자이크 블러 · adminGetReports · adminSetMosaic</td></tr>
+<tr><td>경매 히스토리 열람 BM</td><td>viewAuctionHistory CF (50,000G 차감 · 트랜잭션) · 검색 결과 내 "히스토리 열람" 버튼 · 히스토리 모달 (날짜/유형/시작가/최종가/입찰 수/결과 테이블)</td></tr>
 <tr><td>기반</td><td>Firestore/RTDB 보안 규칙 (auctionRequests 포함), 모바일 반응형 UI</td></tr>
 </table>
 
@@ -207,7 +208,6 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <h3>❌ 미구현</h3>
 <table>
 <tr><th>항목</th><th>비고</th></tr>
-<tr><td>경매 히스토리 열람 (BM)</td><td>auctionHistory 저장만 됨, 열람 기능 없음</td></tr>
 <tr><td>매물 상세 페이지</td><td>listing.html 없음</td></tr>
 <tr><td>마이 페이지</td><td>my.html 없음</td></tr>
 <tr><td>Phase 2+ 전체</td><td>시세 감가상각, 출석/광고 보상, Cloud Scheduler 등</td></tr>
@@ -669,7 +669,6 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <h2>14. 남은 개발 과제</h2>
 <h3>우선순위 높음 — MVP 완성을 위한 필수 항목</h3>
 <ul>
-<li>경매 히스토리 열람 BM (50,000G)</li>
 <li>매물 상세 페이지 (listing.html)</li>
 <li>마이 페이지 (my.html)</li>
 </ul>

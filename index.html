@@ -291,6 +291,17 @@
   </div>
 </div>
 
+<!-- 경매 히스토리 모달 -->
+<div class="modal-overlay" id="historyModal" style="display:none" onclick="if(event.target===this)closeHistoryModal()">
+  <div class="modal modal-history">
+    <div class="modal-header">
+      <h2 id="historyModalTitle">경매 히스토리</h2>
+      <button class="modal-close" onclick="closeHistoryModal()">✕</button>
+    </div>
+    <div class="modal-body" id="historyModalBody"></div>
+  </div>
+</div>
+
 <div id="tutorialToastContainer"></div>
 <script type="module" src="js/main.js"></script>
 </body>

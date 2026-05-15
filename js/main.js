@@ -16,7 +16,7 @@ import {
   subscribeAuction, unsubscribeAuction,
   searchListing, registerAuction, placeBid,
   requestAuction, respondToAuctionRequest,
-  reportListing, blockListing,
+  reportListing, blockListing, viewAuctionHistory,
   formatG, formatTimeRemaining,
   validateSoopId, validateNickname,
   getSoopProfileUrl, loadInitialState,
@@ -759,6 +759,11 @@ function showSearchFoundResult(listing, query) {
           </button>` : ""}
         ${requestBtn}
       </div>
+      <div class="history-row">
+        <button class="btn-history" onclick="handleViewHistory('${escapeHtml(listing.listingId)}', '${escapeHtml(listing.displayName)}')">
+          경매 히스토리 열람 <span class="history-cost">50,000G</span>
+        </button>
+      </div>
       ${reportBlockHtml}
     </div>
   `;
@@ -1153,3 +1158,82 @@ window.handleBlockListing = async function(listingId, block) {
     alert(`${label} 실패: ${e.message}`);
   }
 };
+
+// ===== 경매 히스토리 열람 =====
+window.handleViewHistory = async function(listingId, displayName) {
+  if (!currentUserData) {
+    alert("로그인이 필요합니다.");
+    return;
+  }
+  const balance = currentUserData.balance ?? 0;
+  const COST = 50000;
+  if (balance < COST) {
+    alert(`잔액이 부족합니다.\n필요: ${COST.toLocaleString()}G / 보유: ${balance.toLocaleString()}G`);
+    return;
+  }
+  if (!confirm(`"${displayName}" 경매 히스토리를 열람합니다.\n${COST.toLocaleString()}G가 차감됩니다. 계속하시겠습니까?`)) return;
+
+  const modal = $("historyModal");
+  const body = $("historyModalBody");
+  const title = $("historyModalTitle");
+  title.textContent = `${displayName} — 경매 히스토리`;
+  body.innerHTML = `<p class="history-loading">불러오는 중...</p>`;
+  modal.style.display = "flex";
+
+  try {
+    const result = await viewAuctionHistory(listingId);
+    if (currentUserData) currentUserData.balance = result.newBalance;
+    renderUserBalance();
+
+    if (!result.history || result.history.length === 0) {
+      body.innerHTML = `<p class="history-empty">경매 기록이 없습니다.</p>`;
+      return;
+    }
+
+    const rows = result.history.map((h) => {
+      const date = h.endedAt ? new Date(h.endedAt).toLocaleDateString("ko-KR", {
+        year: "2-digit", month: "2-digit", day: "2-digit",
+      }) : "-";
+      const outcome = h.isWon ? "낙찰" : "유찰";
+      const outcomeClass = h.isWon ? "outcome-won" : "outcome-failed";
+      return `<tr>
+        <td>${date}</td>
+        <td><span class="type-chip">${escapeHtml(h.typeLabel)}</span></td>
+        <td>${formatG(h.startPrice)}</td>
+        <td class="price-final">${formatG(h.finalPrice)}</td>
+        <td>${h.bidCount}회</td>
+        <td><span class="${outcomeClass}">${outcome}</span></td>
+      </tr>`;
+    }).join("");
+
+    body.innerHTML = `
+      <p class="history-cost-notice">${COST.toLocaleString()}G 차감됨 · 잔액 ${result.newBalance.toLocaleString()}G</p>
+      <div class="history-table-wrap">
+        <table class="history-table">
+          <thead>
+            <tr><th>날짜</th><th>유형</th><th>시작가</th><th>최종가</th><th>입찰 수</th><th>결과</th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  } catch (e) {
+    body.innerHTML = `<p class="history-error">${escapeHtml(e.message)}</p>`;
+    log(`히스토리 열람 실패: ${e.message}`, true);
+  }
+};
+
+window.closeHistoryModal = function() {
+  $("historyModal").style.display = "none";
+};
+
+function renderUserBalance() {
+  const balanceEl = $("balance");
+  if (balanceEl && currentUserData) {
+    balanceEl.textContent = formatG(currentUserData.balance);
+  }
+  const authArea = $("authArea");
+  if (authArea && currentUserData) {
+    const balSpan = authArea.querySelector(".user-balance");
+    if (balSpan) balSpan.textContent = formatG(currentUserData.balance);
+  }
+}
