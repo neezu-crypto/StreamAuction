@@ -196,7 +196,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>관리자 페이지 (admin.html)</td><td>5개 탭: 대시보드(통계·경매·기록) / 경매 제어(강제종료·대기열 비우기) / 유저 관리(조회·잔액조정·정지) / 시스템 설정(config 편집) / 신고 관리(모자이크 해제 포함) — <code>system/admin.adminUids</code>로 접근 제어</td></tr>
 <tr><td>신고/차단 시스템</td><td>reportListing (Google 계정 전용 · 중복 방지 · 10회 누적 자동 모자이크) · blockListing · 검색 결과 / 상세 페이지 차단/신고 UI · 모자이크 블러 · adminGetReports · adminSetMosaic</td></tr>
 <tr><td>경매 히스토리 열람 BM</td><td>viewAuctionHistory CF (50,000G 차감 · 트랜잭션) · 검색 결과 내 "히스토리 열람" 버튼 · 상세 페이지 내 열람 버튼 · 히스토리 모달 (날짜/유형/시작가/최종가/입찰 수/결과 테이블)</td></tr>
-<tr><td>매물 상세 페이지</td><td>listing.html?id={listingId} — Firestore 직접 읽기 · 6개 스탯(현재 시세/역대 최고가·최저가/총 거래량/거래 횟수/마지막 거래) · 경매 진행 중 배너(메인 이동 링크) · 보유 현황별 액션 버튼(등록/요청/손절/승인·거부) · 히스토리 열람 · 신고/차단 · 검색 결과 카드에 "상세 페이지 →" 링크 추가</td></tr>
+<tr><td>매물 상세 페이지 BM</td><td>listing.html?id={listingId} — <strong>50,000G 결제 게이트</strong> (viewListingDetail CF · 트랜잭션) · 미결제 시 프로필+이름 미리보기만 노출 · 결제 후 6개 스탯(현재 시세/역대 최고가·최저가/총 거래량/거래 횟수/마지막 거래) + 보유 현황별 액션 버튼(등록/요청/손절/승인·거부) + 히스토리 열람 + 신고/차단 표시 · 경매 등록 등 내부 액션 후에도 isPaid 유지 · 검색 결과 카드에 "상세 페이지 50,000G" 뱃지 링크 추가</td></tr>
 <tr><td>출석 보상 시스템</td><td>claimDailyReward CF (KST 기준 하루 1회 · 연속 스트릭 · 7/30일 보너스 · Google 전용) · 보상 센터 모달 내 출석 카드 (스트릭 표시 · 진행바 · 즉시 잔액 반영 · 미수령 시 헤더 버튼 점 표시) · 관리자 유저 상세 출석 정보 표시 · 시스템 설정 출석 보상값 편집</td></tr>
 <tr><td>기반</td><td>Firestore/RTDB 보안 규칙 (auctionRequests 포함), 모바일 반응형 UI</td></tr>
 </table>
@@ -538,7 +538,8 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <tr><td>경매 수수료</td><td>낙찰가의 5% (판매자 부담)</td></tr>
 <tr><td>보유자 없는 매물 등록비</td><td>최소 시세 50,000G 즉시 차감 (등록 시점)</td></tr>
 <tr><td>신규 매물 낙찰금</td><td>100% 시스템 회수</td></tr>
-<tr><td>경매 히스토리 열람</td><td>50,000G</td></tr>
+<tr><td>매물 상세 페이지 열람</td><td>50,000G</td></tr>
+<tr><td>경매 히스토리 열람</td><td>50,000G (상세 페이지 결제와 별도)</td></tr>
 <tr><td>강제청산 시세 환급</td><td>0% 회수 (보유자에게 100%)</td></tr>
 </table>
 </div>
@@ -547,7 +548,8 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <h2>12. 비즈니스 모델</h2>
 <table>
 <tr><th>항목</th><th>설명</th><th>Phase</th></tr>
-<tr><td>경매 히스토리 열람</td><td>과거 경매 결과 + 입찰 기록 → 50,000G</td><td><span class="badge badge-done">MVP</span></td></tr>
+<tr><td>매물 상세 페이지 열람</td><td>시세 통계 6개 + 거래 액션 버튼 접근 → 50,000G</td><td><span class="badge badge-done">MVP</span></td></tr>
+<tr><td>경매 히스토리 열람</td><td>과거 경매 결과 + 입찰 기록 → 50,000G (상세 페이지 내 별도 과금)</td><td><span class="badge badge-done">MVP</span></td></tr>
 <tr><td>강제청산 방어권</td><td>회신 기한 24→72시간 연장</td><td><span class="badge badge-phase">Phase 2-3</span></td></tr>
 <tr><td>금고 사용권</td><td>매물 강제청산 영구 면제</td><td><span class="badge badge-phase">Phase 2-3</span></td></tr>
 <tr><td>광고</td><td>배너, 영상 광고 (보상형)</td><td><span class="badge badge-phase">Phase 2</span></td></tr>
@@ -570,7 +572,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <div class="phase-row">
 <div class="phase-card">
   <div class="phase-title">Phase 1 — MVP</div>
-  <div class="phase-item">경매 핵심 루프<br>인증/유저 시스템<br>강제청산<br>신고/차단<br>어뷰징 방어<br>경매 히스토리 BM<br>출석 보상<br>튜토리얼 UI<br>관리자 페이지<br>매물 상세 페이지</div>
+  <div class="phase-item">경매 핵심 루프<br>인증/유저 시스템<br>강제청산<br>신고/차단<br>어뷰징 방어<br>매물 상세 열람 BM<br>경매 히스토리 BM<br>출석 보상<br>튜토리얼 UI<br>관리자 페이지</div>
 </div>
 <div class="phase-card">
   <div class="phase-title">Phase 2 — 출시 1개월</div>
@@ -694,7 +696,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 
 <hr>
 <p style="font-size:12px;color:#999;text-align:center;padding:1rem 0">
-  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-15 (매물 상세 페이지 추가) · 작성자: 프로젝트 오너 + Claude
+  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-15 (매물 상세 열람 BM 추가) · 작성자: 프로젝트 오너 + Claude
 </p>
 
 </div>
