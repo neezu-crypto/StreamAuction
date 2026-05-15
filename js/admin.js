@@ -330,7 +330,7 @@ const CONFIG_GROUPS = [
   },
 ];
 
-async function loadConfig() {
+window.loadConfig = async function loadConfig() {
   $('configForm').innerHTML = `<p class="empty-msg">로딩 중...</p>`;
   try {
     const result = await adminGetConfigFn();
@@ -391,7 +391,7 @@ window.handleSaveConfig = async function() {
 const adminGetReportsFn = httpsCallable(functions, "adminGetReports");
 const adminSetMosaicFn = httpsCallable(functions, "adminSetMosaic");
 
-async function loadReports() {
+window.loadReports = async function loadReports() {
   $("reportsContent").innerHTML = `<p class="empty-msg">로딩 중...</p>`;
   try {
     const result = await adminGetReportsFn();
