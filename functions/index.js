@@ -462,6 +462,8 @@ exports.initializeUser = onCall(
             blockedListingIds: userData.blockedListingIds || [],
             onboardingStep: userData.onboardingStep ?? 4,
             tutorialRewards: userData.tutorialRewards || {},
+            consecutiveLoginDays: userData.consecutiveLoginDays || 0,
+            lastDailyRewardAt: userData.lastDailyRewardAt?.toMillis?.() || null,
           };
         }
 
@@ -1496,6 +1498,8 @@ exports.adminGetUser = onCall(
         isBanned: data.isBanned || false,
         banReason: data.banReason || null,
         tutorialRewards: data.tutorialRewards || {},
+        consecutiveLoginDays: data.consecutiveLoginDays || 0,
+        lastDailyRewardAt: data.lastDailyRewardAt?.toMillis?.() || null,
         createdAt: data.createdAt?.toMillis?.() || null,
         lastLoginAt: data.lastLoginAt?.toMillis?.() || null,
       };
@@ -1581,6 +1585,7 @@ exports.adminSetConfig = onCall(
         "anonymousOwnedLimit", "googleOwnedLimit",
         "tutorialRewards.firstPurchase", "tutorialRewards.firstTrade",
         "tutorialRewards.firstSelloff", "tutorialRewards.firstForceLiquidation",
+        "dailyReward1", "dailyReward3Plus", "dailyRewardBonus7", "dailyRewardBonus30",
       ];
       const filtered = {};
       for (const key of allowed) {
@@ -1739,6 +1744,82 @@ exports.adminSetMosaic = onCall(
       await listingRef.update({isMosaicked: !!isMosaicked});
       logger.info(`관리자 모자이크 ${isMosaicked ? "적용" : "해제"}: ${listingId} by ${request.auth.uid}`);
       return {success: true, listingId, isMosaicked: !!isMosaicked};
+    },
+);
+
+// ============================================
+// claimDailyReward: 출석 보상 (Google 전용)
+// ============================================
+function getKSTDateStr(date) {
+  const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  return kst.toISOString().slice(0, 10);
+}
+
+exports.claimDailyReward = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      const uid = request.auth?.uid;
+      if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+      const configSnap = await db.collection("system").doc("config").get();
+      const config = configSnap.data() || {};
+
+      const userRef = db.collection("users").doc(uid);
+
+      return db.runTransaction(async (tx) => {
+        const userSnap = await tx.get(userRef);
+        if (!userSnap.exists) throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+        const user = userSnap.data();
+
+        if (user.isBanned) throw new HttpsError("permission-denied", "정지된 계정입니다.");
+        if (user.authType === "anonymous") {
+          throw new HttpsError("permission-denied", "Google 계정만 출석 보상을 받을 수 있습니다.");
+        }
+
+        const now = new Date();
+        const todayKST = getKSTDateStr(now);
+        const lastAt = user.lastDailyRewardAt?.toDate?.() || null;
+        const lastKST = lastAt ? getKSTDateStr(lastAt) : null;
+
+        if (lastKST === todayKST) {
+          throw new HttpsError("already-exists", "오늘 이미 출석 보상을 받으셨습니다.");
+        }
+
+        const yesterdayKST = getKSTDateStr(new Date(now.getTime() - 86400000));
+        const newStreak = lastKST === yesterdayKST ?
+          (user.consecutiveLoginDays || 0) + 1 : 1;
+
+        const base = newStreak <= 2 ?
+          (config.dailyReward1 || 5000) :
+          (config.dailyReward3Plus || 10000);
+
+        let bonus = 0;
+        let specialDay = null;
+        if (newStreak % 30 === 0) {
+          bonus = config.dailyRewardBonus30 || 100000;
+          specialDay = 30;
+        } else if (newStreak % 7 === 0) {
+          bonus = config.dailyRewardBonus7 || 30000;
+          specialDay = 7;
+        }
+        const totalReward = base + bonus;
+
+        tx.update(userRef, {
+          balance: FieldValue.increment(totalReward),
+          lastDailyRewardAt: FieldValue.serverTimestamp(),
+          consecutiveLoginDays: newStreak,
+        });
+
+        logger.info(`출석 보상: uid=${uid}, streak=${newStreak}, reward=${totalReward}G`);
+        return {
+          reward: totalReward,
+          base,
+          bonus,
+          specialDay,
+          newStreak,
+          newBalance: user.balance + totalReward,
+        };
+      });
     },
 );
 

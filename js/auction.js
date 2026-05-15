@@ -28,6 +28,7 @@ const respondToAuctionRequestFn = httpsCallable(functions, "respondToAuctionRequ
 const reportListingFn = httpsCallable(functions, "reportListing");
 const blockListingFn = httpsCallable(functions, "blockListing");
 const viewAuctionHistoryFn = httpsCallable(functions, "viewAuctionHistory");
+const claimDailyRewardFn = httpsCallable(functions, "claimDailyReward");
 
 // ===== 실시간 구독 시작 =====
 export function subscribeAuction({
@@ -205,5 +206,11 @@ export async function blockListing({listingId, block}) {
 // ===== 경매 히스토리 열람 (50,000G) =====
 export async function viewAuctionHistory(listingId) {
   const result = await viewAuctionHistoryFn({listingId});
+  return result.data;
+}
+
+// ===== 출석 보상 =====
+export async function claimDailyReward() {
+  const result = await claimDailyRewardFn();
   return result.data;
 }

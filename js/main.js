@@ -16,7 +16,7 @@ import {
   subscribeAuction, unsubscribeAuction,
   searchListing, registerAuction, placeBid,
   requestAuction, respondToAuctionRequest,
-  reportListing, blockListing, viewAuctionHistory,
+  reportListing, blockListing, viewAuctionHistory, claimDailyReward,
   formatG, formatTimeRemaining,
   validateSoopId, validateNickname,
   getSoopProfileUrl, loadInitialState,
@@ -56,6 +56,87 @@ function hide(id) { const el = $(id); if (el) el.style.display = "none"; }
 function setText(id, text) { const el = $(id); if (el) el.textContent = text; }
 
 // ===== 튜토리얼 섹션 렌더링 =====
+// ===== 출석 보상 헬퍼 =====
+function getKSTDateStr(date) {
+  const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  return kst.toISOString().slice(0, 10);
+}
+
+function calcNextMilestone(streak) {
+  const milestones = [7, 14, 21, 28, 30, 37, 44, 51, 58, 60];
+  for (const m of milestones) {
+    if (streak < m) return m;
+  }
+  return Math.ceil((streak + 1) / 30) * 30;
+}
+
+function renderDailyRewardSection(userData) {
+  const section = $("dailyRewardSection");
+  if (!section) return;
+
+  if (!userData) {
+    section.style.display = "none";
+    return;
+  }
+
+  section.style.display = "";
+
+  const isGoogle = userData.authType === "google";
+  if (!isGoogle) {
+    section.innerHTML = `
+      <div class="daily-reward-card daily-reward-anonymous">
+        <div class="daily-reward-icon">🗓️</div>
+        <div>
+          <div class="daily-reward-title">매일 출석 보상</div>
+          <div class="daily-reward-sub">Google 계정으로 전환하면 매일 최대 <strong>10,000G+보너스</strong>를 받을 수 있어요!</div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const streak = userData.consecutiveLoginDays || 0;
+  const lastAtMs = userData.lastDailyRewardAt || null;
+  const todayKST = getKSTDateStr(new Date());
+  const lastKST = lastAtMs ? getKSTDateStr(new Date(lastAtMs)) : null;
+  const claimedToday = lastKST === todayKST;
+
+  const nextMilestone = calcNextMilestone(streak);
+  const milestoneType = nextMilestone % 30 === 0 ? 30 : 7;
+  const milestoneBonus = milestoneType === 30 ? 100000 : 30000;
+  const daysLeft = nextMilestone - streak;
+
+  const baseReward = streak < 2 ? 5000 : 10000;
+  const todayIsSpecial = streak > 0 && (streak % 30 === 0 || streak % 7 === 0);
+
+  // 7일 주기 진행바 (30일 달성 시 30 기준)
+  const barTotal = milestoneType === 30 ? 30 : 7;
+  const barFill = streak % barTotal;
+  const barPct = Math.round((barFill / barTotal) * 100);
+
+  const btnHtml = claimedToday
+    ? `<div class="daily-claimed-badge">✅ 오늘 출석 완료</div>`
+    : `<button class="btn-daily-claim" onclick="handleClaimDailyReward()">출석 체크하기</button>`;
+
+  section.innerHTML = `
+    <div class="daily-reward-card">
+      <div class="daily-reward-top">
+        <div class="daily-reward-streak">
+          <span class="daily-streak-num">${streak}</span>
+          <span class="daily-streak-label">일 연속</span>
+        </div>
+        <div class="daily-reward-info">
+          <div class="daily-reward-title">오늘의 보상 <strong class="daily-reward-amount">${baseReward.toLocaleString()}G${todayIsSpecial && !claimedToday ? ` + ${milestoneBonus.toLocaleString()}G 보너스!` : ""}</strong></div>
+          <div class="daily-reward-sub">${daysLeft}일 후 ${milestoneBonus.toLocaleString()}G 특별 보상 (${nextMilestone}일 달성)</div>
+          <div class="daily-progress-bar">
+            <div class="daily-progress-fill" style="width:${barPct}%"></div>
+          </div>
+          <div class="daily-progress-label">${barFill} / ${barTotal}일</div>
+        </div>
+        <div class="daily-reward-action">${btnHtml}</div>
+      </div>
+    </div>`;
+}
+
 const TUTORIAL_ITEMS = [
   {
     key: "firstTrade",
@@ -284,6 +365,9 @@ async function processUserLogin(user) {
     // 보유 매물 로드
     loadMyHoldings(user.uid);
 
+    // 출석 보상 섹션 렌더링
+    renderDailyRewardSection(userData);
+
     // 튜토리얼 섹션 렌더링
     renderTutorialSection(userData);
 
@@ -308,6 +392,7 @@ watchAuthState(async (user) => {
     currentUserData = null;
     updateAuthUI(null, null);
     loadMyHoldings(null);
+    renderDailyRewardSection(null);
     renderTutorialSection(null);
     try {
       await loginAnonymous();
@@ -1222,6 +1307,52 @@ window.handleViewHistory = async function(listingId, displayName) {
     log(`히스토리 열람 실패: ${e.message}`, true);
   }
 };
+
+// ===== 출석 체크 핸들러 =====
+window.handleClaimDailyReward = async function() {
+  const btn = document.querySelector(".btn-daily-claim");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "처리 중...";
+  }
+  try {
+    const result = await claimDailyReward();
+    if (currentUserData) {
+      currentUserData.balance = result.newBalance;
+      currentUserData.consecutiveLoginDays = result.newStreak;
+      currentUserData.lastDailyRewardAt = Date.now();
+    }
+    renderUserBalance();
+    renderDailyRewardSection(currentUserData);
+
+    let msg = `+${result.base.toLocaleString()}G 획득!`;
+    if (result.bonus > 0) {
+      msg += ` +${result.bonus.toLocaleString()}G ${result.specialDay}일 보너스!`;
+    }
+    msg += ` (${result.newStreak}일 연속)`;
+    showToast(msg);
+  } catch (e) {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "출석 체크하기";
+    }
+    if (e.code === "already-exists") {
+      renderDailyRewardSection(currentUserData);
+    } else {
+      alert(`출석 보상 실패: ${e.message}`);
+    }
+  }
+};
+
+function showToast(message) {
+  const container = $("tutorialToastContainer");
+  if (!container) return;
+  const toast = document.createElement("div");
+  toast.className = "tutorial-toast";
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3100);
+}
 
 window.closeHistoryModal = function() {
   const modal = $("historyModal");

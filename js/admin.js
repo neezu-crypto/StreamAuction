@@ -250,6 +250,7 @@ function renderUserDetail(user) {
       <div class="info-row"><dt>보유</dt><dd>${user.ownedCount} / ${user.ownedLimit}개</dd></div>
       <div class="info-row"><dt>가입일</dt><dd>${formatDate(user.createdAt)}</dd></div>
       <div class="info-row"><dt>최근 접속</dt><dd>${formatDate(user.lastLoginAt)}</dd></div>
+      <div class="info-row"><dt>연속 출석</dt><dd>${user.consecutiveLoginDays || 0}일째 · 마지막 ${user.lastDailyRewardAt ? formatDate(user.lastDailyRewardAt) : "없음"}</dd></div>
       <div class="info-row"><dt>튜토리얼</dt><dd class="tut-chips">${tutChips}</dd></div>
       <div class="info-row"><dt>상태</dt><dd style="color:${user.isBanned ? '#ef4444' : '#22c55e'}">
         ${user.isBanned ? `🚫 정지됨${user.banReason ? ` · ${user.banReason}` : ''}` : '✅ 정상'}
@@ -327,6 +328,15 @@ const CONFIG_GROUPS = [
       {key: 'tutorialRewards.firstPurchase', label: '첫 낙찰', unit: 'G'},
       {key: 'tutorialRewards.firstSelloff', label: '첫 손절 경매', unit: 'G'},
       {key: 'tutorialRewards.firstForceLiquidation', label: '첫 강제청산', unit: 'G'},
+    ],
+  },
+  {
+    title: '출석 보상',
+    fields: [
+      {key: 'dailyReward1', label: '출석 1~2일', unit: 'G'},
+      {key: 'dailyReward3Plus', label: '출석 3일+', unit: 'G'},
+      {key: 'dailyRewardBonus7', label: '7일 특별 보너스', unit: 'G'},
+      {key: 'dailyRewardBonus30', label: '30일 특별 보너스', unit: 'G'},
     ],
   },
 ];

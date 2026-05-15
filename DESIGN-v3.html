@@ -196,6 +196,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>관리자 페이지 (admin.html)</td><td>5개 탭: 대시보드(통계·경매·기록) / 경매 제어(강제종료·대기열 비우기) / 유저 관리(조회·잔액조정·정지) / 시스템 설정(config 편집) / 신고 관리(모자이크 해제 포함) — <code>system/admin.adminUids</code>로 접근 제어</td></tr>
 <tr><td>신고/차단 시스템</td><td>reportListing (중복 방지 · 5회 누적 자동 모자이크) · blockListing · 검색 결과 차단/신고 UI · 모자이크 블러 · adminGetReports · adminSetMosaic</td></tr>
 <tr><td>경매 히스토리 열람 BM</td><td>viewAuctionHistory CF (50,000G 차감 · 트랜잭션) · 검색 결과 내 "히스토리 열람" 버튼 · 히스토리 모달 (날짜/유형/시작가/최종가/입찰 수/결과 테이블)</td></tr>
+<tr><td>출석 보상 시스템</td><td>claimDailyReward CF (KST 기준 하루 1회 · 연속 스트릭 · 7/30일 보너스 · Google 전용) · 메인페이지 출석 카드 (스트릭 표시 · 진행바 · 즉시 잔액 반영) · 관리자 유저 상세 출석 정보 표시 · 시스템 설정 출석 보상값 편집</td></tr>
 <tr><td>기반</td><td>Firestore/RTDB 보안 규칙 (auctionRequests 포함), 모바일 반응형 UI</td></tr>
 </table>
 
@@ -676,7 +677,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <ul>
 <li>시세 감가상각 (7일 주기 -5%, 하한 50,000G)</li>
 <li>휴면 매물 강제 회수</li>
-<li>출석/광고 보상 시스템</li>
+<li>광고 시청 보상 시스템</li>
 <li>Cloud Scheduler 도입 (클라이언트 트리거 대체)</li>
 </ul>
 <h3>우선순위 낮음 — Phase 3</h3>

@@ -1345,6 +1345,120 @@
   to   { opacity: 0; }
 }
 
+/* ===== 출석 보상 ===== */
+#dailyRewardSection {
+  margin-bottom: 20px;
+}
+.daily-reward-card {
+  background: linear-gradient(135deg, #1a1f2e 0%, #1e2433 100%);
+  border: 1px solid #2a3548;
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+.daily-reward-card.daily-reward-anonymous {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  opacity: .75;
+}
+.daily-reward-anonymous .daily-reward-icon {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+.daily-reward-top {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.daily-reward-streak {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #0f172a;
+  border: 2px solid #f59e0b;
+  border-radius: 12px;
+  padding: 10px 16px;
+  min-width: 72px;
+  flex-shrink: 0;
+}
+.daily-streak-num {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #f59e0b;
+  line-height: 1;
+}
+.daily-streak-label {
+  font-size: .72rem;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+.daily-reward-info {
+  flex: 1;
+  min-width: 0;
+}
+.daily-reward-title {
+  font-size: .9rem;
+  color: #d1d5db;
+  margin-bottom: 2px;
+}
+.daily-reward-amount {
+  color: #f59e0b;
+}
+.daily-reward-sub {
+  font-size: .78rem;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+.daily-progress-bar {
+  height: 6px;
+  background: #1f2937;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 3px;
+}
+.daily-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  border-radius: 3px;
+  transition: width .4s ease;
+}
+.daily-progress-label {
+  font-size: .72rem;
+  color: #6b7280;
+}
+.daily-reward-action {
+  flex-shrink: 0;
+}
+.btn-daily-claim {
+  background: #f59e0b;
+  color: #0f172a;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: .88rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s, transform .1s;
+}
+.btn-daily-claim:hover { background: #fbbf24; }
+.btn-daily-claim:active { transform: scale(.97); }
+.btn-daily-claim:disabled {
+  background: #374151;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+.daily-claimed-badge {
+  background: #064e3b;
+  color: #34d399;
+  border: 1px solid #065f46;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: .82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* ===== 경매 히스토리 ===== */
 .history-row {
   margin-top: 10px;
