@@ -30,6 +30,7 @@ const blockListingFn = httpsCallable(functions, "blockListing");
 const viewListingDetailFn = httpsCallable(functions, "viewListingDetail");
 const viewAuctionHistoryFn = httpsCallable(functions, "viewAuctionHistory");
 const claimDailyRewardFn = httpsCallable(functions, "claimDailyReward");
+const updateUserNicknameFn = httpsCallable(functions, "updateUserNickname");
 
 // ===== 실시간 구독 시작 =====
 export function subscribeAuction({
@@ -213,6 +214,12 @@ export async function viewListingDetail(listingId) {
 // ===== 경매 히스토리 열람 (50,000G) =====
 export async function viewAuctionHistory(listingId) {
   const result = await viewAuctionHistoryFn({listingId});
+  return result.data;
+}
+
+// ===== 닉네임 변경 =====
+export async function updateUserNickname(nickname) {
+  const result = await updateUserNicknameFn({nickname});
   return result.data;
 }
 

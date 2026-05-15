@@ -9,7 +9,7 @@ import {
 import {httpsCallable} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-functions.js";
 import {watchAuthState} from "./auth.js";
 import {
-  registerAuction, respondToAuctionRequest,
+  registerAuction, respondToAuctionRequest, updateUserNickname,
   formatG, validateSoopId, validateNickname, getSoopProfileUrl,
 } from "./auction.js";
 
@@ -38,6 +38,7 @@ let sellHistory = [];
 let activeTab = "all";
 let pendingRegisterData = {};
 let isRegistering = false;
+let isEditingNickname = false;
 
 const initializeUserFn = httpsCallable(functions, "initializeUser");
 
@@ -148,7 +149,20 @@ function renderProfileCard() {
       <img class="my-profile-avatar" src="${escapeHtml(avatarSrc)}"
         onerror="this.src='assets/images/default-avatar.svg'" alt="프로필">
       <div class="my-profile-info">
-        <div class="my-profile-name">${escapeHtml(displayName)}</div>
+        ${isEditingNickname ? `
+          <div class="my-nickname-edit-row">
+            <input class="my-nickname-input" id="nicknameInput"
+              value="${escapeHtml(displayName)}" maxlength="20" placeholder="닉네임 (2~20자)">
+            <button class="btn-nickname-save" onclick="saveNickname()">저장</button>
+            <button class="btn-nickname-cancel" onclick="cancelEditNickname()">취소</button>
+          </div>
+          <div class="my-nickname-error" id="nicknameError"></div>
+        ` : `
+          <div class="my-profile-name-row">
+            <span class="my-profile-name">${escapeHtml(displayName)}</span>
+            <button class="btn-nickname-edit" onclick="startEditNickname()" title="닉네임 변경">✏️</button>
+          </div>
+        `}
         <span class="my-profile-type ${typeClass}">${typeLabel}</span>
       </div>
       <div class="my-stats-row">
@@ -475,5 +489,44 @@ window.handleRejectRequest = async function(requestId) {
     renderAll();
   } catch (e) {
     alert(`거부 실패: ${e.message}`);
+  }
+};
+
+// ===== 닉네임 변경 =====
+window.startEditNickname = function() {
+  isEditingNickname = true;
+  renderAll();
+  const input = $("nicknameInput");
+  if (input) { input.focus(); input.select(); }
+};
+
+window.cancelEditNickname = function() {
+  isEditingNickname = false;
+  renderAll();
+};
+
+window.saveNickname = async function() {
+  const input = $("nicknameInput");
+  const errEl = $("nicknameError");
+  if (!input) return;
+
+  const nickname = input.value.trim();
+  if (nickname.length < 2 || nickname.length > 20) {
+    if (errEl) errEl.textContent = "닉네임은 2~20자여야 합니다.";
+    return;
+  }
+
+  const saveBtn = document.querySelector(".btn-nickname-save");
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "저장 중..."; }
+
+  try {
+    const result = await updateUserNickname(nickname);
+    currentUserData = {...currentUserData, displayName: result.displayName};
+    isEditingNickname = false;
+    renderAll();
+    renderAuthArea();
+  } catch (e) {
+    if (errEl) errEl.textContent = e.message || "변경에 실패했습니다.";
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "저장"; }
   }
 };

@@ -1934,3 +1934,38 @@ exports.viewAuctionHistory = onCall(
       };
     },
 );
+
+// ============================================
+// updateUserNickname: 닉네임 변경
+// ============================================
+exports.updateUserNickname = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+      const uid = request.auth.uid;
+      const {nickname} = request.data;
+
+      if (typeof nickname !== "string") {
+        throw new HttpsError("invalid-argument", "닉네임을 입력해주세요.");
+      }
+      const trimmed = nickname.trim();
+      if (trimmed.length < 2 || trimmed.length > 20) {
+        throw new HttpsError("invalid-argument", "닉네임은 2~20자여야 합니다.");
+      }
+      // 이모지 및 특수문자 금지 (허용: 한글, 영문, 숫자, 공백, ._-)
+      if (/[^\p{L}\p{N} ._-]/u.test(trimmed)) {
+        throw new HttpsError("invalid-argument", "사용할 수 없는 문자가 포함되어 있습니다.");
+      }
+
+      const userRef = db.collection("users").doc(uid);
+      const userSnap = await userRef.get();
+      if (!userSnap.exists) throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+      const userData = userSnap.data();
+      if (userData.isBanned) throw new HttpsError("permission-denied", "정지된 계정입니다.");
+
+      await userRef.update({displayName: trimmed});
+      logger.info(`닉네임 변경: uid=${uid}, nickname=${trimmed}`);
+      return {success: true, displayName: trimmed};
+    },
+);

@@ -36,6 +36,83 @@
   font-size: 1.25rem;
   font-weight: 700;
   color: #fff;
+  margin-bottom: 0;
+}
+
+.my-profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.btn-nickname-edit {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 2px 4px;
+  opacity: 0.5;
+  transition: opacity .15s;
+  line-height: 1;
+}
+
+.btn-nickname-edit:hover { opacity: 1; }
+
+.my-nickname-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.my-nickname-input {
+  background: #0f1115;
+  border: 1px solid #4b5563;
+  border-radius: 6px;
+  color: #e8e8e8;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  width: 180px;
+  outline: none;
+}
+
+.my-nickname-input:focus { border-color: #f5d142; }
+
+.btn-nickname-save {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: #f5d142;
+  color: #0f1115;
+  border: none;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+
+.btn-nickname-save:hover { opacity: 0.85; }
+.btn-nickname-save:disabled { opacity: 0.5; cursor: default; }
+
+.btn-nickname-cancel {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: #1a1d24;
+  color: #9ba3b4;
+  border: 1px solid #2a2e38;
+  cursor: pointer;
+  transition: all .15s;
+}
+
+.btn-nickname-cancel:hover { border-color: #4b5563; color: #e8e8e8; }
+
+.my-nickname-error {
+  font-size: 0.78rem;
+  color: #f87171;
   margin-bottom: 4px;
 }
 
