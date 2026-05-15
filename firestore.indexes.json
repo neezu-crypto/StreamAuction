@@ -15,6 +15,14 @@
         { "fieldPath": "listingId", "order": "ASCENDING" },
         { "fieldPath": "endedAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "auctionRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "expiresAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

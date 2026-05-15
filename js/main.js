@@ -1176,9 +1176,10 @@ window.handleViewHistory = async function(listingId, displayName) {
   const modal = $("historyModal");
   const body = $("historyModalBody");
   const title = $("historyModalTitle");
+  if (!modal) return;
   title.textContent = `${displayName} — 경매 히스토리`;
   body.innerHTML = `<p class="history-loading">불러오는 중...</p>`;
-  modal.style.display = "flex";
+  modal.classList.add("show");
 
   try {
     const result = await viewAuctionHistory(listingId);
@@ -1223,17 +1224,20 @@ window.handleViewHistory = async function(listingId, displayName) {
 };
 
 window.closeHistoryModal = function() {
-  $("historyModal").style.display = "none";
+  const modal = $("historyModal");
+  if (modal) modal.classList.remove("show");
 };
 
 function renderUserBalance() {
-  const balanceEl = $("balance");
-  if (balanceEl && currentUserData) {
-    balanceEl.textContent = formatG(currentUserData.balance);
-  }
+  if (!currentUserData) return;
+  setText("balance", formatG(currentUserData.balance));
   const authArea = $("authArea");
-  if (authArea && currentUserData) {
-    const balSpan = authArea.querySelector(".user-balance");
-    if (balSpan) balSpan.textContent = formatG(currentUserData.balance);
-  }
+  if (!authArea) return;
+  const typeLabel = currentUserData.authType === "anonymous" ? "익명 유저" : "Google 유저";
+  authArea.innerHTML = `
+    <span style="font-size:.85rem;color:#9ba3b4">
+      <strong style="color:#f5d142">${typeLabel}</strong>
+      · ${formatG(currentUserData.balance)}
+    </span>
+  `;
 }
