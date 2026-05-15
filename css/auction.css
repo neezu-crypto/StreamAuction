@@ -1060,6 +1060,140 @@
   flex-wrap: wrap;
 }
 
+/* ===== 신고 / 차단 ===== */
+.search-result-blocked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 32px 20px;
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 14px;
+  text-align: center;
+}
+
+.blocked-icon { font-size: 2rem; }
+.blocked-msg { font-size: .9rem; color: #6b7280; }
+.blocked-name { font-size: 1rem; font-weight: 600; color: #9ba3b4; }
+
+.search-profile-wrap {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+}
+
+.search-profile-wrap .search-profile-img {
+  width: 100%;
+  height: 100%;
+}
+
+.img-mosaic {
+  filter: blur(10px);
+  border-radius: 50%;
+}
+
+.mosaic-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .6rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0,0,0,.45);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.report-block-row {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #2a2e38;
+}
+
+.btn-block-listing {
+  padding: 5px 14px;
+  background: #2a2e38;
+  color: #9ba3b4;
+  border-radius: 6px;
+  font-size: .8rem;
+  font-weight: 600;
+  transition: background .15s;
+}
+
+.btn-block-listing:hover { background: #353a47; color: #e2e8f0; }
+
+.btn-report-listing {
+  padding: 5px 14px;
+  background: #3b1515;
+  color: #f87171;
+  border: 1px solid #7f1d1d50;
+  border-radius: 6px;
+  font-size: .8rem;
+  font-weight: 600;
+  transition: background .15s;
+}
+
+.btn-report-listing:hover { background: #4c1a1a; }
+
+/* 신고 모달 내부 */
+.report-target-name {
+  font-size: .9rem;
+  color: #9ba3b4;
+  margin-bottom: 16px;
+}
+
+.report-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.report-reason-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #0f1115;
+  border: 1px solid #2a2e38;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: .9rem;
+  color: #c9cdd5;
+  transition: border-color .15s;
+}
+
+.report-reason-item:hover { border-color: #4b5563; }
+.report-reason-item input[type="radio"] { accent-color: #f5d142; width: 16px; height: 16px; }
+
+.btn-report-submit {
+  padding: 10px 24px;
+  background: #dc2626;
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: .9rem;
+  transition: background .15s;
+}
+
+.btn-report-submit:hover { background: #b91c1c; }
+.btn-report-submit:disabled { opacity: .5; cursor: not-allowed; }
+
+/* 기존 search-profile-img가 래퍼 없이 쓰이는 경우 유지 */
+.search-listing-profile .search-profile-img:not(.img-mosaic) {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 /* ===== 튜토리얼 보상 섹션 ===== */
 .tutorial-section {
   margin-top: 2rem;

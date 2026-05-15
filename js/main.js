@@ -16,6 +16,7 @@ import {
   subscribeAuction, unsubscribeAuction,
   searchListing, registerAuction, placeBid,
   requestAuction, respondToAuctionRequest,
+  reportListing, blockListing,
   formatG, formatTimeRemaining,
   validateSoopId, validateNickname,
   getSoopProfileUrl, loadInitialState,
@@ -33,6 +34,8 @@ let isBidding = false;
 let isRegistering = false;
 let isSearching = false;
 let pendingRegisterData = null;
+let pendingReportListingId = null;
+let pendingReportListingName = null;
 
 // ===== Cloud Functions =====
 const initializeUserFn = httpsCallable(functions, "initializeUser");
@@ -669,6 +672,19 @@ function showSearchFoundResult(listing, query) {
   const resultDiv = $("searchResult");
   if (!resultDiv) return;
 
+  // 차단된 매물이면 블러 화면
+  const isBlocked = (currentUserData?.blockedListingIds || []).includes(listing.listingId);
+  if (isBlocked) {
+    resultDiv.innerHTML = `
+      <div class="search-result-blocked">
+        <div class="blocked-icon">🚫</div>
+        <div class="blocked-msg">차단한 매물입니다</div>
+        <div class="blocked-name">${escapeHtml(listing.displayName)}</div>
+        <button class="btn-secondary" onclick="handleBlockListing('${escapeHtml(listing.listingId)}', false)">차단 해제</button>
+      </div>`;
+    return;
+  }
+
   const ownerText = listing.isOwnedByMe ?
     "내 매물" : (listing.ownerId ? "보유자 있음" : "주인 없음");
 
@@ -690,13 +706,27 @@ function showSearchFoundResult(listing, query) {
     }
   }
 
+  // 모자이크 여부에 따라 이미지 처리
+  const imgClass = listing.isMosaicked ? "search-profile-img img-mosaic" : "search-profile-img";
+  const imgSrc = listing.profileImageUrl || "";
+
+  // 신고/차단 버튼 (본인 매물 제외)
+  const reportBlockHtml = !listing.isOwnedByMe ? `
+    <div class="report-block-row">
+      <button class="btn-block-listing" onclick="handleBlockListing('${escapeHtml(listing.listingId)}', true)">차단</button>
+      <button class="btn-report-listing" onclick="openReportModal('${escapeHtml(listing.listingId)}', '${escapeHtml(listing.displayName)}')">신고</button>
+    </div>` : "";
+
   resultDiv.innerHTML = `
     <div class="search-result-found">
       <div class="search-listing-profile">
-        <img class="search-profile-img"
-          src="${listing.profileImageUrl || ""}"
-          onerror="this.src='assets/images/default-avatar.svg'"
-          alt="프로필">
+        <div class="search-profile-wrap">
+          <img class="${imgClass}"
+            src="${imgSrc}"
+            onerror="this.src='assets/images/default-avatar.svg'"
+            alt="프로필">
+          ${listing.isMosaicked ? `<div class="mosaic-label">신고됨</div>` : ""}
+        </div>
         <div>
           <div class="search-listing-name">${escapeHtml(listing.displayName)}</div>
           <div class="search-listing-id">${escapeHtml(listing.soopId)}</div>
@@ -722,15 +752,14 @@ function showSearchFoundResult(listing, query) {
         ${!listing.isOwnedByMe && !listing.ownerId ? `
           <button class="btn-primary" onclick="openRegisterModal('${escapeHtml(listing.soopId)}', '${escapeHtml(listing.displayName)}')">
             경매 등록
-          </button>
-        ` : ""}
+          </button>` : ""}
         ${listing.isOwnedByMe ? `
           <button class="btn-selloff" onclick="openRegisterModal('${escapeHtml(listing.soopId)}', '${escapeHtml(listing.displayName)}', true, ${listing.currentPrice || 50000})">
             손절 경매 등록
-          </button>
-        ` : ""}
+          </button>` : ""}
         ${requestBtn}
       </div>
+      ${reportBlockHtml}
     </div>
   `;
 }
@@ -1060,3 +1089,67 @@ function formatBidTime(timestamp) {
   if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
   return `${Math.floor(diff / 3600)}시간 전`;
 }
+
+// ===== 신고 모달 =====
+window.openReportModal = function(listingId, displayName) {
+  pendingReportListingId = listingId;
+  pendingReportListingName = displayName;
+  const modal = $("reportModal");
+  if (!modal) return;
+  setText("reportTargetName", `"${displayName}" 을(를) 신고하는 이유를 선택해주세요.`);
+  document.querySelectorAll('input[name="reportReason"]').forEach((r) => { r.checked = false; });
+  setText("reportError", "");
+  modal.classList.add("show");
+};
+
+window.closeReportModal = function() {
+  const modal = $("reportModal");
+  if (modal) modal.classList.remove("show");
+  pendingReportListingId = null;
+  pendingReportListingName = null;
+};
+
+window.handleSubmitReport = async function() {
+  const reason = document.querySelector('input[name="reportReason"]:checked')?.value;
+  if (!reason) {
+    setText("reportError", "신고 사유를 선택해주세요.");
+    return;
+  }
+  if (!pendingReportListingId) return;
+
+  const btn = $("reportSubmitBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "제출 중..."; }
+
+  try {
+    await reportListing({listingId: pendingReportListingId, reason});
+    closeReportModal();
+    log(`신고 완료: ${pendingReportListingName}`);
+    alert("신고가 접수됐습니다. 검토 후 조치하겠습니다.");
+  } catch (e) {
+    setText("reportError", e.message.includes("이미") ? "이미 신고한 매물입니다." : e.message);
+    if (btn) { btn.disabled = false; btn.textContent = "신고 제출"; }
+  }
+};
+
+// ===== 차단 / 해제 =====
+window.handleBlockListing = async function(listingId, block) {
+  const label = block ? "차단" : "차단 해제";
+  if (!confirm(`이 매물을 ${label}하시겠습니까?`)) return;
+  try {
+    await blockListing({listingId, block});
+    if (currentUserData) {
+      if (!currentUserData.blockedListingIds) currentUserData.blockedListingIds = [];
+      if (block) {
+        currentUserData.blockedListingIds.push(listingId);
+      } else {
+        currentUserData.blockedListingIds = currentUserData.blockedListingIds.filter((id) => id !== listingId);
+      }
+    }
+    log(`${label} 완료: ${listingId}`);
+    // 검색 결과 새로고침
+    handleSearch();
+  } catch (e) {
+    log(`${label} 실패: ${e.message}`, true);
+    alert(`${label} 실패: ${e.message}`);
+  }
+};

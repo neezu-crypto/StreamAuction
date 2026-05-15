@@ -25,6 +25,8 @@ const finalizeAuctionFn = httpsCallable(functions, "finalizeAuction");
 const getAuctionStateFn = httpsCallable(functions, "getAuctionState");
 const requestAuctionFn = httpsCallable(functions, "requestAuction");
 const respondToAuctionRequestFn = httpsCallable(functions, "respondToAuctionRequest");
+const reportListingFn = httpsCallable(functions, "reportListing");
+const blockListingFn = httpsCallable(functions, "blockListing");
 
 // ===== 실시간 구독 시작 =====
 export function subscribeAuction({
@@ -184,5 +186,17 @@ export function getSoopProfileUrl(soopId) {
 // ===== 초기 상태 로드 (만료 경매 정산 포함) =====
 export async function loadInitialState() {
   const result = await getAuctionStateFn();
+  return result.data;
+}
+
+// ===== 매물 신고 =====
+export async function reportListing({listingId, reason}) {
+  const result = await reportListingFn({listingId, reason});
+  return result.data;
+}
+
+// ===== 매물 차단 / 해제 =====
+export async function blockListing({listingId, block}) {
+  const result = await blockListingFn({listingId, block});
   return result.data;
 }

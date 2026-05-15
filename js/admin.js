@@ -386,3 +386,74 @@ window.handleSaveConfig = async function() {
     btn.textContent = '설정 저장';
   }
 };
+
+// ===== 신고 관리 =====
+const adminGetReportsFn = httpsCallable(functions, "adminGetReports");
+const adminSetMosaicFn = httpsCallable(functions, "adminSetMosaic");
+
+async function loadReports() {
+  $("reportsContent").innerHTML = `<p class="empty-msg">로딩 중...</p>`;
+  try {
+    const result = await adminGetReportsFn();
+    renderReports(result.data);
+  } catch (e) {
+    $("reportsContent").innerHTML = `<p class="msg-error">${e.message}</p>`;
+  }
+}
+
+function renderReports(reports) {
+  if (!reports || reports.length === 0) {
+    $("reportsContent").innerHTML = `<p class="empty-msg">신고된 매물 없음</p>`;
+    return;
+  }
+  const REASON_LABEL = {
+    inappropriateImage: "부적절 이미지",
+    profanity: "욕설/비방",
+    misinformation: "허위 정보",
+    other: "기타",
+  };
+  $("reportsContent").innerHTML = `
+    <table class="admin-table">
+      <thead>
+        <tr><th>닉네임</th><th>ID</th><th>신고 수</th><th>사유 분류</th><th>보유자</th><th>모자이크</th><th>조치</th></tr>
+      </thead>
+      <tbody>
+        ${reports.map((r) => {
+          const reasons = Object.entries(r.reportReasons || {})
+              .filter(([, v]) => v > 0)
+              .map(([k, v]) => `${REASON_LABEL[k] || k}(${v})`)
+              .join(", ") || "-";
+          return `
+            <tr id="report-row-${r.listingId}">
+              <td>${r.displayName}</td>
+              <td class="mono">${r.soopId}</td>
+              <td><strong style="color:#f87171">${r.reportCount}</strong></td>
+              <td style="font-size:.78rem;color:#9ba3b4">${reasons}</td>
+              <td class="mono" style="font-size:.75rem">${r.ownerId ? r.ownerId.substring(0, 8) + "…" : "없음"}</td>
+              <td>${r.isMosaicked ? `<span style="color:#f87171;font-weight:600">적용중</span>` : `<span style="color:#22c55e">없음</span>`}</td>
+              <td>
+                ${r.isMosaicked
+                  ? `<button class="btn-sm btn-primary" onclick="handleSetMosaic('${r.listingId}', false, this)">해제</button>`
+                  : `<button class="btn-sm btn-danger" onclick="handleSetMosaic('${r.listingId}', true, this)">모자이크</button>`
+                }
+              </td>
+            </tr>`;
+        }).join("")}
+      </tbody>
+    </table>`;
+}
+
+window.handleSetMosaic = async function(listingId, isMosaicked, btn) {
+  const label = isMosaicked ? "모자이크 적용" : "모자이크 해제";
+  if (!confirm(`${listingId} — ${label}하시겠습니까?`)) return;
+  btn.disabled = true;
+  btn.textContent = "처리 중...";
+  try {
+    await adminSetMosaicFn({listingId, isMosaicked});
+    await loadReports();
+  } catch (e) {
+    alert(`실패: ${e.message}`);
+    btn.disabled = false;
+    btn.textContent = label;
+  }
+};

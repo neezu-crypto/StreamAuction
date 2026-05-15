@@ -255,6 +255,42 @@
   </div>
 </div>
 
+<!-- 신고 모달 -->
+<div class="modal-overlay" id="reportModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>신고하기</h2>
+      <button class="modal-close" onclick="closeReportModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="reportTargetName" class="report-target-name"></p>
+      <div class="report-reasons">
+        <label class="report-reason-item">
+          <input type="radio" name="reportReason" value="inappropriateImage">
+          <span>부적절한 이미지</span>
+        </label>
+        <label class="report-reason-item">
+          <input type="radio" name="reportReason" value="profanity">
+          <span>욕설 / 비방</span>
+        </label>
+        <label class="report-reason-item">
+          <input type="radio" name="reportReason" value="misinformation">
+          <span>허위 정보</span>
+        </label>
+        <label class="report-reason-item">
+          <input type="radio" name="reportReason" value="other">
+          <span>기타</span>
+        </label>
+      </div>
+      <div class="field-error" id="reportError"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeReportModal()">취소</button>
+      <button class="btn-report-submit" id="reportSubmitBtn" onclick="handleSubmitReport()">신고 제출</button>
+    </div>
+  </div>
+</div>
+
 <div id="tutorialToastContainer"></div>
 <script type="module" src="js/main.js"></script>
 </body>

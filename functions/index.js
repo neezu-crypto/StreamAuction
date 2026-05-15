@@ -1597,3 +1597,147 @@ exports.adminSetConfig = onCall(
       return {success: true, updated: Object.keys(filtered)};
     },
 );
+
+// ============================================
+// reportListing: 매물 신고
+// ============================================
+exports.reportListing = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+      }
+
+      const {listingId, reason} = request.data;
+      const uid = request.auth.uid;
+      const VALID_REASONS = ["inappropriateImage", "profanity", "misinformation", "other"];
+
+      if (!listingId || typeof listingId !== "string") {
+        throw new HttpsError("invalid-argument", "매물 ID가 필요합니다.");
+      }
+      if (!reason || !VALID_REASONS.includes(reason)) {
+        throw new HttpsError("invalid-argument", "유효하지 않은 신고 사유입니다.");
+      }
+
+      const listingRef = db.collection("listings").doc(listingId);
+      const listingSnap = await listingRef.get();
+      if (!listingSnap.exists) {
+        throw new HttpsError("not-found", "매물을 찾을 수 없습니다.");
+      }
+
+      const listing = listingSnap.data();
+      if (listing.ownerId === uid) {
+        throw new HttpsError("permission-denied", "자신의 매물은 신고할 수 없습니다.");
+      }
+
+      // 중복 신고 방지 (reportId = listingId_uid)
+      const reportRef = db.collection("reports").doc(`${listingId}_${uid}`);
+      const reportSnap = await reportRef.get();
+      if (reportSnap.exists) {
+        throw new HttpsError("already-exists", "이미 신고한 매물입니다.");
+      }
+
+      const MOSAIC_THRESHOLD = 5;
+      const newCount = (listing.reportCount || 0) + 1;
+
+      const batch = db.batch();
+      batch.set(reportRef, {
+        listingId,
+        reporterId: uid,
+        reason,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+      const listingUpdate = {
+        reportCount: FieldValue.increment(1),
+        [`reportReasons.${reason}`]: FieldValue.increment(1),
+      };
+      if (newCount >= MOSAIC_THRESHOLD && !listing.isMosaicked) {
+        listingUpdate.isMosaicked = true;
+        logger.info(`모자이크 자동 적용: listingId=${listingId}, reportCount=${newCount}`);
+      }
+      batch.update(listingRef, listingUpdate);
+      await batch.commit();
+
+      logger.info(`신고: listingId=${listingId}, uid=${uid}, reason=${reason}`);
+      return {success: true, isMosaicked: newCount >= MOSAIC_THRESHOLD};
+    },
+);
+
+// ============================================
+// blockListing: 매물 차단 / 해제
+// ============================================
+exports.blockListing = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+      }
+
+      const {listingId, block} = request.data;
+      const uid = request.auth.uid;
+
+      if (!listingId || typeof listingId !== "string") {
+        throw new HttpsError("invalid-argument", "매물 ID가 필요합니다.");
+      }
+
+      const isBlock = block !== false;
+      const blockUpdate = isBlock ?
+        FieldValue.arrayUnion(listingId) :
+        FieldValue.arrayRemove(listingId);
+      await db.collection("users").doc(uid).update({blockedListingIds: blockUpdate});
+
+      logger.info(`${isBlock ? "차단" : "차단해제"}: listingId=${listingId}, uid=${uid}`);
+      return {success: true, blocked: isBlock, listingId};
+    },
+);
+
+// ============================================
+// adminGetReports: 신고된 매물 목록 (관리자)
+// ============================================
+exports.adminGetReports = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      await requireAdmin(request);
+
+      const snap = await db.collection("listings")
+          .where("reportCount", ">", 0)
+          .orderBy("reportCount", "desc")
+          .limit(50)
+          .get();
+
+      return snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          listingId: d.id,
+          soopId: data.soopId,
+          displayName: data.displayName,
+          reportCount: data.reportCount || 0,
+          reportReasons: data.reportReasons || {},
+          isMosaicked: data.isMosaicked || false,
+          ownerId: data.ownerId || null,
+        };
+      });
+    },
+);
+
+// ============================================
+// adminSetMosaic: 모자이크 수동 설정 / 해제 (관리자)
+// ============================================
+exports.adminSetMosaic = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      await requireAdmin(request);
+      const {listingId, isMosaicked} = request.data;
+
+      if (!listingId) throw new HttpsError("invalid-argument", "listingId가 필요합니다.");
+
+      const listingRef = db.collection("listings").doc(listingId);
+      if (!(await listingRef.get()).exists) {
+        throw new HttpsError("not-found", "매물을 찾을 수 없습니다.");
+      }
+
+      await listingRef.update({isMosaicked: !!isMosaicked});
+      logger.info(`관리자 모자이크 ${isMosaicked ? "적용" : "해제"}: ${listingId} by ${request.auth.uid}`);
+      return {success: true, listingId, isMosaicked: !!isMosaicked};
+    },
+);
