@@ -1,0 +1,287 @@
+/* ============================================
+   listing.css - 매물 상세 페이지
+   ============================================ */
+
+.listing-back-nav {
+  margin-bottom: 20px;
+}
+
+.listing-back {
+  color: #9ba3b4;
+  font-size: 0.9rem;
+  transition: color .15s;
+}
+
+.listing-back:hover { color: #e8e8e8; }
+
+.listing-loading {
+  text-align: center;
+  padding: 60px;
+  color: #9ba3b4;
+}
+
+.listing-error {
+  text-align: center;
+  padding: 60px;
+  color: #f87171;
+}
+
+/* ===== Card ===== */
+.listing-card {
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 16px;
+  overflow: hidden;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+/* ===== Hero ===== */
+.listing-hero {
+  padding: 28px 32px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  border-bottom: 1px solid #2a2e38;
+  position: relative;
+}
+
+.listing-hero-img-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.listing-hero-img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #2a2e38;
+  display: block;
+}
+
+.listing-hero-img.img-mosaic { filter: blur(10px); }
+
+.listing-mosaic-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: #f87171;
+  font-weight: 600;
+  background: rgba(0,0,0,.45);
+  border-radius: 50%;
+}
+
+.listing-hero-info { flex: 1; min-width: 0; }
+
+.listing-hero-name {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+  word-break: break-all;
+}
+
+.listing-hero-id {
+  font-size: 0.85rem;
+  color: #9ba3b4;
+  font-family: "SF Mono", Consolas, monospace;
+}
+
+.listing-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: #1e1010;
+  border: 1px solid #7f1d1d;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: #f87171;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ===== Stats ===== */
+.listing-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid #2a2e38;
+}
+
+.listing-stat {
+  padding: 18px 20px;
+  text-align: center;
+  border-right: 1px solid #2a2e38;
+}
+
+.listing-stat:nth-child(3n) { border-right: none; }
+.listing-stat:nth-child(n+4) { border-top: 1px solid #2a2e38; }
+
+.listing-stat-label {
+  font-size: 0.72rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.listing-stat-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e8e8e8;
+}
+
+.listing-stat-value.accent { color: #f5d142; }
+.listing-stat-value.up    { color: #34d399; }
+.listing-stat-value.down  { color: #f87171; }
+.listing-stat-value.muted { color: #9ba3b4; font-weight: 500; font-size: .9rem; }
+
+/* ===== Live Banner ===== */
+.listing-live-banner {
+  margin: 0;
+  padding: 16px 32px;
+  background: #1e0f0f;
+  border-bottom: 1px solid #7f1d1d;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.listing-live-banner-text {
+  font-size: 0.9rem;
+  color: #fca5a5;
+}
+
+.btn-go-main {
+  padding: 8px 18px;
+  background: #f87171;
+  color: #1a0505;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  transition: background .15s;
+  white-space: nowrap;
+}
+
+.btn-go-main:hover { background: #fca5a5; }
+
+/* ===== Actions ===== */
+.listing-actions-section {
+  padding: 20px 32px;
+  border-bottom: 1px solid #2a2e38;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.listing-owner-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid;
+}
+
+.listing-owner-badge.no-owner {
+  background: #0f2000;
+  border-color: #16a34a33;
+  color: #4ade80;
+}
+
+.listing-owner-badge.has-owner {
+  background: #1e1a00;
+  border-color: #a16207;
+  color: #fbbf24;
+}
+
+.listing-owner-badge.is-mine {
+  background: #001830;
+  border-color: #1d4ed8;
+  color: #60a5fa;
+}
+
+/* Pending request section */
+.listing-pending-request {
+  width: 100%;
+  background: #1e1a00;
+  border: 1px solid #a16207;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.listing-pending-request-text {
+  font-size: 0.88rem;
+  color: #fbbf24;
+}
+
+.listing-pending-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ===== History Row ===== */
+.listing-history-section {
+  padding: 16px 32px;
+  border-bottom: 1px solid #2a2e38;
+}
+
+/* ===== Report/Block ===== */
+.listing-report-section {
+  padding: 14px 32px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ===== Metadata footer ===== */
+.listing-meta {
+  padding: 12px 32px;
+  border-top: 1px solid #2a2e38;
+  font-size: 0.78rem;
+  color: #4b5563;
+  text-align: right;
+}
+
+/* ===== Blocked card ===== */
+.listing-blocked {
+  text-align: center;
+  padding: 60px 32px;
+}
+
+.listing-blocked-icon { font-size: 2.5rem; margin-bottom: 12px; }
+.listing-blocked-msg  { font-size: 1rem; color: #9ba3b4; margin-bottom: 8px; }
+.listing-blocked-name { font-size: 0.9rem; color: #6b7280; margin-bottom: 20px; }
+
+/* ===== Responsive ===== */
+@media (max-width: 640px) {
+  .listing-hero { padding: 20px; gap: 14px; }
+  .listing-hero-img { width: 60px; height: 60px; }
+  .listing-hero-name { font-size: 1.15rem; }
+
+  .listing-stats { grid-template-columns: repeat(2, 1fr); }
+  .listing-stat:nth-child(2n) { border-right: none; }
+  .listing-stat:nth-child(3n) { border-right: 1px solid #2a2e38; }
+  .listing-stat:nth-child(odd):last-child { border-right: none; }
+  .listing-stat:nth-child(n+3) { border-top: 1px solid #2a2e38; }
+  .listing-stat:nth-child(n+4) { border-top: none; }
+
+  .listing-actions-section { padding: 16px 20px; }
+  .listing-history-section  { padding: 14px 20px; }
+  .listing-report-section   { padding: 12px 20px; }
+  .listing-meta             { padding: 10px 20px; }
+  .listing-live-banner      { padding: 14px 20px; }
+}

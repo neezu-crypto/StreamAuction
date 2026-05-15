@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>매물 상세 - StreamAuction</title>
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/auction.css">
+  <link rel="stylesheet" href="css/listing.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <a href="index.html" class="logo">StreamAuction</a>
+    <div class="header-right">
+      <div class="auth-area" id="authArea">
+        <span class="loading">로딩 중...</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+  <nav class="listing-back-nav">
+    <a href="index.html" class="listing-back">← 돌아가기</a>
+  </nav>
+
+  <div id="listingContent">
+    <div class="listing-loading">불러오는 중...</div>
+  </div>
+</main>
+
+<footer class="footer">
+  <p>&copy; 2026 StreamAuction. MVP Build.</p>
+</footer>
+
+<!-- 경매 등록 모달 -->
+<div class="modal-overlay" id="registerModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>경매 등록</h2>
+      <button class="modal-close" onclick="closeRegisterModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="register-preview" id="registerPreview">
+        <img id="registerProfileImg" src="" alt="프로필" onerror="this.style.display='none'">
+        <div class="register-info">
+          <div id="registerName" class="register-name"></div>
+          <div id="registerSoopId" class="register-soop-id"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>soop ID *</label>
+        <input type="text" id="regSoopId" placeholder="SOOP ID" oninput="updateProfilePreview()">
+        <div class="field-error" id="regSoopIdError"></div>
+      </div>
+      <div class="form-group">
+        <label>닉네임 *</label>
+        <input type="text" id="regNickname" placeholder="닉네임">
+        <div class="field-error" id="regNicknameError"></div>
+      </div>
+      <div class="form-group">
+        <label>시작가 *</label>
+        <div class="price-input-row">
+          <input type="number" id="regStartPrice" value="50000" min="50000" step="10000">
+          <span class="price-unit">G</span>
+        </div>
+        <div class="field-hint">최소 50,000G</div>
+        <div class="field-error" id="regStartPriceError"></div>
+      </div>
+      <div class="register-notice">
+        <strong>⚠️ 주의사항</strong>
+        <ul id="registerNoticeList">
+          <li>유찰 시 시작가로 자동 낙찰됩니다</li>
+          <li>잔액에서 시작가가 차감될 수 있습니다</li>
+          <li>등록 후 취소는 불가합니다</li>
+        </ul>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeRegisterModal()">취소</button>
+      <button class="btn-primary" id="registerBtn" onclick="handleRegisterAuction()">경매 등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- 신고 모달 -->
+<div class="modal-overlay" id="reportModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>신고하기</h2>
+      <button class="modal-close" onclick="closeReportModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="reportTargetName" class="report-target-name"></p>
+      <div class="report-reasons">
+        <label class="report-reason-item">
+          <input type="radio" name="reportReason" value="inappropriateImage">
+          <span>부적절한 이미지</span>
+        </label>
+        <label class="report-reason-item">
+          <input type="radio" name="reportReason" value="profanity">
+          <span>욕설 / 비방</span>
+        </label>
+        <label class="report-reason-item">
+          <input type="radio" name="reportReason" value="misinformation">
+          <span>허위 정보</span>
+        </label>
+        <label class="report-reason-item">
+          <input type="radio" name="reportReason" value="other">
+          <span>기타</span>
+        </label>
+      </div>
+      <div class="field-error" id="reportError"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeReportModal()">취소</button>
+      <button class="btn-report-submit" id="reportSubmitBtn" onclick="handleSubmitReport()">신고 제출</button>
+    </div>
+  </div>
+</div>
+
+<!-- 경매 히스토리 모달 -->
+<div class="modal-overlay" id="historyModal" onclick="if(event.target===this)closeHistoryModal()">
+  <div class="modal modal-history">
+    <div class="modal-header">
+      <h2 id="historyModalTitle">경매 히스토리</h2>
+      <button class="modal-close" onclick="closeHistoryModal()">✕</button>
+    </div>
+    <div class="modal-body" id="historyModalBody"></div>
+  </div>
+</div>
+
+<div id="toastContainer"></div>
+<script type="module" src="js/listing.js"></script>
+</body>
+</html>

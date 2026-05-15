@@ -1498,6 +1498,26 @@
   white-space: nowrap;
 }
 
+/* ===== 상세 페이지 링크 + 히스토리 행 ===== */
+.search-detail-history-row {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-detail {
+  font-size: .85rem;
+  color: #9ba3b4;
+  padding: 7px 0;
+  transition: color .15s;
+  text-decoration: none;
+}
+
+.btn-detail:hover { color: #f5d142; }
+
 /* ===== 경매 히스토리 ===== */
 .history-row {
   margin-top: 10px;
