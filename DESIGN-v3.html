@@ -192,11 +192,11 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>검색 UI</td><td>보유자 있는 매물 → "경매 요청 보내기" 버튼 · 요청 접수됨 뱃지 · 면역 기간 표시</td></tr>
 <tr><td>경매 수수료 5%</td><td>유형 B·C 낙찰 시 판매자에게 낙찰가 × 95% 지급 (유형 A는 판매자 없어 해당 없음)</td></tr>
 <tr><td>튜토리얼 보상 (전체)</td><td>첫 낙찰 30,000G · 첫 경매 등록 10,000G · 첫 손절 5,000G · 첫 강제청산 10,000G — 서버에서 자동 지급, 토스트 알림</td></tr>
-<tr><td>튜토리얼 UI</td><td>메인페이지 내 튜토리얼 진행 현황 섹션 — 4개 미션 체크리스트, 완료 수 배지, 미완료 시 행동 유도 버튼</td></tr>
+<tr><td>튜토리얼 UI</td><td>헤더 "🎁 보상" 버튼 → 보상 센터 모달 — 단계별 1개씩 표시 (완료 단계는 칩으로 압축), 진행 배지, 전체 완료 카드</td></tr>
 <tr><td>관리자 페이지 (admin.html)</td><td>5개 탭: 대시보드(통계·경매·기록) / 경매 제어(강제종료·대기열 비우기) / 유저 관리(조회·잔액조정·정지) / 시스템 설정(config 편집) / 신고 관리(모자이크 해제 포함) — <code>system/admin.adminUids</code>로 접근 제어</td></tr>
 <tr><td>신고/차단 시스템</td><td>reportListing (중복 방지 · 5회 누적 자동 모자이크) · blockListing · 검색 결과 차단/신고 UI · 모자이크 블러 · adminGetReports · adminSetMosaic</td></tr>
 <tr><td>경매 히스토리 열람 BM</td><td>viewAuctionHistory CF (50,000G 차감 · 트랜잭션) · 검색 결과 내 "히스토리 열람" 버튼 · 히스토리 모달 (날짜/유형/시작가/최종가/입찰 수/결과 테이블)</td></tr>
-<tr><td>출석 보상 시스템</td><td>claimDailyReward CF (KST 기준 하루 1회 · 연속 스트릭 · 7/30일 보너스 · Google 전용) · 메인페이지 출석 카드 (스트릭 표시 · 진행바 · 즉시 잔액 반영) · 관리자 유저 상세 출석 정보 표시 · 시스템 설정 출석 보상값 편집</td></tr>
+<tr><td>출석 보상 시스템</td><td>claimDailyReward CF (KST 기준 하루 1회 · 연속 스트릭 · 7/30일 보너스 · Google 전용) · 보상 센터 모달 내 출석 카드 (스트릭 표시 · 진행바 · 즉시 잔액 반영 · 미수령 시 헤더 버튼 점 표시) · 관리자 유저 상세 출석 정보 표시 · 시스템 설정 출석 보상값 편집</td></tr>
 <tr><td>기반</td><td>Firestore/RTDB 보안 규칙 (auctionRequests 포함), 모바일 반응형 UI</td></tr>
 </table>
 
@@ -211,7 +211,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><th>항목</th><th>비고</th></tr>
 <tr><td>매물 상세 페이지</td><td>listing.html 없음</td></tr>
 <tr><td>마이 페이지</td><td>my.html 없음</td></tr>
-<tr><td>Phase 2+ 전체</td><td>시세 감가상각, 출석/광고 보상, Cloud Scheduler 등</td></tr>
+<tr><td>Phase 2+ 전체</td><td>시세 감가상각, 광고 보상, Cloud Scheduler 등</td></tr>
 </table>
 </div>
 
@@ -570,11 +570,11 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <div class="phase-row">
 <div class="phase-card">
   <div class="phase-title">Phase 1 — MVP</div>
-  <div class="phase-item">경매 핵심 루프<br>인증/유저 시스템<br>강제청산<br>신고/차단<br>어뷰징 방어<br>경매 히스토리 BM</div>
+  <div class="phase-item">경매 핵심 루프<br>인증/유저 시스템<br>강제청산<br>신고/차단<br>어뷰징 방어<br>경매 히스토리 BM<br>출석 보상<br>튜토리얼 UI<br>관리자 페이지</div>
 </div>
 <div class="phase-card">
   <div class="phase-title">Phase 2 — 출시 1개월</div>
-  <div class="phase-item">시세 감가상각<br>휴면 매물 회수<br>출석/광고 보상<br>닉네임 변경 투표<br>관리자 페이지<br>Cloud Scheduler</div>
+  <div class="phase-item">시세 감가상각<br>휴면 매물 회수<br>광고 보상<br>닉네임 변경 투표<br>Cloud Scheduler<br>listing.html / my.html</div>
 </div>
 <div class="phase-card">
   <div class="phase-title">Phase 3 — 출시 3개월</div>
@@ -613,13 +613,10 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
   </div>
 </div>
 <div class="timeline-item">
-  <div class="timeline-dot dot-inprogress">5</div>
+  <div class="timeline-dot dot-done">5</div>
   <div>
-    <div class="timeline-title">Step 5 — 경매 Cloud Functions <span class="badge badge-new">부분 완료</span></div>
-    <div class="timeline-desc">
-      <strong>완료:</strong> registerAuction(유형A), placeBid, finalizeAuction, searchListing, getAuctionState, requestAuction(유형B), respondToAuctionRequest(유형B), checkAndFinalizeExpiredRequests<br>
-      <strong>미구현:</strong> 경매 히스토리 열람 BM, 신고/차단 시스템
-    </div>
+    <div class="timeline-title">Step 5 — 경매 Cloud Functions <span class="badge badge-done">완료</span></div>
+    <div class="timeline-desc">registerAuction(유형A/B/C), placeBid, finalizeAuction, searchListing, getAuctionState, requestAuction, respondToAuctionRequest, checkAndFinalizeExpiredRequests, reportListing, blockListing, viewAuctionHistory, claimDailyReward, 관리자 CF 8개 (adminGetDashboard 외)</div>
   </div>
 </div>
 <div class="timeline-item">
@@ -633,7 +630,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
   <div class="timeline-dot dot-todo">7</div>
   <div>
     <div class="timeline-title">Step 7 — 매물 상세 + 마이페이지</div>
-    <div class="timeline-desc">listing.html, my.html, 신고/차단 UI, 경매 히스토리 열람 BM</div>
+    <div class="timeline-desc">listing.html (매물 상세), my.html (내 거래 내역·보유 매물)</div>
   </div>
 </div>
 <div class="timeline-item">
