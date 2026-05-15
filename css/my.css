@@ -1,0 +1,354 @@
+/* ============================================
+   my.css - 마이페이지
+   ============================================ */
+
+.my-loading {
+  text-align: center;
+  padding: 60px;
+  color: #9ba3b4;
+}
+
+/* ===== 프로필 카드 ===== */
+.my-profile-card {
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 16px;
+  padding: 28px 32px;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.my-profile-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #2a2e38;
+  flex-shrink: 0;
+}
+
+.my-profile-info { flex: 1; min-width: 180px; }
+
+.my-profile-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.my-profile-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.my-profile-type.google  { background: #172554; color: #60a5fa; border: 1px solid #1d4ed8; }
+.my-profile-type.anon    { background: #1c1917; color: #a8a29e; border: 1px solid #44403c; }
+
+.my-stats-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.my-stat-box {
+  background: #0f1115;
+  border: 1px solid #2a2e38;
+  border-radius: 10px;
+  padding: 12px 18px;
+  text-align: center;
+  min-width: 90px;
+}
+
+.my-stat-label {
+  font-size: 0.72rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.my-stat-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e8e8e8;
+}
+
+.my-stat-value.accent { color: #f5d142; }
+
+/* ===== 섹션 공통 ===== */
+.my-section {
+  margin-bottom: 32px;
+}
+
+.my-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.my-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e8e8e8;
+}
+
+.my-section-count {
+  font-size: 0.82rem;
+  color: #6b7280;
+}
+
+/* ===== 보유 매물 ===== */
+.my-holdings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.my-holding-card {
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.my-holding-card.has-request {
+  border-color: #a16207;
+}
+
+.my-holding-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.my-holding-info { flex: 1; min-width: 120px; }
+
+.my-holding-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e8e8e8;
+}
+
+.my-holding-id {
+  font-size: 0.78rem;
+  color: #9ba3b4;
+  font-family: "SF Mono", Consolas, monospace;
+}
+
+.my-holding-price {
+  text-align: right;
+}
+
+.my-holding-price-label { font-size: 0.72rem; color: #6b7280; margin-bottom: 2px; }
+.my-holding-price-value { font-size: 0.95rem; font-weight: 700; color: #f5d142; }
+
+.my-holding-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.my-holding-request-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  margin-top: 10px;
+  border-top: 1px solid #2a2e38;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.my-request-badge {
+  font-size: 0.8rem;
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+.my-request-btns { display: flex; gap: 6px; }
+
+.my-empty {
+  padding: 28px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.9rem;
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 12px;
+}
+
+/* ===== 거래 내역 ===== */
+.my-history-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.my-tab-btn {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  color: #9ba3b4;
+  cursor: pointer;
+  transition: all .15s;
+}
+
+.my-tab-btn.active {
+  background: #f5d142;
+  color: #0f1115;
+  border-color: #f5d142;
+}
+
+.my-tab-btn:hover:not(.active) {
+  border-color: #4b5563;
+  color: #e8e8e8;
+}
+
+.my-history-wrap {
+  overflow-x: auto;
+}
+
+.my-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 12px;
+  overflow: hidden;
+  min-width: 520px;
+}
+
+.my-history-table th {
+  padding: 11px 14px;
+  text-align: left;
+  background: #0f1115;
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: 1px solid #2a2e38;
+}
+
+.my-history-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid #1f2330;
+  color: #d1d5db;
+  vertical-align: middle;
+}
+
+.my-history-table tr:last-child td { border-bottom: none; }
+.my-history-table tr:hover td { background: #1f2330; }
+
+.my-role-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.my-role-badge.buy  { background: #172554; color: #60a5fa; }
+.my-role-badge.sell { background: #1c1917; color: #fb923c; }
+
+.my-listing-link {
+  color: #e8e8e8;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.my-listing-link:hover { color: #f5d142; }
+
+/* ===== 출석 현황 ===== */
+.my-attendance-card {
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 12px;
+  padding: 22px 24px;
+}
+
+.my-attendance-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.my-streak-block { text-align: center; }
+
+.my-streak-num {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #f5d142;
+  line-height: 1;
+}
+
+.my-streak-label {
+  font-size: 0.75rem;
+  color: #9ba3b4;
+  margin-top: 2px;
+}
+
+.my-attendance-info { flex: 1; }
+
+.my-attendance-detail {
+  font-size: 0.85rem;
+  color: #9ba3b4;
+  margin-bottom: 4px;
+}
+
+.my-attendance-detail strong { color: #e8e8e8; }
+
+.my-next-milestone {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: #6b7280;
+}
+
+.my-next-milestone span { color: #f5d142; font-weight: 600; }
+
+.my-progress-bar {
+  height: 6px;
+  background: #2a2e38;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.my-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #f5d142);
+  border-radius: 3px;
+  transition: width .4s;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 640px) {
+  .my-profile-card { padding: 20px; }
+  .my-stats-row { width: 100%; justify-content: space-between; }
+  .my-stat-box { flex: 1; min-width: 0; padding: 10px 12px; }
+  .my-holding-card { padding: 14px 16px; }
+  .my-attendance-row { flex-direction: column; align-items: flex-start; gap: 12px; }
+}

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>마이페이지 - StreamAuction</title>
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/auction.css">
+  <link rel="stylesheet" href="css/my.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <a href="index.html" class="logo">StreamAuction</a>
+    <div class="header-right">
+      <div class="auth-area" id="authArea">
+        <span class="loading">로딩 중...</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+  <nav class="listing-back-nav">
+    <a href="index.html" class="listing-back">← 메인으로</a>
+  </nav>
+
+  <div id="myContent">
+    <div class="my-loading">불러오는 중...</div>
+  </div>
+</main>
+
+<footer class="footer">
+  <p>&copy; 2026 StreamAuction. MVP Build.</p>
+</footer>
+
+<!-- 손절 경매 등록 모달 -->
+<div class="modal-overlay" id="registerModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="registerModalTitle">손절 경매 등록</h2>
+      <button class="modal-close" onclick="closeRegisterModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="register-preview" id="registerPreview">
+        <img id="registerProfileImg" src="" alt="프로필" onerror="this.style.display='none'">
+        <div class="register-info">
+          <div id="registerName" class="register-name"></div>
+          <div id="registerSoopId" class="register-soop-id"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>soop ID</label>
+        <input type="text" id="regSoopId" placeholder="SOOP ID" disabled>
+        <div class="field-error" id="regSoopIdError"></div>
+      </div>
+      <div class="form-group">
+        <label>닉네임</label>
+        <input type="text" id="regNickname" placeholder="닉네임" disabled>
+        <div class="field-error" id="regNicknameError"></div>
+      </div>
+      <div class="form-group">
+        <label>시작가 *</label>
+        <div class="price-input-row">
+          <input type="number" id="regStartPrice" value="50000" min="50000" step="10000">
+          <span class="price-unit">G</span>
+        </div>
+        <div class="field-hint">최소 50,000G</div>
+        <div class="field-error" id="regStartPriceError"></div>
+      </div>
+      <div class="register-notice">
+        <strong>⚠️ 주의사항</strong>
+        <ul>
+          <li>낙찰 시 낙찰가의 <strong>95%</strong>가 즉시 지급됩니다 (수수료 5%)</li>
+          <li>유찰 시 경매가 취소되고 <strong>매물은 그대로 유지</strong>됩니다</li>
+          <li>등록 후 취소는 불가합니다</li>
+        </ul>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeRegisterModal()">취소</button>
+      <button class="btn-primary" id="registerBtn" onclick="handleRegisterAuction()">경매 등록</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastContainer"></div>
+<script type="module" src="js/my.js"></script>
+</body>
+</html>

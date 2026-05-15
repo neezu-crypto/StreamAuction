@@ -169,6 +169,7 @@ function renderAuthArea() {
 
   const name = currentUserData.displayName || (currentUserData.authType === "anonymous" ? "익명 유저" : "유저");
   area.innerHTML = `
+    <a href="my.html" style="font-size:.82rem;color:#9ba3b4;text-decoration:none;padding:4px 10px;border:1px solid #2a2e38;border-radius:6px">마이페이지</a>
     <span class="auth-info">
       <strong>${escapeHtml(name)}</strong>
       <span style="color:#9ba3b4;font-size:.88rem">${formatG(currentUserData.balance ?? 0)}</span>
@@ -412,14 +413,7 @@ function formatRelTime(ms) {
 }
 
 function renderBalance() {
-  const area = $("authArea");
-  if (!area || !currentUserData) return;
-  const name = currentUserData.displayName || (currentUserData.authType === "anonymous" ? "익명 유저" : "유저");
-  area.innerHTML = `
-    <span class="auth-info">
-      <strong>${escapeHtml(name)}</strong>
-      <span style="color:#9ba3b4;font-size:.88rem">${formatG(currentUserData.balance ?? 0)}</span>
-    </span>`;
+  renderAuthArea();
 }
 
 // ===== 경매 등록 모달 =====

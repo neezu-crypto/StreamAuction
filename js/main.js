@@ -259,6 +259,8 @@ function updateAuthUI(user, userData) {
 
     const typeLabel = userData.authType === "anonymous" ? "익명 유저" : "Google 유저";
     authArea.innerHTML = `
+      <a href="my.html" style="font-size:.82rem;color:#9ba3b4;text-decoration:none;padding:4px 10px;border:1px solid #2a2e38;border-radius:6px;transition:color .15s"
+        onmouseover="this.style.color='#e8e8e8'" onmouseout="this.style.color='#9ba3b4'">마이페이지</a>
       <span style="font-size:.85rem;color:#9ba3b4">
         <strong style="color:#f5d142">${typeLabel}</strong>
         · ${formatG(userData.balance)}
