@@ -1123,6 +1123,7 @@ window.searchByHolding = function(soopId) {
 
 // ===== 검색 포커스 =====
 window.focusSearch = function() {
+  closeRewardModal();
   const input = $("searchInput");
   if (input) {
     input.focus();
