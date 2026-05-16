@@ -99,12 +99,13 @@ let isPurchasing = false;
 
 // ===== 초기화 =====
 watchAuthState(async (user) => {
-  renderAuthArea();
   if (!user) {
+    renderAuthArea();
     renderLoginPrompt();
     return;
   }
   await loadUserData(user.uid);
+  renderAuthArea();
   renderShop();
 });
 
