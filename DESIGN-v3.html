@@ -148,7 +148,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
   <p class="hero-sub">스트리머 닉네임을 사고파는 실시간 경매 게임 — Trade the Streamers You Love</p>
   <div class="hero-badges">
     <span class="badge badge-done">v3 경매 중심 재설계</span>
-    <span class="badge badge-phase">2026-05-15 최종 업데이트</span>
+    <span class="badge badge-phase">2026-05-16 최종 업데이트</span>
     <span class="badge badge-new">매물 상세 페이지 구현 완료</span>
   </div>
 </div>
@@ -183,7 +183,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>인증</td><td>익명/구글 로그인, 익명→구글 전환 (자산 승계 + 보너스), 신규 유저 환영 모달</td></tr>
 <tr><td>경매 핵심</td><td>등록 → 대기열(최대 5개) → 5분 경매 → 낙찰/유찰 자동 정산</td></tr>
 <tr><td>경매 유형 A</td><td>신규/보유자 없는 매물 경매 — 등록비 50,000G 차감 · 타 유저 낙찰 시 환급 · 유찰 시 등록자 자동 낙찰</td></tr>
-<tr><td>경매 유형 B</td><td>보유자 승인 경매 — 요청(requestAuction) · 승인/거부(respondToAuctionRequest) · 낙찰 시 판매자 95% 정산 · 유찰 시 소유 유지 + 24h 면역 · 24h 미회신 시 강제청산(보유자 시세 100% 환급 + 무보유 전환)</td></tr>
+<tr><td>경매 유형 B</td><td>보유자 승인 경매 — 요청(requestAuction) · 승인/거부(respondToAuctionRequest) · 낙찰 시 판매자 95% 정산 · <strong>유찰 시 신청자 잔액 충분하면 시작가에 자동 낙찰 (판매자 95% 정산) · 잔액 부족 시 소유 유지 + 24h 면역</strong> · 24h 미회신 시 강제청산(보유자 시세 100% 환급 + 무보유 전환)</td></tr>
 <tr><td>경매 유형 C</td><td>손절 경매 — 보유자 직접 등록(type:"selloff") · 매물 isLocked 설정 · 낙찰 시 판매자 95% 정산 · 유찰 시 소유 유지 (면역 없음) · 내 보유 매물 패널 / 검색 결과에서 등록 가능</td></tr>
 <tr><td>입찰</td><td>에스크로 방식 (즉시 차감, 갱신 시 환불), 스나이핑 방지 15초 연장</td></tr>
 <tr><td>보호 규칙</td><td>자기 매물 입찰 차단, 보유 한도 초과 차단, 계정 정지(isBanned) 체크</td></tr>
@@ -210,7 +210,6 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <h3>❌ 미구현</h3>
 <table>
 <tr><th>항목</th><th>비고</th></tr>
-<tr><td>마이 페이지</td><td>my.html 없음 — 내 거래 내역·보유 매물 상세</td></tr>
 <tr><td>Phase 2+ 전체</td><td>시세 감가상각, 광고 보상, Cloud Scheduler 등</td></tr>
 </table>
 </div>
@@ -327,7 +326,12 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 2. 유저A에게 내 보유 매물 패널에 승인/거부 버튼 노출 (24시간 기한)
 3-A. 승인 (respondToAuctionRequest approve) → 경매 대기열 추가, 시작가는 유저A가 지정
 3-B. 거부 (respondToAuctionRequest reject) → 해당 매물 24시간 면역 설정
-3-C. 24시간 미회신 → 강제청산 (보유자 시세 100% 환급 + 무보유 전환)</pre>
+3-C. 24시간 미회신 → 강제청산 (보유자 시세 100% 환급 + 무보유 전환)
+
+낙찰 처리:
+4-A. 낙찰 (입찰자 존재) → 낙찰자에게 매물 이전, 유저A에게 낙찰가 × 95% 즉시 지급
+4-B. 유찰 + 유저B 잔액 충분 → 유저B가 시작가에 자동 낙찰, 유저A에게 시작가 × 95% 지급
+4-C. 유찰 + 유저B 잔액 부족 → 유저A 소유 유지 + 해당 매물 24시간 면역 설정</pre>
 
 <h4>유형 C — 손절 경매 <span class="badge badge-done">구현 완료</span></h4>
 <pre>1. 보유자가 본인 매물 경매 등록 (시작가 5만G 이상) — registerAuction type:"selloff"
@@ -363,15 +367,17 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <table>
 <tr><th>경매 유형</th><th>낙찰금 처리</th><th>시세 갱신</th></tr>
 <tr><td>신규 매물</td><td>100% 시스템 회수 (판매자 없음)</td><td>낙찰가 = 새 시세</td></tr>
-<tr><td>보유자 승인 / 손절</td><td>보유자에게 낙찰가 × 95%</td><td>낙찰가 = 새 시세</td></tr>
+<tr><td>보유자 승인 / 손절 — 낙찰</td><td>보유자에게 낙찰가 × 95%</td><td>낙찰가 = 새 시세</td></tr>
+<tr><td>보유자 승인 — 유찰 + 신청자 잔액 충분</td><td>신청자가 시작가 지불 → 보유자에게 시작가 × 95%</td><td>시작가 = 새 시세</td></tr>
+<tr><td>보유자 승인 — 유찰 + 신청자 잔액 부족</td><td>없음 (소유 유지 + 24h 면역)</td><td>변동 없음</td></tr>
 <tr><td>손절 유찰</td><td>없음</td><td>변동 없음</td></tr>
 </table>
 
 <h3>4.5 경매 상태</h3>
 <pre>QUEUED     대기열에서 대기 중
 ACTIVE     경매 진행 중 (5분 카운트다운)
-COMPLETED  낙찰 완료
-FAILED     유찰 (입찰 0건, 손절 경매에서만)
+COMPLETED  낙찰 완료 (실제 입찰 낙찰 또는 유형 B 신청자 자동 낙찰)
+FAILED     유찰 (입찰 0건, 자동 낙찰 불가 포함)
 CANCELLED  취소 (시스템 예외)</pre>
 </div>
 
@@ -576,7 +582,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 </div>
 <div class="phase-card">
   <div class="phase-title">Phase 2 — 출시 1개월</div>
-  <div class="phase-item">시세 감가상각<br>휴면 매물 회수<br>광고 보상<br>닉네임 변경 투표<br>Cloud Scheduler<br>my.html (마이페이지)</div>
+  <div class="phase-item">시세 감가상각<br>휴면 매물 회수<br>광고 보상<br>Cloud Scheduler</div>
 </div>
 <div class="phase-card">
   <div class="phase-title">Phase 3 — 출시 3개월</div>
@@ -629,10 +635,10 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
   </div>
 </div>
 <div class="timeline-item">
-  <div class="timeline-dot dot-inprogress">7</div>
+  <div class="timeline-dot dot-done">7</div>
   <div>
-    <div class="timeline-title">Step 7 — 매물 상세 + 마이페이지 <span class="badge badge-new">진행 중</span></div>
-    <div class="timeline-desc">listing.html (매물 상세) ✅ 완료 — 6개 스탯 카드, 보유 현황별 액션, 히스토리 열람, 신고/차단<br>my.html (마이페이지) — 미구현</div>
+    <div class="timeline-title">Step 7 — 매물 상세 + 마이페이지 <span class="badge badge-done">완료</span></div>
+    <div class="timeline-desc">listing.html (매물 상세) ✅ — 6개 스탯 카드, 보유 현황별 액션, 히스토리 열람, 신고/차단, 50,000G BM 게이트<br>my.html (마이페이지) ✅ — 프로필 카드(닉네임 변경), 보유 매물, 거래 내역 탭, 출석 현황</div>
   </div>
 </div>
 <div class="timeline-item">
@@ -654,22 +660,27 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <div class="checklist-item"><input type="checkbox" checked> <span>유찰 시 등록자 자동 낙찰 (신규 매물)</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>유찰 시 보유 유지 (손절 경매) — 유형 C 구현 완료</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>보유자 승인/거절 정상 작동 (유형 B) — 경매 요청·승인·거부·24h 만료 구현</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>유형 B 유찰 시 신청자 자동 낙찰 — 잔액 충분하면 시작가에 자동 성사, 부족하면 소유 유지 + 면역</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>미회신 강제청산 작동 — 24h 미회신 시 시세 100% 환급 + 무보유 전환</span></div>
-<div class="checklist-item"><input type="checkbox" checked> <span>경매 수수료 5% 적용 — 유형 B·C 낙찰 시 판매자 95% 정산 (유형 A는 판매자 없어 해당 없음)</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>경매 수수료 5% 적용 — 유형 B·C 낙찰 시 판매자 95% 정산 (자동 낙찰 포함, 유형 A는 해당 없음)</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>보유 한도 초과 시 입찰 차단</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>자기 매물 입찰 차단</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>스나이핑 방지 (15초 연장) 작동</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>실시간 경매 UI 갱신 (RTDB onValue)</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>모바일에서 정상 표시 및 동작</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>Firestore/RTDB 보안 규칙으로 클라이언트 직접 조작 차단</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>마이페이지 (my.html) — 프로필, 보유 매물, 거래 내역, 출석 스트릭, 손절 등록</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>닉네임 변경 (마이페이지 인라인 편집, 2~20자, 이모지 차단)</span></div>
 </div>
 </div>
 
 <div id="s14" class="section-anchor">
 <h2>14. 남은 개발 과제</h2>
-<h3>우선순위 높음 — MVP 완성을 위한 필수 항목</h3>
+<h3>우선순위 높음 — MVP 완성 ✅</h3>
 <ul>
-<li>마이 페이지 (my.html) — 내 거래 내역, 보유 매물 상세, 출석 스트릭 확인</li>
+<li>마이 페이지 (my.html) ✅ 구현 완료</li>
+<li>닉네임 변경 ✅ 구현 완료 (마이페이지 인라인 편집)</li>
+<li>유형 B 유찰 자동 낙찰 ✅ 구현 완료</li>
 </ul>
 <h3>우선순위 중간 — Phase 2</h3>
 <ul>
@@ -683,7 +694,6 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <li>강제청산 방어권/금고 BM</li>
 <li>랭킹 시스템</li>
 <li>스킨/칭호</li>
-<li>닉네임 변경 투표</li>
 <li>시즌제 검토 / 모바일 앱 확장</li>
 </ul>
 <h3>정책 미결</h3>
@@ -696,7 +706,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 
 <hr>
 <p style="font-size:12px;color:#999;text-align:center;padding:1rem 0">
-  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-15 (매물 상세 열람 BM 추가) · 작성자: 프로젝트 오너 + Claude
+  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-16 (마이페이지·닉네임 변경·유형 B 자동 낙찰 추가) · 작성자: 프로젝트 오너 + Claude
 </p>
 
 </div>
