@@ -1240,7 +1240,8 @@ exports.requestAuction = onCall(
 
       const requestRef = db.collection("auctionRequests").doc();
       const requestId = requestRef.id;
-      const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+      const reservedHours = listing.reservedExtensionHours || 0;
+      const expiresAt = Date.now() + (24 + reservedHours) * 60 * 60 * 1000;
 
       const batch = db.batch();
 
@@ -1260,7 +1261,11 @@ exports.requestAuction = onCall(
         schemaVersion: 1,
       });
 
-      batch.update(listingRef, {pendingRequestId: requestId});
+      const listingUpdate = {pendingRequestId: requestId};
+      if (reservedHours > 0) {
+        listingUpdate.reservedExtensionHours = FieldValue.delete();
+      }
+      batch.update(listingRef, listingUpdate);
 
       batch.update(db.collection("users").doc(uid), {
         [`lastAuctionRequests.${listingId}`]: Date.now(),
@@ -2092,18 +2097,28 @@ exports.purchaseShopItem = onCall(
           throw new HttpsError("permission-denied", "내 매물만 사용 가능합니다.");
         }
         const reqId = listingSnap.data().pendingRequestId;
-        if (!reqId) throw new HttpsError("failed-precondition", "대기 중인 경매 요청이 없습니다.");
-        const reqSnap = await db.collection("auctionRequests").doc(reqId).get();
-        if (!reqSnap.exists || reqSnap.data().status !== "pending") {
-          throw new HttpsError("failed-precondition", "유효한 경매 요청이 없습니다.");
+        if (reqId) {
+          // 즉시 적용: 현재 대기 중인 경매 요청의 기한 연장
+          const reqSnap = await db.collection("auctionRequests").doc(reqId).get();
+          if (!reqSnap.exists || reqSnap.data().status !== "pending") {
+            throw new HttpsError("failed-precondition", "유효한 경매 요청이 없습니다.");
+          }
+          const newExpiresAt = (reqSnap.data().expiresAt || Date.now()) + 24 * 60 * 60 * 1000;
+          await db.runTransaction(async (tx) => {
+            tx.update(userRef, update);
+            tx.update(reqSnap.ref, {expiresAt: newExpiresAt});
+          });
+          logger.info(`강제청산 기간 즉시 연장: uid=${uid}, listing=${targetListingId}, newExpiresAt=${newExpiresAt}`);
+          return {success: true, newBalance: user.balance - item.price, newExpiresAt, immediate: true};
+        } else {
+          // 예약 적용: 다음 경매 신청 시 자동 적용
+          await db.runTransaction(async (tx) => {
+            tx.update(userRef, update);
+            tx.update(listingRef, {reservedExtensionHours: FieldValue.increment(24)});
+          });
+          logger.info(`강제청산 기간 연장 예약: uid=${uid}, listing=${targetListingId}`);
+          return {success: true, newBalance: user.balance - item.price, reserved: true};
         }
-        const newExpiresAt = (reqSnap.data().expiresAt || Date.now()) + 24 * 60 * 60 * 1000;
-        await db.runTransaction(async (tx) => {
-          tx.update(userRef, update);
-          tx.update(reqSnap.ref, {expiresAt: newExpiresAt});
-        });
-        logger.info(`강제청산 기간 연장: uid=${uid}, listing=${targetListingId}, newExpiresAt=${newExpiresAt}`);
-        return {success: true, newBalance: user.balance - item.price, newExpiresAt};
       }
 
       if (itemId === "immunity_extension") {

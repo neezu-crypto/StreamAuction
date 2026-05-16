@@ -26,7 +26,7 @@ const SHOP_ITEMS = [
     priceLabel: "100,000G / 24h",
     desc: "보유 매물 1개의 강제청산 회신 기한을 24시간 연장합니다. 중복 구매로 누적 연장 가능.",
     needsTarget: true,
-    targetType: "pendingRequest",
+    targetType: "ownedListing",
   },
   {
     id: "immunity_extension",
@@ -220,16 +220,22 @@ window.openPurchaseModal = function(itemId) {
   if (item.needsTarget && targetWrap && targetSelect) {
     targetWrap.style.display = "block";
     const eligible = myHoldings.filter((h) => {
-      if (item.targetType === "pendingRequest") return !!h.pendingRequestId;
+      if (item.targetType === "ownedListing") return true;
       if (item.targetType === "immunity") return h.immunityUntil && h.immunityUntil > Date.now();
       return false;
     });
     if (eligible.length === 0) {
       targetSelect.innerHTML = `<option value="">해당 조건의 매물 없음</option>`;
     } else {
-      targetSelect.innerHTML = eligible.map((h) =>
-        `<option value="${escapeHtml(h.id)}">${escapeHtml(h.displayName)} (@${escapeHtml(h.soopId)})</option>`
-      ).join("");
+      targetSelect.innerHTML = eligible.map((h) => {
+        const reservedHours = h.reservedExtensionHours || 0;
+        const statusLabel = h.pendingRequestId
+          ? " [요청 대기 중 → 즉시 적용]"
+          : reservedHours > 0
+            ? ` [예약 ${reservedHours}h → 추가 예약]`
+            : " [예약]";
+        return `<option value="${escapeHtml(h.id)}">${escapeHtml(h.displayName)} (@${escapeHtml(h.soopId)})${statusLabel}</option>`;
+      }).join("");
       pendingPurchase.targetListingId = eligible[0].id;
     }
     targetSelect.onchange = () => {
