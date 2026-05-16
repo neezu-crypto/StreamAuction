@@ -276,8 +276,7 @@ function renderHistoryTable() {
     return `<tr>
       <td>${date}</td>
       <td>
-        <a class="my-listing-link" href="listing.html?id=${escapeHtml(h.listingId)}"
-          target="_blank">${escapeHtml(h.displayName)}</a>
+        <a class="my-listing-link" href="listing.html?id=${escapeHtml(h.listingId)}">${escapeHtml(h.displayName)}</a>
       </td>
       <td><span class="type-chip">${escapeHtml(typeLabel)}</span></td>
       <td><span class="my-role-badge ${roleCls}">${roleLabel}</span></td>
