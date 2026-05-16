@@ -2034,19 +2034,19 @@ const SHOP_ITEMS = {
   },
   queue_priority_pass: {
     name: "대기열 우선권 패스 (30일)",
-    price: 150000,
+    price: 300000,
     category: "trade",
     passField: "queuePriorityPassExpiresAt",
   },
   detail_view_pass: {
     name: "상세 열람 패스 (30일)",
-    price: 200000,
+    price: 300000,
     category: "convenience",
     passField: "detailViewPassExpiresAt",
   },
   history_view_pass: {
     name: "히스토리 패스 (30일)",
-    price: 200000,
+    price: 300000,
     category: "convenience",
     passField: "historyViewPassExpiresAt",
   },
