@@ -31,6 +31,7 @@ const viewListingDetailFn = httpsCallable(functions, "viewListingDetail");
 const viewAuctionHistoryFn = httpsCallable(functions, "viewAuctionHistory");
 const claimDailyRewardFn = httpsCallable(functions, "claimDailyReward");
 const updateUserNicknameFn = httpsCallable(functions, "updateUserNickname");
+const purchaseShopItemFn = httpsCallable(functions, "purchaseShopItem");
 
 // ===== 실시간 구독 시작 =====
 export function subscribeAuction({
@@ -220,6 +221,12 @@ export async function viewAuctionHistory(listingId) {
 // ===== 닉네임 변경 =====
 export async function updateUserNickname(nickname) {
   const result = await updateUserNicknameFn({nickname});
+  return result.data;
+}
+
+// ===== 상점 아이템 구매 =====
+export async function purchaseShopItem(itemId, targetListingId) {
+  const result = await purchaseShopItemFn({itemId, targetListingId: targetListingId || null});
   return result.data;
 }
 

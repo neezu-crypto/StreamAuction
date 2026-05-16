@@ -360,7 +360,8 @@ function renderAuthArea() {
     <span class="auth-info">
       <strong>${escapeHtml(name)}</strong>
       <span style="color:#9ba3b4;font-size:.88rem">${formatG(currentUserData.balance ?? 0)}</span>
-    </span>`;
+    </span>
+    <a class="btn-secondary" href="shop.html" style="padding:5px 12px;font-size:.82rem">🛒 상점</a>`;
 }
 
 // ===== 탭 전환 =====

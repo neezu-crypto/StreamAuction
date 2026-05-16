@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>상점 - StreamAuction</title>
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/shop.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <a href="index.html" class="logo">StreamAuction</a>
+    <div class="header-right">
+      <div class="auth-area" id="authArea">
+        <span class="loading">로딩 중...</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+  <nav class="listing-back-nav">
+    <a href="index.html" class="listing-back">← 메인으로</a>
+  </nav>
+
+  <div class="shop-header">
+    <h1 class="shop-title">🛒 상점</h1>
+    <p class="shop-desc">게임 화폐(G)로 편의 아이템을 구매하세요</p>
+  </div>
+
+  <div class="shop-category-tabs" id="categoryTabs">
+    <button class="shop-tab active" data-cat="all" onclick="setCategory('all')">전체</button>
+    <button class="shop-tab" data-cat="protection" onclick="setCategory('protection')">보호</button>
+    <button class="shop-tab" data-cat="trade" onclick="setCategory('trade')">거래</button>
+    <button class="shop-tab" data-cat="convenience" onclick="setCategory('convenience')">편의</button>
+  </div>
+
+  <div id="shopContent">
+    <div class="shop-loading">로딩 중...</div>
+  </div>
+</main>
+
+<footer class="footer">
+  <p>&copy; 2026 StreamAuction. MVP Build.</p>
+</footer>
+
+<!-- 구매 확인 모달 -->
+<div class="modal-overlay" id="purchaseModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="purchaseModalTitle">아이템 구매</h2>
+      <button class="modal-close" onclick="closePurchaseModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="purchase-item-preview" id="purchasePreview"></div>
+      <!-- 대상 매물 선택 (강제청산 연장권, 면역 연장권) -->
+      <div id="targetListingWrap" style="display:none">
+        <div class="form-group">
+          <label>대상 매물 선택</label>
+          <select id="targetListingSelect" class="shop-select"></select>
+          <div class="field-error" id="targetListingError"></div>
+        </div>
+      </div>
+      <div class="purchase-cost-row">
+        <span class="purchase-cost-label">차감 금액</span>
+        <span class="purchase-cost-value" id="purchaseCostValue"></span>
+      </div>
+      <div class="purchase-balance-row">
+        <span class="purchase-balance-label">구매 후 잔액</span>
+        <span class="purchase-balance-value" id="purchaseAfterBalance"></span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closePurchaseModal()">취소</button>
+      <button class="btn-primary" id="purchaseConfirmBtn" onclick="confirmPurchase()">구매 확인</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastContainer"></div>
+<script type="module" src="js/shop.js"></script>
+</body>
+</html>

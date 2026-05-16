@@ -251,6 +251,9 @@ function renderUserDetail(user) {
       <div class="info-row"><dt>가입일</dt><dd>${formatDate(user.createdAt)}</dd></div>
       <div class="info-row"><dt>최근 접속</dt><dd>${formatDate(user.lastLoginAt)}</dd></div>
       <div class="info-row"><dt>연속 출석</dt><dd>${user.consecutiveLoginDays || 0}일째 · 마지막 ${user.lastDailyRewardAt ? formatDate(user.lastDailyRewardAt) : "없음"}</dd></div>
+      <div class="info-row"><dt>상세 열람 패스</dt><dd>${user.detailViewPass || "없음"}</dd></div>
+      <div class="info-row"><dt>히스토리 패스</dt><dd>${user.historyViewPass || "없음"}</dd></div>
+      <div class="info-row"><dt>우선권 패스</dt><dd>${user.queuePriorityPass || "없음"}</dd></div>
       <div class="info-row"><dt>튜토리얼</dt><dd class="tut-chips">${tutChips}</dd></div>
       <div class="info-row"><dt>상태</dt><dd style="color:${user.isBanned ? '#ef4444' : '#22c55e'}">
         ${user.isBanned ? `🚫 정지됨${user.banReason ? ` · ${user.banReason}` : ''}` : '✅ 정상'}

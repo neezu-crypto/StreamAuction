@@ -106,9 +106,18 @@ function renderGate() {
   const imgSrc = listing.profileImageUrl || "assets/images/default-avatar.svg";
   const imgClass = listing.isMosaicked ? "listing-hero-img img-mosaic" : "listing-hero-img";
 
+  const hasPass = currentUserData?.detailViewPassExpiresAt &&
+    currentUserData.detailViewPassExpiresAt > Date.now();
+
   let actionHtml;
   if (!currentUserData) {
     actionHtml = `<p class="gate-notice">로그인 후 이용할 수 있습니다</p>`;
+  } else if (hasPass) {
+    actionHtml = `
+      <button class="btn-pay-gate" id="btnPayGate" onclick="handlePayToView()">
+        상세 정보 확인하기 · <span class="gate-cost-badge" style="background:#065f46;color:#6ee7b7">패스 보유 중 (무료)</span>
+      </button>
+      <p class="gate-balance-hint">상세 열람 패스가 적용됩니다</p>`;
   } else if (balance < COST) {
     actionHtml = `<p class="gate-notice">잔액 부족 · 보유 ${formatG(balance)} / 필요 ${formatG(COST)}</p>`;
   } else {
@@ -169,6 +178,7 @@ function renderAuthArea() {
 
   const name = currentUserData.displayName || (currentUserData.authType === "anonymous" ? "익명 유저" : "유저");
   area.innerHTML = `
+    <a href="shop.html" style="font-size:.82rem;color:#9ba3b4;text-decoration:none;padding:4px 10px;border:1px solid #2a2e38;border-radius:6px">🛒 상점</a>
     <a href="my.html" style="font-size:.82rem;color:#9ba3b4;text-decoration:none;padding:4px 10px;border:1px solid #2a2e38;border-radius:6px">마이페이지</a>
     <span class="auth-info">
       <strong>${escapeHtml(name)}</strong>
@@ -185,6 +195,7 @@ window.handlePayToView = async function() {
     if (currentUserData) currentUserData.balance = result.newBalance;
     isPaid = true;
     renderAuthArea();
+    if (result.passUsed) showToast("상세 열람 패스가 적용되었습니다 (무료)");
     await renderDetail();
   } catch (e) {
     if (btn) {
@@ -684,7 +695,7 @@ window.handleViewHistory = async function(lid, displayName) {
     }).join("");
 
     body.innerHTML = `
-      <p class="history-cost-notice">${COST.toLocaleString()}G 차감됨 · 잔액 ${result.newBalance.toLocaleString()}G</p>
+      <p class="history-cost-notice">${result.passUsed ? "히스토리 패스 적용 (무료)" : `${COST.toLocaleString()}G 차감됨`} · 잔액 ${result.newBalance.toLocaleString()}G</p>
       <div class="history-table-wrap">
         <table class="history-table">
           <thead><tr><th>날짜</th><th>유형</th><th>시작가</th><th>최종가</th><th>입찰 수</th><th>결과</th></tr></thead>
@@ -700,6 +711,18 @@ window.closeHistoryModal = function() {
   const modal = $("historyModal");
   if (modal) modal.classList.remove("show");
 };
+
+// ===== 토스트 =====
+function showToast(msg) {
+  const container = $("toastContainer");
+  if (!container) return;
+  const toast = document.createElement("div");
+  toast.className = "toast";
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => toast.classList.add("show"), 10);
+  setTimeout(() => { toast.classList.remove("show"); setTimeout(() => toast.remove(), 300); }, 3000);
+}
 
 // ===== 시작 =====
 init();

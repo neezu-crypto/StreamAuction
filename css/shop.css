@@ -1,0 +1,258 @@
+/* ============================================
+   shop.css - 상점 페이지
+   ============================================ */
+
+/* ===== 헤더 ===== */
+.shop-header {
+  margin-bottom: 24px;
+}
+
+.shop-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #e8e8e8;
+  margin-bottom: 6px;
+}
+
+.shop-desc {
+  font-size: 0.9rem;
+  color: #9ba3b4;
+}
+
+/* ===== 카테고리 탭 ===== */
+.shop-category-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.shop-tab {
+  padding: 6px 18px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  color: #9ba3b4;
+  cursor: pointer;
+  transition: all .15s;
+}
+
+.shop-tab.active {
+  background: #f5d142;
+  color: #0f1115;
+  border-color: #f5d142;
+}
+
+.shop-tab:hover:not(.active) {
+  border-color: #4b5563;
+  color: #e8e8e8;
+}
+
+/* ===== 로딩 ===== */
+.shop-loading {
+  text-align: center;
+  padding: 60px;
+  color: #9ba3b4;
+}
+
+/* ===== 아이템 그리드 ===== */
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+/* ===== 아이템 카드 ===== */
+.shop-card {
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color .15s;
+}
+
+.shop-card:hover {
+  border-color: #4b5563;
+}
+
+.shop-card.owned {
+  border-color: #065f46;
+}
+
+.shop-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.shop-card-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.shop-card-info { flex: 1; }
+
+.shop-card-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #e8e8e8;
+  margin-bottom: 4px;
+}
+
+.shop-card-cat {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.shop-card-cat.protection { background: #1c1917; color: #fb923c; }
+.shop-card-cat.trade      { background: #172554; color: #60a5fa; }
+.shop-card-cat.convenience{ background: #1e1b4b; color: #a5b4fc; }
+
+.shop-card-desc {
+  font-size: 0.83rem;
+  color: #9ba3b4;
+  line-height: 1.55;
+}
+
+.shop-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #2a2e38;
+  gap: 10px;
+}
+
+.shop-card-price {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f5d142;
+}
+
+.shop-card-price-sub {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+/* ===== 보유 중 배지 ===== */
+.shop-owned-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #34d399;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.shop-owned-exp {
+  font-size: 0.72rem;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+/* ===== 구매 버튼 ===== */
+.btn-shop-buy {
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 0.83rem;
+  font-weight: 700;
+  background: #f5d142;
+  color: #0f1115;
+  border: none;
+  cursor: pointer;
+  transition: opacity .15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-shop-buy:hover { opacity: 0.85; }
+.btn-shop-buy:disabled { opacity: 0.4; cursor: default; }
+
+.btn-shop-buy.insufficient {
+  background: #2a2e38;
+  color: #6b7280;
+}
+
+/* ===== 구매 확인 모달 ===== */
+.purchase-item-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #0f1115;
+  border: 1px solid #2a2e38;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.purchase-item-icon { font-size: 2rem; }
+
+.purchase-item-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e8e8e8;
+  margin-bottom: 4px;
+}
+
+.purchase-item-effect {
+  font-size: 0.82rem;
+  color: #9ba3b4;
+}
+
+.purchase-cost-row,
+.purchase-balance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #2a2e38;
+  font-size: 0.9rem;
+}
+
+.purchase-balance-row { border-bottom: none; }
+
+.purchase-cost-label,
+.purchase-balance-label { color: #9ba3b4; }
+
+.purchase-cost-value { font-weight: 700; color: #f87171; }
+.purchase-balance-value { font-weight: 700; color: #f5d142; }
+
+/* ===== 대상 매물 선택 ===== */
+.shop-select {
+  width: 100%;
+  background: #0f1115;
+  border: 1px solid #2a2e38;
+  border-radius: 8px;
+  color: #e8e8e8;
+  font-size: 0.88rem;
+  padding: 8px 12px;
+  margin-top: 6px;
+  outline: none;
+}
+
+.shop-select:focus { border-color: #f5d142; }
+
+/* ===== 로그인 안내 ===== */
+.shop-login-prompt {
+  text-align: center;
+  padding: 60px;
+  color: #9ba3b4;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 640px) {
+  .shop-grid { grid-template-columns: 1fr; }
+  .shop-card-footer { flex-direction: column; align-items: flex-start; }
+  .btn-shop-buy { width: 100%; text-align: center; }
+}

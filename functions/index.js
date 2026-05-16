@@ -392,10 +392,9 @@ async function startNextFromQueue() {
     return;
   }
 
-  // 대기열 첫 번째 항목 가져오기 (key 기준 정렬)
-  const keys = Object.keys(queue).sort();
-  const nextKey = keys[0];
-  const next = queue[nextKey];
+  // queuedAt 기준 오름차순 정렬 (우선권 패스 사용 시 queuedAt=0)
+  const entries = Object.entries(queue).sort((a, b) => (a[1].queuedAt || 0) - (b[1].queuedAt || 0));
+  const [nextKey, next] = entries[0];
 
   // 대기열에서 제거
   await queueRef.child(nextKey).remove();
@@ -488,6 +487,9 @@ exports.initializeUser = onCall(
             tutorialRewards: userData.tutorialRewards || {},
             consecutiveLoginDays: userData.consecutiveLoginDays || 0,
             lastDailyRewardAt: userData.lastDailyRewardAt?.toMillis?.() || null,
+            detailViewPassExpiresAt: userData.detailViewPassExpiresAt || null,
+            historyViewPassExpiresAt: userData.historyViewPassExpiresAt || null,
+            queuePriorityPassExpiresAt: userData.queuePriorityPassExpiresAt || null,
           };
         }
 
@@ -906,6 +908,8 @@ exports.registerAuction = onCall(
         }
       }
 
+      const hasPriorityPass = userData.queuePriorityPassExpiresAt &&
+        userData.queuePriorityPassExpiresAt > Date.now();
       const auctionId = db.collection("_").doc().id;
       await rtdb.ref(`auction/queue/${auctionId}`).set({
         auctionId,
@@ -916,7 +920,7 @@ exports.registerAuction = onCall(
         profileImageUrl: profileImageUrl || null,
         registeredBy: uid,
         startPrice,
-        queuedAt: Date.now(),
+        queuedAt: hasPriorityPass ? 0 : Date.now(),
       });
 
       // 잔액 변동 누적 (basePrice 차감 + firstTrade 보상 합산)
@@ -1362,6 +1366,10 @@ exports.respondToAuctionRequest = onCall(
         }
       }
 
+      const requesterSnap = await db.collection("users").doc(req.requesterId).get();
+      const requesterData = requesterSnap.exists ? requesterSnap.data() : {};
+      const requesterHasPriorityPass = requesterData.queuePriorityPassExpiresAt &&
+        requesterData.queuePriorityPassExpiresAt > Date.now();
       const auctionId = db.collection("_").doc().id;
       const newQueueItem = {
         auctionId,
@@ -1374,7 +1382,7 @@ exports.respondToAuctionRequest = onCall(
         sellerId: uid,
         requestId,
         startPrice: sp,
-        queuedAt: Date.now(),
+        queuedAt: requesterHasPriorityPass ? 0 : Date.now(),
       };
 
       await rtdb.ref(`auction/queue/${auctionId}`).set(newQueueItem);
@@ -1510,6 +1518,8 @@ exports.adminGetUser = onCall(
       }
 
       const data = userSnap.data();
+      const now = Date.now();
+      const fmtPass = (v) => (!v ? null : v > now ? `${Math.ceil((v - now) / 86400000)}일 남음` : "만료");
       return {
         uid: userSnap.id,
         authType: data.authType || "anonymous",
@@ -1526,6 +1536,9 @@ exports.adminGetUser = onCall(
         lastDailyRewardAt: data.lastDailyRewardAt?.toMillis?.() || null,
         createdAt: data.createdAt?.toMillis?.() || null,
         lastLoginAt: data.lastLoginAt?.toMillis?.() || null,
+        detailViewPass: fmtPass(data.detailViewPassExpiresAt),
+        historyViewPass: fmtPass(data.historyViewPassExpiresAt),
+        queuePriorityPass: fmtPass(data.queuePriorityPassExpiresAt),
       };
     },
 );
@@ -1867,25 +1880,27 @@ exports.viewListingDetail = onCall(
       const COST = 50000;
       const userRef = db.collection("users").doc(uid);
 
-      let newBalance;
-      await db.runTransaction(async (tx) => {
-        const userSnap = await tx.get(userRef);
-        if (!userSnap.exists) throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+      const userSnap = await userRef.get();
+      if (!userSnap.exists) throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+      const userData = userSnap.data();
+      if (userData.isBanned) throw new HttpsError("permission-denied", "정지된 계정입니다.");
 
-        const user = userSnap.data();
-        if (user.isBanned) throw new HttpsError("permission-denied", "정지된 계정입니다.");
-        if ((user.balance || 0) < COST) {
+      // 상세 열람 패스 보유 시 무료
+      const hasPass = userData.detailViewPassExpiresAt && userData.detailViewPassExpiresAt > Date.now();
+      let newBalance = userData.balance;
+      if (!hasPass) {
+        if ((userData.balance || 0) < COST) {
           throw new HttpsError(
               "failed-precondition",
-              `잔액이 부족합니다. (필요: ${COST.toLocaleString()}G, 보유: ${(user.balance || 0).toLocaleString()}G)`,
+              `잔액이 부족합니다. (필요: ${COST.toLocaleString()}G, 보유: ${(userData.balance || 0).toLocaleString()}G)`,
           );
         }
-        newBalance = user.balance - COST;
-        tx.update(userRef, {balance: FieldValue.increment(-COST)});
-      });
+        await userRef.update({balance: FieldValue.increment(-COST)});
+        newBalance = userData.balance - COST;
+      }
 
-      logger.info(`상세 열람: listingId=${listingId}, uid=${uid}, cost=${COST}G`);
-      return {success: true, newBalance};
+      logger.info(`상세 열람: listingId=${listingId}, uid=${uid}, cost=${hasPass ? 0 : COST}G, pass=${hasPass}`);
+      return {success: true, newBalance, passUsed: hasPass};
     },
 );
 
@@ -1905,25 +1920,25 @@ exports.viewAuctionHistory = onCall(
       const userRef = db.collection("users").doc(uid);
       const listingRef = db.collection("listings").doc(listingId);
 
-      const listingSnap = await listingRef.get();
+      const [listingSnap, userSnap] = await Promise.all([listingRef.get(), userRef.get()]);
       if (!listingSnap.exists) throw new HttpsError("not-found", "매물을 찾을 수 없습니다.");
+      if (!userSnap.exists) throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+      const userData = userSnap.data();
+      if (userData.isBanned) throw new HttpsError("permission-denied", "정지된 계정입니다.");
 
-      let newBalance;
-      await db.runTransaction(async (tx) => {
-        const userSnap = await tx.get(userRef);
-        if (!userSnap.exists) throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
-
-        const user = userSnap.data();
-        if (user.isBanned) throw new HttpsError("permission-denied", "정지된 계정입니다.");
-        if (user.balance < COST) {
+      // 히스토리 패스 보유 시 무료
+      const hasPass = userData.historyViewPassExpiresAt && userData.historyViewPassExpiresAt > Date.now();
+      let newBalance = userData.balance;
+      if (!hasPass) {
+        if ((userData.balance || 0) < COST) {
           throw new HttpsError(
               "failed-precondition",
-              `잔액이 부족합니다. (필요: ${COST.toLocaleString()}G, 보유: ${user.balance.toLocaleString()}G)`,
+              `잔액이 부족합니다. (필요: ${COST.toLocaleString()}G, 보유: ${(userData.balance || 0).toLocaleString()}G)`,
           );
         }
-        newBalance = user.balance - COST;
-        tx.update(userRef, {balance: FieldValue.increment(-COST)});
-      });
+        await userRef.update({balance: FieldValue.increment(-COST)});
+        newBalance = userData.balance - COST;
+      }
 
       const historySnap = await db.collection("auctionHistory")
           .where("listingId", "==", listingId)
@@ -1946,10 +1961,11 @@ exports.viewAuctionHistory = onCall(
       });
 
       const listing = listingSnap.data();
-      logger.info(`히스토리 열람: listingId=${listingId}, uid=${uid}, cost=${COST}G`);
+      logger.info(`히스토리 열람: listingId=${listingId}, uid=${uid}, cost=${hasPass ? 0 : COST}G, pass=${hasPass}`);
       return {
-        cost: COST,
+        cost: hasPass ? 0 : COST,
         newBalance,
+        passUsed: hasPass,
         listing: {
           displayName: listing.displayName,
           soopId: listing.soopId,
@@ -1991,5 +2007,135 @@ exports.updateUserNickname = onCall(
       await userRef.update({displayName: trimmed});
       logger.info(`닉네임 변경: uid=${uid}, nickname=${trimmed}`);
       return {success: true, displayName: trimmed};
+    },
+);
+
+// ============================================
+// purchaseShopItem: 상점 아이템 구매
+// ============================================
+const SHOP_ITEMS = {
+  liquidation_extension: {
+    name: "강제청산 기간 연장권",
+    price: 100000,
+    category: "protection",
+    needsTarget: true,
+  },
+  immunity_extension: {
+    name: "면역 연장권",
+    price: 50000,
+    category: "protection",
+    needsTarget: true,
+  },
+  holding_limit_expansion: {
+    name: "보유 한도 +1",
+    price: 300000,
+    category: "trade",
+    googleOnly: true,
+  },
+  queue_priority_pass: {
+    name: "대기열 우선권 패스 (30일)",
+    price: 150000,
+    category: "trade",
+    passField: "queuePriorityPassExpiresAt",
+  },
+  detail_view_pass: {
+    name: "상세 열람 패스 (30일)",
+    price: 200000,
+    category: "convenience",
+    passField: "detailViewPassExpiresAt",
+  },
+  history_view_pass: {
+    name: "히스토리 패스 (30일)",
+    price: 200000,
+    category: "convenience",
+    passField: "historyViewPassExpiresAt",
+  },
+};
+const PASS_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
+
+exports.purchaseShopItem = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+      const uid = request.auth.uid;
+      const {itemId, targetListingId} = request.data;
+
+      const item = SHOP_ITEMS[itemId];
+      if (!item) throw new HttpsError("not-found", "존재하지 않는 아이템입니다.");
+
+      if (item.googleOnly && request.auth.token.firebase?.sign_in_provider !== "google.com") {
+        throw new HttpsError("permission-denied", "Google 계정 전용 아이템입니다.");
+      }
+      if (item.needsTarget && !targetListingId) {
+        throw new HttpsError("invalid-argument", "대상 매물을 선택해주세요.");
+      }
+
+      const userRef = db.collection("users").doc(uid);
+      const userSnap = await userRef.get();
+      if (!userSnap.exists) throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+      const user = userSnap.data();
+      if (user.isBanned) throw new HttpsError("permission-denied", "정지된 계정입니다.");
+      if ((user.balance || 0) < item.price) {
+        throw new HttpsError(
+            "failed-precondition",
+            `잔액이 부족합니다. (필요: ${item.price.toLocaleString()}G, 보유: ${(user.balance || 0).toLocaleString()}G)`,
+        );
+      }
+
+      const update = {balance: FieldValue.increment(-item.price)};
+
+      if (itemId === "liquidation_extension") {
+        const listingRef = db.collection("listings").doc(targetListingId);
+        const listingSnap = await listingRef.get();
+        if (!listingSnap.exists) throw new HttpsError("not-found", "매물을 찾을 수 없습니다.");
+        if (listingSnap.data().ownerId !== uid) {
+          throw new HttpsError("permission-denied", "내 매물만 사용 가능합니다.");
+        }
+        const reqId = listingSnap.data().pendingRequestId;
+        if (!reqId) throw new HttpsError("failed-precondition", "대기 중인 경매 요청이 없습니다.");
+        const reqSnap = await db.collection("auctionRequests").doc(reqId).get();
+        if (!reqSnap.exists || reqSnap.data().status !== "pending") {
+          throw new HttpsError("failed-precondition", "유효한 경매 요청이 없습니다.");
+        }
+        const newExpiresAt = (reqSnap.data().expiresAt || Date.now()) + 24 * 60 * 60 * 1000;
+        await db.runTransaction(async (tx) => {
+          tx.update(userRef, update);
+          tx.update(reqSnap.ref, {expiresAt: newExpiresAt});
+        });
+        logger.info(`강제청산 기간 연장: uid=${uid}, listing=${targetListingId}, newExpiresAt=${newExpiresAt}`);
+        return {success: true, newBalance: user.balance - item.price, newExpiresAt};
+      }
+
+      if (itemId === "immunity_extension") {
+        const listingRef = db.collection("listings").doc(targetListingId);
+        const listingSnap = await listingRef.get();
+        if (!listingSnap.exists) throw new HttpsError("not-found", "매물을 찾을 수 없습니다.");
+        const listing = listingSnap.data();
+        if (listing.ownerId !== uid) throw new HttpsError("permission-denied", "내 매물만 사용 가능합니다.");
+        if (!listing.immunityUntil || listing.immunityUntil < Date.now()) {
+          throw new HttpsError("failed-precondition", "면역 기간이 활성화된 매물이 아닙니다.");
+        }
+        const newImmunityUntil = listing.immunityUntil + 24 * 60 * 60 * 1000;
+        await db.runTransaction(async (tx) => {
+          tx.update(userRef, update);
+          tx.update(listingRef, {immunityUntil: newImmunityUntil});
+        });
+        logger.info(`면역 연장: uid=${uid}, listing=${targetListingId}, newImmunityUntil=${newImmunityUntil}`);
+        return {success: true, newBalance: user.balance - item.price, newImmunityUntil};
+      }
+
+      if (itemId === "holding_limit_expansion") {
+        update.ownedLimit = FieldValue.increment(1);
+      }
+
+      if (item.passField) {
+        const now = Date.now();
+        const current = user[item.passField] || 0;
+        update[item.passField] = Math.max(current, now) + PASS_DURATION_MS;
+      }
+
+      await userRef.update(update);
+      logger.info(`상점 구매: uid=${uid}, itemId=${itemId}, price=${item.price}G`);
+      return {success: true, newBalance: user.balance - item.price};
     },
 );
