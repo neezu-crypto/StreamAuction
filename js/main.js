@@ -1064,12 +1064,10 @@ window.handleRegisterAuction = async function() {
 
   try {
     const isSelloff = pendingRegisterData?.isSelloff;
-    const profileUrl = getSoopProfileUrl(soopId);
     const result = await registerAuction({
       soopId: soopId.toLowerCase(),
       displayName,
       startPrice,
-      profileImageUrl: profileUrl,
       type: isSelloff ? "selloff" : "new",
     });
 
@@ -1202,7 +1200,7 @@ window.handleSkipCooldown = async function() {
   try {
     const result = await skipCooldown();
     if (currentUserData) currentUserData.balance = result.newBalance;
-    renderAuthArea();
+    renderUserBalance();
     btn.style.display = "none";
   } catch (e) {
     setText("skipCooldownError", e.message || "처리 중 오류가 발생했습니다.");

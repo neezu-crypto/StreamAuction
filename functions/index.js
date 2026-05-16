@@ -716,7 +716,7 @@ exports.registerAuction = onCall(
 
       await checkAndFinalizeExpiredAuction();
 
-      const {soopId, displayName, startPrice, profileImageUrl, type: auctionType} = request.data;
+      const {soopId, displayName, startPrice, type: auctionType} = request.data;
       const uid = request.auth.uid;
       const isSelloff = auctionType === "selloff";
 
@@ -724,6 +724,12 @@ exports.registerAuction = onCall(
       if (!soopId || !/^[a-zA-Z0-9]+$/.test(soopId)) {
         throw new HttpsError("invalid-argument", "유효하지 않은 soop ID입니다.");
       }
+
+      // profileImageUrl은 클라이언트 입력을 신뢰하지 않고 서버에서 직접 생성
+      const normalizedSoopId = soopId.toLowerCase();
+      const soopIdPrefix = normalizedSoopId.substring(0, 2);
+      const generatedProfileImageUrl =
+        `https://stimg.sooplive.co.kr/LOGO/${soopIdPrefix}/${normalizedSoopId}/${normalizedSoopId}.jpg`;
 
       if (!startPrice || startPrice < 50000) {
         throw new HttpsError("invalid-argument", "시작가는 최소 50,000G입니다.");
@@ -841,6 +847,9 @@ exports.registerAuction = onCall(
       if (!displayName || typeof displayName !== "string") {
         throw new HttpsError("invalid-argument", "닉네임을 입력해주세요.");
       }
+      if (displayName.trim().length > 50) {
+        throw new HttpsError("invalid-argument", "닉네임은 50자 이하여야 합니다.");
+      }
       if (/\p{Extended_Pictographic}/u.test(displayName)) {
         throw new HttpsError("invalid-argument", "닉네임에 이모지를 사용할 수 없습니다.");
       }
@@ -921,7 +930,7 @@ exports.registerAuction = onCall(
         type: "new",
         soopId: soopId.toLowerCase(),
         displayName,
-        profileImageUrl: profileImageUrl || null,
+        profileImageUrl: generatedProfileImageUrl,
         registeredBy: uid,
         startPrice,
         queuedAt: hasPriorityPass ? 0 : Date.now(),
