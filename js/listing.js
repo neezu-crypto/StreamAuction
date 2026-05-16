@@ -311,7 +311,10 @@ async function renderDetail() {
         // 경매 요청 승인/거부
         actionBtns = `
           <div class="listing-pending-request">
-            <span class="listing-pending-request-text">📨 경매 요청이 들어왔습니다</span>
+            <div class="listing-pending-request-header">
+              <span class="listing-pending-request-text">📨 경매 요청이 들어왔습니다</span>
+              <span class="listing-pending-expires">${formatRequestExpiry(pendingRequest.expiresAt)}</span>
+            </div>
             <div class="listing-pending-actions">
               <button class="btn-primary" onclick="handleApproveRequest('${escapeHtml(pendingRequest.id)}')">승인</button>
               <button class="btn-secondary" onclick="handleRejectRequest('${escapeHtml(pendingRequest.id)}')">거부</button>
@@ -713,6 +716,15 @@ window.closeHistoryModal = function() {
 };
 
 // ===== 토스트 =====
+function formatRequestExpiry(expiresAt) {
+  const remaining = expiresAt - Date.now();
+  if (remaining <= 0) return "⚠️ 기한 만료";
+  const h = Math.floor(remaining / (1000 * 60 * 60));
+  const m = Math.ceil((remaining % (1000 * 60 * 60)) / (1000 * 60));
+  if (h > 0) return `⏱ ${h}시간 ${m}분 남음`;
+  return `⏱ ${m}분 남음`;
+}
+
 function showToast(msg) {
   const container = $("toastContainer");
   if (!container) return;

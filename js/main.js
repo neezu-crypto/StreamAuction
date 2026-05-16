@@ -56,6 +56,15 @@ function show(id) { const el = $(id); if (el) el.style.display = ""; }
 function hide(id) { const el = $(id); if (el) el.style.display = "none"; }
 function setText(id, text) { const el = $(id); if (el) el.textContent = text; }
 
+function formatRequestExpiry(expiresAt) {
+  const remaining = expiresAt - Date.now();
+  if (remaining <= 0) return "⚠️ 기한 만료";
+  const h = Math.floor(remaining / (1000 * 60 * 60));
+  const m = Math.ceil((remaining % (1000 * 60 * 60)) / (1000 * 60));
+  if (h > 0) return `⏱ ${h}시간 ${m}분 남음`;
+  return `⏱ ${m}분 남음`;
+}
+
 // ===== 튜토리얼 섹션 렌더링 =====
 // ===== 출석 보상 헬퍼 =====
 function getKSTDateStr(date) {
@@ -328,7 +337,10 @@ async function loadMyHoldings(uid) {
 
       const requestBanner = pending ? `
         <div class="holding-request-banner">
-          <span class="request-badge">경매 요청 대기 중</span>
+          <div class="request-badge-row">
+            <span class="request-badge">📨 경매 요청 대기 중</span>
+            <span class="request-expires">${formatRequestExpiry(pending.expiresAt)}</span>
+          </div>
           <div class="request-actions">
             <button class="btn-approve" onclick="event.stopPropagation();handleApproveRequest('${pending.requestId}')">승인</button>
             <button class="btn-reject" onclick="event.stopPropagation();handleRejectRequest('${pending.requestId}')">거부</button>

@@ -217,15 +217,26 @@
   border-radius: 10px;
   padding: 14px 16px;
   display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.listing-pending-request-header {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .listing-pending-request-text {
   font-size: 0.88rem;
   color: #fbbf24;
+}
+
+.listing-pending-expires {
+  font-size: 0.82rem;
+  color: #f59e0b;
+  white-space: nowrap;
 }
 
 .listing-pending-actions {
