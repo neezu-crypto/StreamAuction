@@ -182,14 +182,16 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <table>
 <tr><th>영역</th><th>항목</th></tr>
 <tr><td>인증</td><td>익명/구글 로그인, 익명→구글 전환 (자산 승계 + 보너스), 신규 유저 환영 모달</td></tr>
-<tr><td>경매 핵심</td><td>등록 → 대기열(최대 5개) → 5분 경매 → 낙찰/유찰 자동 정산</td></tr>
+<tr><td>경매 핵심</td><td>등록 → 대기열(최대 5개) → 5분 경매 → 낙찰/유찰 자동 정산 → <strong>10분 쿨다운</strong> → 다음 경매 자동 시작</td></tr>
 <tr><td>경매 유형 A</td><td>신규/보유자 없는 매물 경매 — 등록비 50,000G 차감 · 타 유저 낙찰 시 환급 · 유찰 시 등록자 자동 낙찰</td></tr>
 <tr><td>경매 유형 B</td><td>보유자 승인 경매 — 요청(requestAuction) · 승인/거부(respondToAuctionRequest) · 낙찰 시 판매자 95% 정산 · <strong>유찰 시 신청자 잔액 충분하면 시작가에 자동 낙찰 (판매자 95% 정산) · 잔액 부족 시 소유 유지 + 24h 면역</strong> · 24h 미회신 시 강제청산(보유자 시세 100% 환급 + 무보유 전환)</td></tr>
 <tr><td>경매 유형 C</td><td>손절 경매 — 보유자 직접 등록(type:"selloff") · 매물 isLocked 설정 · 낙찰 시 판매자 95% 정산 · 유찰 시 소유 유지 (면역 없음) · 내 보유 매물 패널 / 검색 결과에서 등록 가능</td></tr>
 <tr><td>입찰</td><td>에스크로 방식 (즉시 차감, 갱신 시 환불), 스나이핑 방지 15초 연장</td></tr>
 <tr><td>보호 규칙</td><td>자기 매물 입찰 차단, 보유 한도 초과 차단, 계정 정지(isBanned) 체크</td></tr>
 <tr><td>익명 제한</td><td>경매 등록 후 1시간 재등록 쿨다운 (구글 면제)</td></tr>
-<tr><td>메인 UI</td><td>실시간 경매 표시(RTDB), 대기열, 입찰 기록, 스트리머 검색, 내 보유 매물 패널 (보류 요청 승인/거부 포함)</td></tr>
+<tr><td>메인 UI</td><td>실시간 경매 표시(RTDB), 대기열, 입찰 기록, 스트리머 검색, 내 보유 매물 패널 (보류 요청 승인/거부 포함), 쿨다운 카운트다운 + "대기시간 건너뛰기 (50,000G)" 버튼</td></tr>
+<tr><td>경매 쿨다운 / 건너뛰기</td><td>경매 종료 후 10분 쿨다운 (RTDB status:"cooldown" + cooldownUntil) → 다음 경매 자동 시작. skipCooldown CF — 로그인 유저가 50,000G 지불해 즉시 건너뛰기. RTDB 트랜잭션으로 중복 실행 방지.</td></tr>
+<tr><td>상점 페이지</td><td>shop.html + purchaseShopItem CF — 6종 아이템 (강제청산 기간 연장권·면역 연장권·보유 한도+1·대기열 우선권 패스·상세 열람 패스·히스토리 패스). 강제청산 기간 연장권은 경매 신청 전 사전 구매 가능 (listings.reservedExtensionHours 저장 → requestAuction 시 자동 적용).</td></tr>
 <tr><td>검색 UI</td><td>보유자 있는 매물 → "경매 요청 보내기" 버튼 · 요청 접수됨 뱃지 · 면역 기간 표시</td></tr>
 <tr><td>경매 수수료 5%</td><td>유형 B·C 낙찰 시 판매자에게 낙찰가 × 95% 지급 (유형 A는 판매자 없어 해당 없음)</td></tr>
 <tr><td>튜토리얼 보상 (전체)</td><td>첫 낙찰 30,000G · 첫 경매 등록 10,000G · 첫 손절 5,000G · 첫 강제청산 10,000G — 서버에서 자동 지급, 토스트 알림</td></tr>
@@ -269,6 +271,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 2. 매물이 없으면 → 경매 등록 (큐에 추가)
 3. 경매 시작 → 5분간 실시간 입찰 경쟁
 4. 최고 입찰자 낙찰 → 매물 보유
+   (경매 종료 후 10분 쿨다운 → 다음 경매 자동 시작. 50,000G로 즉시 건너뛰기 가능)
 5. 보유 매물의 시세 변동 관찰
 6. 다른 유저가 내 매물에 경매 요청 → 승인/거절
 7. 경매에서 더 높은 가격에 판매 → 수익 실현</pre>
@@ -347,6 +350,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <div class="stat"><div class="stat-label">경매 시간</div><div class="stat-value">5분</div></div>
 <div class="stat"><div class="stat-label">동시 경매</div><div class="stat-value">1개</div></div>
 <div class="stat"><div class="stat-label">대기열</div><div class="stat-value">최대 5개</div></div>
+<div class="stat"><div class="stat-label">경매 간 쿨다운</div><div class="stat-value">10분</div></div>
 <div class="stat"><div class="stat-label">스나이핑 방지</div><div class="stat-value">15초 연장</div></div>
 <div class="stat"><div class="stat-label">연장 횟수</div><div class="stat-value">무제한</div></div>
 <div class="stat"><div class="stat-label">경매 수수료</div><div class="stat-value">5% <span class="badge badge-done" style="font-size:10px">적용됨</span></div></div>
@@ -378,6 +382,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <pre>QUEUED     대기열에서 대기 중
 ACTIVE     경매 진행 중 (5분 카운트다운)
 COMPLETED  낙찰 완료 (실제 입찰 낙찰 또는 유형 B 신청자 자동 낙찰)
+COOLDOWN   낙찰/유찰 후 다음 경매 시작 전 10분 대기 (cooldownUntil 타임스탬프 포함)
 FAILED     유찰 (입찰 0건, 자동 낙찰 불가 포함)
 CANCELLED  취소 (시스템 예외)</pre>
 </div>
@@ -470,11 +475,11 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <tr><td>재요청 제한</td><td>같은 유저가 같은 매물에 3일 내 재요청 불가</td></tr>
 </table>
 
-<h3>BM 확장 <span class="badge badge-phase">Phase 2-3</span></h3>
+<h3>BM 확장</h3>
 <table>
-<tr><th>아이템</th><th>효과</th></tr>
-<tr><td>강제청산 기간 연장권</td><td>보유 매물의 강제청산 회신 기한을 24시간씩 연장 (100,000G / 24h, 중복 사용 가능)</td></tr>
-<tr><td>금고</td><td>계정에 금고 슬롯 1칸 영구 추가 — 슬롯에 보유 매물 1개를 보관하면 강제청산 면제. 손절 시 슬롯이 비워지며 다른 매물에 재사용 가능.</td></tr>
+<tr><th>아이템</th><th>효과</th><th>상태</th></tr>
+<tr><td>강제청산 기간 연장권</td><td>보유 매물의 강제청산 회신 기한을 24시간씩 연장 (100,000G / 24h, 중복 사용 가능). <strong>경매 신청 전 사전 구매 가능</strong> — listings.reservedExtensionHours에 24h씩 누적 저장, requestAuction 시 expiresAt에 자동 반영 후 필드 삭제.</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>금고</td><td>계정에 금고 슬롯 1칸 영구 추가 — 슬롯에 보유 매물 1개를 보관하면 강제청산 면제. 손절 시 슬롯이 비워지며 다른 매물에 재사용 가능.</td><td><span class="badge badge-phase">Phase 3</span></td></tr>
 </table>
 </div>
 
@@ -547,6 +552,11 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <tr><td>신규 매물 낙찰금</td><td>100% 시스템 회수</td></tr>
 <tr><td>매물 상세 페이지 열람</td><td>50,000G</td></tr>
 <tr><td>경매 히스토리 열람</td><td>50,000G (상세 페이지 결제와 별도)</td></tr>
+<tr><td>쿨다운 건너뛰기</td><td>50,000G</td></tr>
+<tr><td>강제청산 기간 연장권</td><td>100,000G / 24h</td></tr>
+<tr><td>면역 연장권</td><td>50,000G / 24h</td></tr>
+<tr><td>보유 한도 +1</td><td>300,000G</td></tr>
+<tr><td>패스권 3종 (대기열 우선권·상세 열람·히스토리)</td><td>각 300,000G / 30일</td></tr>
 <tr><td>강제청산 시세 환급</td><td>0% 회수 (보유자에게 100%)</td></tr>
 </table>
 </div>
@@ -557,10 +567,10 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <tr><th>항목</th><th>설명</th><th>Phase</th></tr>
 <tr><td>매물 상세 페이지 열람</td><td>시세 통계 6개 + 거래 액션 버튼 접근 → 50,000G</td><td><span class="badge badge-done">MVP</span></td></tr>
 <tr><td>경매 히스토리 열람</td><td>과거 경매 결과 + 입찰 기록 → 50,000G (상세 페이지 내 별도 과금)</td><td><span class="badge badge-done">MVP</span></td></tr>
-<tr><td>강제청산 기간 연장권</td><td>보유 매물 강제청산 회신 기한 24h씩 연장 (100,000G / 24h) — 상점에서 G로 구매</td><td><span class="badge badge-phase">Phase 2</span></td></tr>
+<tr><td>경매 간 쿨다운 건너뛰기</td><td>쿨다운 중 50,000G 지불 → 즉시 다음 경매 시작 (skipCooldown CF)</td><td><span class="badge badge-done">MVP</span></td></tr>
+<tr><td>강제청산 기간 연장권</td><td>보유 매물 강제청산 회신 기한 24h씩 연장 (100,000G / 24h) — 사전 구매 가능, requestAuction 시 자동 적용</td><td><span class="badge badge-done">MVP</span></td></tr>
+<tr><td>면역 연장권 / 보유 한도 확장 / 패스 3종</td><td>면역 연장 50,000G · 한도+1 300,000G · 대기열·상세·히스토리 패스 각 300,000G/30일 — shop.html 상점</td><td><span class="badge badge-done">MVP</span></td></tr>
 <tr><td>금고</td><td>금고 슬롯 1칸 영구 구매 — 매물 1개 보관 시 강제청산 면제, 손절 후 슬롯 재사용 가능</td><td><span class="badge badge-phase">Phase 3</span></td></tr>
-<tr><td>보유 한도 확장 / 대기열 우선권 패스 (30일)</td><td>거래 편의 아이템 — 상점에서 G로 구매</td><td><span class="badge badge-phase">Phase 2-3</span></td></tr>
-<tr><td>상세·히스토리 열람 패스 (30일)</td><td>무제한 열람 정기권 — 상점에서 G로 구매</td><td><span class="badge badge-phase">Phase 2</span></td></tr>
 <tr><td>광고</td><td>배너, 영상 광고 (보상형)</td><td><span class="badge badge-phase">Phase 2</span></td></tr>
 <tr><td>스킨/칭호/프로필 테두리</td><td>코스메틱 아이템 — 상점에서 G로 구매</td><td><span class="badge badge-phase">Phase 3</span></td></tr>
 </table>
@@ -581,7 +591,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <div class="phase-row">
 <div class="phase-card">
   <div class="phase-title">Phase 1 — MVP</div>
-  <div class="phase-item">경매 핵심 루프<br>인증/유저 시스템<br>강제청산<br>신고/차단<br>어뷰징 방어<br>매물 상세 열람 BM<br>경매 히스토리 BM<br>출석 보상<br>튜토리얼 UI<br>관리자 페이지</div>
+  <div class="phase-item">경매 핵심 루프<br>경매 간 10분 쿨다운<br>쿨다운 건너뛰기 50,000G<br>인증/유저 시스템<br>강제청산<br>신고/차단<br>어뷰징 방어<br>매물 상세 열람 BM<br>경매 히스토리 BM<br>출석 보상<br>튜토리얼 UI<br>관리자 페이지<br>상점 페이지 (Phase 2 선반영)</div>
 </div>
 <div class="phase-card">
   <div class="phase-title">Phase 2 — 출시 1개월</div>
@@ -589,7 +599,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 </div>
 <div class="phase-card">
   <div class="phase-title">Phase 3 — 출시 3개월</div>
-  <div class="phase-item">방어권/금고 BM<br>보유자 정보 BM<br>스킨/칭호<br>랭킹 시스템<br>운영 대시보드</div>
+  <div class="phase-item">금고 BM<br>보유자 정보 BM<br>스킨/칭호<br>랭킹 시스템<br>운영 대시보드</div>
 </div>
 </div>
 
@@ -627,7 +637,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
   <div class="timeline-dot dot-done">5</div>
   <div>
     <div class="timeline-title">Step 5 — 경매 Cloud Functions <span class="badge badge-done">완료</span></div>
-    <div class="timeline-desc">registerAuction(유형A/B/C), placeBid, finalizeAuction, searchListing, getAuctionState, requestAuction, respondToAuctionRequest, checkAndFinalizeExpiredRequests, reportListing, blockListing, viewAuctionHistory, claimDailyReward, 관리자 CF 8개 (adminGetDashboard 외)</div>
+    <div class="timeline-desc">registerAuction(유형A/B/C), placeBid, finalizeAuction, searchListing, getAuctionState, requestAuction, respondToAuctionRequest, checkAndFinalizeExpiredRequests, reportListing, blockListing, viewAuctionHistory, claimDailyReward, updateUserNickname, purchaseShopItem, skipCooldown, 관리자 CF 8개 (adminGetDashboard 외)</div>
   </div>
 </div>
 <div class="timeline-item">
@@ -684,6 +694,9 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <li>마이 페이지 (my.html) ✅ 구현 완료</li>
 <li>닉네임 변경 ✅ 구현 완료 (마이페이지 인라인 편집)</li>
 <li>유형 B 유찰 자동 낙찰 ✅ 구현 완료</li>
+<li>경매 간 10분 쿨다운 ✅ 구현 완료 (RTDB cooldown 상태 + 프론트 카운트다운)</li>
+<li>쿨다운 건너뛰기 (50,000G) ✅ 구현 완료 (skipCooldown CF)</li>
+<li>상점 페이지 (Phase 2 선반영) ✅ 구현 완료 — 6종 아이템 + 강제청산 연장권 사전 구매</li>
 </ul>
 <h3>우선순위 중간 — Phase 2</h3>
 <ul>
@@ -694,7 +707,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 </ul>
 <h3>우선순위 낮음 — Phase 3</h3>
 <ul>
-<li>강제청산 기간 연장권/금고 BM</li>
+<li>금고 BM</li>
 <li>랭킹 시스템</li>
 <li>스킨/칭호</li>
 <li>시즌제 검토 / 모바일 앱 확장</li>
@@ -729,8 +742,8 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
   <td rowspan="3">보호</td>
   <td>강제청산 기간 연장권</td>
   <td>100,000G / 24h</td>
-  <td>보유 매물 1개의 강제청산 회신 기한을 24시간 연장. 중복 사용 가능 (횟수 × 24h 누적). 구매 시 대상 매물 선택.</td>
-  <td><span class="badge badge-phase">Phase 2</span></td>
+  <td>보유 매물 1개의 강제청산 회신 기한을 24시간 연장. 중복 사용 가능 (횟수 × 24h 누적). 구매 시 대상 매물 선택. <strong>경매 신청 전 사전 구매 가능</strong> — 신청 없는 매물 선택 시 listings.reservedExtensionHours에 24h 누적 저장, 이후 신청이 들어오면 expiresAt에 자동 반영.</td>
+  <td><span class="badge badge-done">구현</span></td>
 </tr>
 <tr>
   <td>금고</td>
@@ -742,33 +755,33 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
   <td>면역 연장권</td>
   <td>50,000G</td>
   <td>유찰 후 면역 기간 24h → 48h 연장. 대상 매물 보유자만 사용 가능.</td>
-  <td><span class="badge badge-phase">Phase 2</span></td>
+  <td><span class="badge badge-done">구현</span></td>
 </tr>
 <tr>
   <td rowspan="2">거래</td>
   <td>보유 한도 +1</td>
   <td>300,000G</td>
   <td>계정 보유 매물 한도 1칸 영구 확장 (최대 한도 별도 정책). Google 계정 전용.</td>
-  <td><span class="badge badge-phase">Phase 2</span></td>
+  <td><span class="badge badge-done">구현</span></td>
 </tr>
 <tr>
   <td>대기열 우선권 패스 (30일)</td>
   <td>300,000G</td>
   <td>30일간 등록하는 모든 경매를 대기열 맨 앞으로 이동. 단, 현재 진행 중인 경매는 밀지 않음.</td>
-  <td><span class="badge badge-phase">Phase 2</span></td>
+  <td><span class="badge badge-done">구현</span></td>
 </tr>
 <tr>
   <td rowspan="2">편의</td>
   <td>상세 열람 패스 (30일)</td>
   <td>300,000G</td>
   <td>30일간 모든 매물 상세 페이지 무제한 열람 (건당 50,000G 대신). 경매 히스토리는 별도.</td>
-  <td><span class="badge badge-phase">Phase 2</span></td>
+  <td><span class="badge badge-done">구현</span></td>
 </tr>
 <tr>
   <td>히스토리 패스 (30일)</td>
   <td>300,000G</td>
   <td>30일간 모든 경매 히스토리 무제한 열람 (건당 50,000G 대신).</td>
-  <td><span class="badge badge-phase">Phase 2</span></td>
+  <td><span class="badge badge-done">구현</span></td>
 </tr>
 <tr>
   <td rowspan="3">코스메틱</td>
@@ -797,51 +810,35 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 3. 아이템 카드 "구매" 버튼 클릭
 4. 구매 확인 모달 표시
    - 아이템명 · 효과 요약 · 차감 G · 구매 후 잔액 미리보기
+   - needsTarget 아이템(연장권·면역권)은 대상 매물 선택 드롭다운 표시
+     * 강제청산 기간 연장권: 모든 내 보유 매물 표시 (요청 없는 매물 선택 시 예약, 있는 매물 선택 시 즉시 적용)
+     * 면역 연장권: 면역 기간 중인 매물만 표시
    - 잔액 부족 시 버튼 비활성화 + 부족 금액 안내
 5. 확인 → purchaseShopItem CF 호출 (Firestore 트랜잭션)
-   - 잔액 차감 / users.inventory 배열에 { itemId, expiresAt, usedAt: null } 저장
+   - 잔액 차감 / 패스형은 users.{passField} 만료 timestamp 갱신 / 연장권은 listing 또는 request 직접 갱신
 6. 성공 토스트 + 잔액 즉시 갱신
-7. 효과 적용 시점: 즉시 적용형(패스) vs 사용 시 적용형(방어권·우선권 등)</pre>
+7. 효과 적용 시점: 즉시 적용형(패스, 면역 연장) vs 자동 적용형(강제청산 연장권 예약)</pre>
 
 <h3>15.4 Firestore 구조</h3>
 <pre>users/{uid}
-  inventory: [
-    {
-      itemId: "liquidation_extension",  // 강제청산 기간 연장권 (소모형)
-      purchasedAt: Timestamp,
-      used: false,
-      targetListingId: null             // 사용 시점에 기록
-    }
-  ]
-  vaults: [                             // 금고 슬롯 목록 (구매할 때마다 1개씩 추가)
-    {
-      vaultId: "...",
-      purchasedAt: Timestamp,
-      storedListingId: null             // null = 비어있음 / listingId = 보관 중
-    }
-  ]
+  balance: number
+  ownedLimit: number                    // 보유 한도 (보유 한도+1 구매 시 increment)
+  detailViewPassExpiresAt: number       // 상세 열람 패스 만료 timestamp
+  historyViewPassExpiresAt: number      // 히스토리 패스 만료 timestamp
+  queuePriorityPassExpiresAt: number    // 대기열 우선권 패스 만료 timestamp
 
 listings/{listingId}
-  vaultedBy: null | uid               // 금고에 보관 중인 유저 UID (보관 중이면 강제청산 면제)
+  reservedExtensionHours: number        // 강제청산 기간 연장권 사전 구매분 (h 단위 누적)
+                                        // requestAuction 호출 시 expiresAt에 자동 반영 후 필드 삭제
+  vaultedBy: null | uid                 // (Phase 3) 금고 보관 중인 유저 UID
 
-system/shopItems (관리자가 가격·설명 변경 가능)
-  items: {
-    "liquidation_extension": {
-      name: "강제청산 기간 연장권",
-      category: "protection",
-      price: 100000,          // 24h 연장당
-      consumable: true,
-      enabled: true
-    },
-    "vault": {
-      name: "금고",
-      category: "protection",
-      price: 500000,
-      consumable: false,      // 소모되지 않음 (슬롯 영구 추가)
-      enabled: true
-    },
-    ...
-  }</pre>
+RTDB auction/current (쿨다운 상태)
+  status: "cooldown"
+  auctionId: string
+  finalPrice: number
+  winnerId: string | null
+  completedAt: number
+  cooldownUntil: number                 // now + 10분 (ms timestamp)</pre>
 
 <h3>15.5 설계 원칙</h3>
 <table>
@@ -849,7 +846,7 @@ system/shopItems (관리자가 가격·설명 변경 가능)
 <tr><td>No Pay-to-Win</td><td>아이템이 경매 결과에 직접 영향을 미치지 않음. 우선권·패스는 편의이지 승률 보정 아님.</td></tr>
 <tr><td>재사용 제한</td><td>남용 가능성 있는 아이템은 계정당 사용 빈도 제한 적용.</td></tr>
 <tr><td>관리자 제어</td><td>가격·활성화 여부를 <code>system/shopItems</code>에서 실시간 변경 가능 (재배포 불필요).</td></tr>
-<tr><td>MVP 제외</td><td>MVP에는 상점 없음. Phase 2 도입 시 <code>purchaseShopItem</code> CF + <code>shop.html</code> 신규 개발.</td></tr>
+<tr><td>Phase 2 선반영</td><td>상점 (shop.html + purchaseShopItem CF) 은 Phase 2 예정이었으나 MVP에 선반영 구현 완료. 금고(Phase 3)는 미구현.</td></tr>
 </table>
 
 </div>
