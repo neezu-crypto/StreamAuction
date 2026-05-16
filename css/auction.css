@@ -321,6 +321,30 @@
   color: #6b7280;
 }
 
+.btn-skip-cooldown {
+  margin-top: 12px;
+  padding: 8px 20px;
+  background: #1e293b;
+  color: #f59e0b;
+  border: 1px solid #f59e0b44;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-skip-cooldown:hover:not(:disabled) {
+  background: #2d3748;
+}
+.btn-skip-cooldown:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.skip-cooldown-error {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: #ef4444;
+}
+
 /* ===== 대기열 ===== */
 .queue-section {
   margin-top: 16px;

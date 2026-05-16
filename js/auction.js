@@ -32,6 +32,7 @@ const viewAuctionHistoryFn = httpsCallable(functions, "viewAuctionHistory");
 const claimDailyRewardFn = httpsCallable(functions, "claimDailyReward");
 const updateUserNicknameFn = httpsCallable(functions, "updateUserNickname");
 const purchaseShopItemFn = httpsCallable(functions, "purchaseShopItem");
+const skipCooldownFn = httpsCallable(functions, "skipCooldown");
 
 // ===== 실시간 구독 시작 =====
 export function subscribeAuction({
@@ -93,7 +94,22 @@ function updateTimer(auctionData) {
   clearInterval(timerInterval);
   timerInterval = null;
 
-  if (!auctionData || auctionData.status !== "active") {
+  if (!auctionData) {
+    onTimerCallback && onTimerCallback(null);
+    return;
+  }
+
+  if (auctionData.status === "cooldown") {
+    const tick = () => {
+      const remaining = auctionData.cooldownUntil - Date.now();
+      onTimerCallback && onTimerCallback(remaining > 0 ? remaining : 0);
+    };
+    tick();
+    timerInterval = setInterval(tick, 500);
+    return;
+  }
+
+  if (auctionData.status !== "active") {
     onTimerCallback && onTimerCallback(null);
     return;
   }
@@ -233,5 +249,11 @@ export async function purchaseShopItem(itemId, targetListingId) {
 // ===== 출석 보상 =====
 export async function claimDailyReward() {
   const result = await claimDailyRewardFn();
+  return result.data;
+}
+
+// ===== 쿨다운 건너뛰기 =====
+export async function skipCooldown() {
+  const result = await skipCooldownFn();
   return result.data;
 }

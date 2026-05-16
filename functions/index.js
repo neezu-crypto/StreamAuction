@@ -24,6 +24,7 @@ const AUCTION_DURATION_MS = 5 * 60 * 1000;
 const SNIPE_WINDOW_MS = 15 * 1000;
 const SNIPE_EXTENSION_MS = 15 * 1000;
 const FEE_RATE = 0.05;
+const COOLDOWN_MS = 10 * 60 * 1000;
 
 
 // ============================================
@@ -34,6 +35,11 @@ async function checkAndFinalizeExpiredAuction() {
   const currentRef = rtdb.ref("auction/current");
   const snap = await currentRef.once("value");
   const current = snap.val();
+
+  if (current && current.status === "cooldown" && Date.now() >= current.cooldownUntil) {
+    await startNextFromQueue();
+    return null;
+  }
 
   if (!current || current.status !== "active") return null;
   if (Date.now() < current.endsAt) return null;
@@ -361,17 +367,15 @@ async function doFinalizeAuction(current) {
 
   await batch.commit();
 
+  const completedAt = Date.now();
   await rtdb.ref("auction/current").set({
-    status: "completed",
+    status: "cooldown",
     auctionId,
     finalPrice,
     winnerId: winnerId || null,
-    completedAt: Date.now(),
+    completedAt,
+    cooldownUntil: completedAt + COOLDOWN_MS,
   });
-
-  setTimeout(async () => {
-    await startNextFromQueue();
-  }, 3000);
 
   logger.info(`경매 정산 완료: ${auctionId}`);
   return {auctionId, finalPrice, winnerId, isWon};
@@ -825,7 +829,7 @@ exports.registerAuction = onCall(
 
         const selloffTutorialReward = selloffTutorialRewards.length > 0 ? selloffTutorialRewards : null;
 
-        if (!current || current.status !== "active") {
+        if (!current) {
           await startNextFromQueue();
           return {success: true, auctionId, status: "started", message: "손절 경매가 시작됐습니다!", tutorialReward: selloffTutorialReward};
         }
@@ -955,7 +959,7 @@ exports.registerAuction = onCall(
 
       const newTutorialReward = newTutorialRewards.length > 0 ? newTutorialRewards : null;
 
-      if (!current || current.status !== "active") {
+      if (!current) {
         await startNextFromQueue();
         return {success: true, auctionId, status: "started", message: "경매가 시작됐습니다!", tutorialReward: newTutorialReward};
       }
@@ -1403,7 +1407,7 @@ exports.respondToAuctionRequest = onCall(
 
       logger.info(`경매 요청 승인: requestId=${requestId}, auctionId=${auctionId}`);
 
-      if (!current || current.status !== "active") {
+      if (!current) {
         await startNextFromQueue();
         return {success: true, action: "approved", auctionId, status: "started"};
       }
@@ -2152,5 +2156,67 @@ exports.purchaseShopItem = onCall(
       await userRef.update(update);
       logger.info(`상점 구매: uid=${uid}, itemId=${itemId}, price=${item.price}G`);
       return {success: true, newBalance: user.balance - item.price};
+    },
+);
+
+
+// ============================================
+// skipCooldown: 경매 대기시간 즉시 건너뛰기 (50,000G)
+// ============================================
+const SKIP_COOLDOWN_COST = 50000;
+
+exports.skipCooldown = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+      const uid = request.auth.uid;
+
+      // RTDB 트랜잭션으로 쿨다운 상태를 원자적으로 제거
+      const currentRef = rtdb.ref("auction/current");
+      const txResult = await currentRef.transaction((current) => {
+        if (!current || current.status !== "cooldown") return;
+        return {
+          status: "skipping",
+          auctionId: current.auctionId,
+          finalPrice: current.finalPrice,
+          winnerId: current.winnerId || null,
+          completedAt: current.completedAt,
+        };
+      });
+
+      if (!txResult.committed) {
+        throw new HttpsError("failed-precondition", "현재 쿨다운 상태가 아닙니다.");
+      }
+
+      // G 차감
+      const userRef = db.collection("users").doc(uid);
+      let newBalance;
+      try {
+        await db.runTransaction(async (tx) => {
+          const userSnap = await tx.get(userRef);
+          if (!userSnap.exists) throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+          const balance = userSnap.data().balance || 0;
+          if (balance < SKIP_COOLDOWN_COST) {
+            throw new HttpsError(
+                "failed-precondition",
+                `잔액이 부족합니다. (필요: ${SKIP_COOLDOWN_COST.toLocaleString()}G)`,
+            );
+          }
+          newBalance = balance - SKIP_COOLDOWN_COST;
+          tx.update(userRef, {balance: FieldValue.increment(-SKIP_COOLDOWN_COST)});
+        });
+      } catch (e) {
+        // G 차감 실패 시 쿨다운 상태 복원
+        const snap = await currentRef.once("value");
+        const cur = snap.val();
+        if (cur && cur.status === "skipping") {
+          await currentRef.update({status: "cooldown", cooldownUntil: Date.now() + 60 * 1000});
+        }
+        throw e;
+      }
+
+      await startNextFromQueue();
+      logger.info(`쿨다운 건너뛰기: uid=${uid}, cost=${SKIP_COOLDOWN_COST}G`);
+      return {success: true, newBalance};
     },
 );

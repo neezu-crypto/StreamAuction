@@ -17,6 +17,7 @@ import {
   searchListing, registerAuction, placeBid,
   requestAuction, respondToAuctionRequest,
   reportListing, blockListing, viewAuctionHistory, claimDailyReward,
+  skipCooldown,
   formatG, formatTimeRemaining,
   validateSoopId, validateNickname,
   getSoopProfileUrl, loadInitialState,
@@ -503,17 +504,27 @@ function onAuctionUpdate(auction) {
     return;
   }
 
-  if (auction.status === "completed") {
-    // 경매 완료
+  if (auction.status === "completed" || auction.status === "cooldown") {
     if (empty) empty.style.display = "none";
     if (card) card.style.display = "none";
     if (completed) completed.style.display = "";
     const info = $("completedInfo");
     if (info) {
       const winner = auction.winnerId ?
-        auction.winnerId.substring(0, 4) + "***" : "-";
+        auction.winnerId.substring(0, 4) + "***" : "유찰";
       info.textContent = `${formatG(auction.finalPrice)}에 낙찰 · 낙찰자: ${winner}`;
     }
+    const countdown = $("completedCountdown");
+    if (countdown) {
+      countdown.textContent = auction.status === "cooldown"
+        ? "다음 경매 준비 중..."
+        : "잠시 후 다음 경매가 시작됩니다...";
+    }
+    const skipBtn = $("btnSkipCooldown");
+    if (skipBtn) {
+      skipBtn.style.display = (auction.status === "cooldown" && currentUserData) ? "" : "none";
+    }
+    setText("skipCooldownError", "");
     return;
   }
 
@@ -588,6 +599,16 @@ function onBidsUpdate(bids) {
 }
 
 function onTimer(ms) {
+  if (currentAuction?.status === "cooldown") {
+    const countdown = $("completedCountdown");
+    if (countdown && ms !== null) {
+      countdown.textContent = ms <= 0
+        ? "다음 경매를 준비하는 중..."
+        : `다음 경매까지 ${formatTimeRemaining(ms)}`;
+    }
+    return;
+  }
+
   const timerEl = $("auctionTimer");
   if (!timerEl) return;
 
@@ -1156,6 +1177,26 @@ window.handleLogout = async function() {
     log("로그아웃 완료");
   } catch (e) {
     log(`로그아웃 실패: ${e.message}`, true);
+  }
+};
+
+let isSkippingCooldown = false;
+window.handleSkipCooldown = async function() {
+  if (isSkippingCooldown) return;
+  isSkippingCooldown = true;
+  const btn = $("btnSkipCooldown");
+  if (btn) { btn.disabled = true; btn.textContent = "처리 중..."; }
+  setText("skipCooldownError", "");
+  try {
+    const result = await skipCooldown();
+    if (currentUserData) currentUserData.balance = result.newBalance;
+    renderAuthArea();
+    btn.style.display = "none";
+  } catch (e) {
+    setText("skipCooldownError", e.message || "처리 중 오류가 발생했습니다.");
+  } finally {
+    isSkippingCooldown = false;
+    if (btn) { btn.disabled = false; btn.textContent = "⚡ 대기시간 건너뛰기 (50,000G)"; }
   }
 };
 

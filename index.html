@@ -97,12 +97,16 @@
         </div>
       </div>
 
-      <!-- 경매 완료 상태 -->
+      <!-- 경매 완료 / 쿨다운 상태 -->
       <div class="auction-completed" id="auctionCompleted" style="display:none">
         <div class="completed-icon">🎉</div>
         <div class="completed-title">경매 완료!</div>
         <div class="completed-info" id="completedInfo"></div>
-        <div class="completed-countdown">잠시 후 다음 경매가 시작됩니다...</div>
+        <div class="completed-countdown" id="completedCountdown">잠시 후 다음 경매가 시작됩니다...</div>
+        <button class="btn-skip-cooldown" id="btnSkipCooldown" onclick="handleSkipCooldown()" style="display:none">
+          ⚡ 대기시간 건너뛰기 (50,000G)
+        </button>
+        <div class="skip-cooldown-error" id="skipCooldownError"></div>
       </div>
     </div>
 
