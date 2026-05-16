@@ -172,6 +172,8 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
     <a class="toc-item" href="#s12">12. 비즈니스 모델</a>
     <a class="toc-item" href="#s13">13. MVP 로드맵</a>
     <a class="toc-item" href="#s14">14. 미정 항목</a>
+    <a class="toc-item" href="#s15">15. 상점 페이지</a>
+    <a class="toc-item" href="#s16">16. 랭킹 페이지</a>
   </div>
 </div>
 
@@ -852,8 +854,75 @@ RTDB auction/current (쿨다운 상태)
 </div>
 
 <hr>
+<div id="s16" class="section-anchor">
+<h2>16. 매물 시세 랭킹 페이지 <span class="badge badge-phase">Phase 2</span></h2>
+
+<blockquote>모든 매물의 현재 시세를 순위별로 보여주는 공개 페이지. 로그인 없이 열람 가능.</blockquote>
+
+<h3>16.1 페이지 구성</h3>
+<table>
+<tr><th>영역</th><th>설명</th></tr>
+<tr><td>헤더</td><td>공통 헤더 (로그인 상태에 따라 잔액·마이페이지 표시)</td></tr>
+<tr><td>랭킹 탭</td><td>시세 순위 / 거래 횟수 순위 / 역대 최고가 순위 — 탭 전환으로 정렬 기준 변경</td></tr>
+<tr><td>랭킹 테이블</td><td>순위 · 매물(닉네임 + soopId) · 현재 시세 · 보유자 · 마지막 거래가 · 거래 횟수 표시</td></tr>
+<tr><td>매물 링크</td><td>각 행 클릭 → listing.html?id={listingId} (상세 페이지)</td></tr>
+<tr><td>새로고침</td><td>수동 새로고침 버튼 (실시간 구독 대신 단순 조회)</td></tr>
+</table>
+
+<h3>16.2 랭킹 기준</h3>
+<table>
+<tr><th>탭</th><th>정렬 기준</th><th>Firestore 쿼리</th><th>표시 항목</th></tr>
+<tr><td>시세 순위</td><td>currentPrice 내림차순</td><td><code>orderBy("currentPrice","desc").limit(50)</code></td><td>현재 시세 강조</td></tr>
+<tr><td>거래 횟수 순위</td><td>tradeCount 내림차순</td><td><code>orderBy("tradeCount","desc").limit(50)</code></td><td>총 거래 횟수 강조</td></tr>
+<tr><td>역대 최고가 순위</td><td>highestPrice 내림차순</td><td><code>orderBy("highestPrice","desc").limit(50)</code></td><td>역대 최고가 강조</td></tr>
+</table>
+
+<h3>16.3 랭킹 테이블 컬럼</h3>
+<table>
+<tr><th>#</th><th>컬럼</th><th>설명</th></tr>
+<tr><td>1</td><td>순위</td><td>1위부터 번호 표시. 1~3위는 🥇🥈🥉 아이콘</td></tr>
+<tr><td>2</td><td>매물</td><td>프로필 이미지 썸네일 + 닉네임 + soopId</td></tr>
+<tr><td>3</td><td>현재 시세</td><td>listings.currentPrice (G 단위)</td></tr>
+<tr><td>4</td><td>보유자</td><td>보유자 닉네임 (없으면 "미보유")</td></tr>
+<tr><td>5</td><td>마지막 거래가</td><td>listings.currentPrice 갱신 시점의 낙찰가</td></tr>
+<tr><td>6</td><td>거래 횟수</td><td>listings.tradeCount</td></tr>
+</table>
+
+<h3>16.4 표시 정책</h3>
+<table>
+<tr><th>항목</th><th>정책</th></tr>
+<tr><td>모자이크 매물</td><td>isMosaiced: true인 매물은 닉네임·soopId 블러 처리 (상세 링크는 유지)</td></tr>
+<tr><td>차단 매물</td><td>로그인 유저의 blockedListingIds에 포함된 매물은 목록에서 제외</td></tr>
+<tr><td>미보유 매물</td><td>ownerId: null인 매물도 포함 (시세 기록 있는 경우)</td></tr>
+<tr><td>신규 매물</td><td>한 번도 거래 없는 매물(currentPrice: 0 또는 없음)은 랭킹에서 제외</td></tr>
+<tr><td>페이지 크기</td><td>최대 50위까지 표시 (페이지네이션 없음 — MVP 단순화)</td></tr>
+</table>
+
+<h3>16.5 데이터 조회 방식</h3>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>조회 방식</td><td>페이지 로드 시 1회 Firestore 쿼리 (실시간 구독 없음)</td></tr>
+<tr><td>캐싱</td><td>브라우저 로컬 캐시 5분 (탭 전환 시 재조회 없이 메모리 데이터 사용)</td></tr>
+<tr><td>접근 제어</td><td>Firestore 보안 규칙: listings 컬렉션 read 공개 (기존 규칙 활용)</td></tr>
+<tr><td>Cloud Function</td><td>별도 CF 없음 — 클라이언트에서 직접 Firestore 쿼리</td></tr>
+</table>
+
+<h3>16.6 필요한 Firestore 인덱스</h3>
+<pre>listings 컬렉션 복합 인덱스 (Firestore 자동 생성 또는 수동 추가):
+  currentPrice DESC
+  tradeCount DESC
+  highestPrice DESC</pre>
+
+<h3>16.7 네비게이션 연동</h3>
+<ul>
+<li>메인 페이지(index.html) 헤더 또는 푸터에 "📊 랭킹" 링크 추가</li>
+<li>상점 페이지(shop.html), 마이페이지(my.html)에서도 동일 링크 제공</li>
+<li>ranking.html은 독립 페이지 (공통 헤더/푸터 사용)</li>
+</ul>
+</div>
+
 <p style="font-size:12px;color:#999;text-align:center;padding:1rem 0">
-  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-16 (마이페이지·닉네임 변경·유형 B 자동 낙찰·상점 기획 추가) · 작성자: 프로젝트 오너 + Claude
+  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-17 (경매 쿨다운·상점 반영·랭킹 페이지 추가) · 작성자: 프로젝트 오너 + Claude
 </p>
 
 </div>
