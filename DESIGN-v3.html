@@ -567,7 +567,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 
 <h3>절대 금지</h3>
 <ul>
-<li>❌ 게임 화폐(G)의 현금 충전/환전</li>
+<li>❌ 게임 화폐(G)의 현금 환전 (G → 현금 출금)</li>
 <li>❌ 실제 통화 단위(원/달러) 표기</li>
 <li>❌ 확률형 아이템 (가챠)</li>
 <li>❌ Pay-to-Win (결제로 경매 우선권 등)</li>
@@ -847,7 +847,6 @@ system/shopItems (관리자가 가격·설명 변경 가능)
 <table>
 <tr><th>원칙</th><th>내용</th></tr>
 <tr><td>No Pay-to-Win</td><td>아이템이 경매 결과에 직접 영향을 미치지 않음. 우선권·패스는 편의이지 승률 보정 아님.</td></tr>
-<tr><td>게임 내 G만</td><td>현금 결제·충전 창구 없음. G는 플레이(출석·경매·거래)로만 획득.</td></tr>
 <tr><td>재사용 제한</td><td>남용 가능성 있는 아이템은 계정당 사용 빈도 제한 적용.</td></tr>
 <tr><td>관리자 제어</td><td>가격·활성화 여부를 <code>system/shopItems</code>에서 실시간 변경 가능 (재배포 불필요).</td></tr>
 <tr><td>MVP 제외</td><td>MVP에는 상점 없음. Phase 2 도입 시 <code>purchaseShopItem</code> CF + <code>shop.html</code> 신규 개발.</td></tr>
