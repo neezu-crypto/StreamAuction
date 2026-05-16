@@ -453,14 +453,16 @@ CANCELLED  취소 (시스템 예외)</pre>
 
 <h3>입력 검증</h3>
 <table>
-<tr><th>필드</th><th>규칙</th></tr>
-<tr><td>soop 닉네임</td><td>한글/외래어/대소문자/특수문자 OK, 이모지 NO</td></tr>
-<tr><td>soop ID</td><td>영문 대소문자 + 숫자만</td></tr>
+<tr><th>필드</th><th>규칙</th><th>검증 위치</th></tr>
+<tr><td>soop 닉네임</td><td>한글/외래어/대소문자/특수문자 OK, 이모지 NO, 50자 이하</td><td>클라이언트 + 서버(CF)</td></tr>
+<tr><td>soop ID</td><td>영문 대소문자 + 숫자만</td><td>클라이언트 + 서버(CF)</td></tr>
+<tr><td>시작가</td><td>50,000G 이상</td><td>클라이언트 + 서버(CF)</td></tr>
 </table>
 <pre>const hasEmoji = /\p{Extended_Pictographic}/u.test(nickname);
 const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
-<p>프로필 이미지 URL 패턴: <code>https://stimg.sooplive.com/LOGO/{앞2글자}/{id}/{id}.jpg</code></p>
-<p>CORS 문제로 검증 어려움 → 프로필 없이도 등록 가능. 부적절 프로필은 신고 시스템으로 대응.</p>
+<p>프로필 이미지 URL: 클라이언트 입력을 신뢰하지 않고 <strong>서버(CF)에서 soopId 기반으로 직접 생성</strong>.</p>
+<p><code>https://stimg.sooplive.co.kr/LOGO/{앞2글자}/{id}/{id}.jpg</code></p>
+<p>부적절 프로필은 신고 시스템으로 대응.</p>
 </div>
 
 <div id="s8" class="section-anchor">
@@ -923,7 +925,7 @@ RTDB auction/current (쿨다운 상태)
 </div>
 
 <p style="font-size:12px;color:#999;text-align:center;padding:1rem 0">
-  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-17 (경매 쿨다운·상점 반영·랭킹 페이지 추가·랭킹 열람 조건 구글 로그인으로 변경) · 작성자: 오목지면시그
+  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-17 (경매 쿨다운·상점 반영·랭킹 페이지 추가·랭킹 열람 조건 구글 로그인으로 변경·입력 검증 정책 보완) · 작성자: 오목지면시그
 </p>
 
 </div>
