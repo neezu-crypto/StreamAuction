@@ -474,7 +474,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <table>
 <tr><th>아이템</th><th>효과</th></tr>
 <tr><td>강제청산 기간 연장권</td><td>보유 매물의 강제청산 회신 기한을 24시간씩 연장 (100,000G / 24h, 중복 사용 가능)</td></tr>
-<tr><td>금고 사용권</td><td>매물 강제청산 영구 면제 (매물당 1칸)</td></tr>
+<tr><td>금고</td><td>계정에 금고 슬롯 1칸 영구 추가 — 슬롯에 보유 매물 1개를 보관하면 강제청산 면제. 손절 시 슬롯이 비워지며 다른 매물에 재사용 가능.</td></tr>
 </table>
 </div>
 
@@ -558,7 +558,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <tr><td>매물 상세 페이지 열람</td><td>시세 통계 6개 + 거래 액션 버튼 접근 → 50,000G</td><td><span class="badge badge-done">MVP</span></td></tr>
 <tr><td>경매 히스토리 열람</td><td>과거 경매 결과 + 입찰 기록 → 50,000G (상세 페이지 내 별도 과금)</td><td><span class="badge badge-done">MVP</span></td></tr>
 <tr><td>강제청산 기간 연장권</td><td>보유 매물 강제청산 회신 기한 24h씩 연장 (100,000G / 24h) — 상점에서 G로 구매</td><td><span class="badge badge-phase">Phase 2</span></td></tr>
-<tr><td>금고 사용권</td><td>매물 강제청산 영구 면제 — 상점에서 G로 구매</td><td><span class="badge badge-phase">Phase 3</span></td></tr>
+<tr><td>금고</td><td>금고 슬롯 1칸 영구 구매 — 매물 1개 보관 시 강제청산 면제, 손절 후 슬롯 재사용 가능</td><td><span class="badge badge-phase">Phase 3</span></td></tr>
 <tr><td>보유 한도 확장 / 대기열 우선권 / 면역 해제권</td><td>거래 편의 아이템 — 상점에서 G로 구매</td><td><span class="badge badge-phase">Phase 2-3</span></td></tr>
 <tr><td>상세·히스토리 열람 패스 (30일)</td><td>무제한 열람 정기권 — 상점에서 G로 구매</td><td><span class="badge badge-phase">Phase 2</span></td></tr>
 <tr><td>광고</td><td>배너, 영상 광고 (보상형)</td><td><span class="badge badge-phase">Phase 2</span></td></tr>
@@ -733,9 +733,9 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
   <td><span class="badge badge-phase">Phase 2</span></td>
 </tr>
 <tr>
-  <td>금고 사용권</td>
+  <td>금고</td>
   <td>500,000G</td>
-  <td>특정 매물 1개에 강제청산 영구 면제 부여. 매물 양도 시 효과 유지.</td>
+  <td>계정에 금고 슬롯 1칸 영구 추가. 슬롯에 보유 매물 1개를 보관하면 강제청산 완전 면제. 손절하면 슬롯이 비워지며 다른 매물에 재사용 가능. 슬롯은 계정에 귀속 (양도 불가).</td>
   <td><span class="badge badge-phase">Phase 3</span></td>
 </tr>
 <tr>
@@ -813,22 +813,37 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <pre>users/{uid}
   inventory: [
     {
-      itemId: "shield_forced_liquidation",  // 아이템 ID
+      itemId: "liquidation_extension",  // 강제청산 기간 연장권 (소모형)
       purchasedAt: Timestamp,
-      expiresAt: Timestamp | null,          // null = 영구
-      used: false,                          // 소모형 아이템
-      targetListingId: null                 // 사용 대상 (사용 시점에 기록)
+      used: false,
+      targetListingId: null             // 사용 시점에 기록
+    }
+  ]
+  vaults: [                             // 금고 슬롯 목록 (구매할 때마다 1개씩 추가)
+    {
+      vaultId: "...",
+      purchasedAt: Timestamp,
+      storedListingId: null             // null = 비어있음 / listingId = 보관 중
     }
   ]
 
+listings/{listingId}
+  vaultedBy: null | uid               // 금고에 보관 중인 유저 UID (보관 중이면 강제청산 면제)
+
 system/shopItems (관리자가 가격·설명 변경 가능)
   items: {
-    "shield_forced_liquidation": {
+    "liquidation_extension": {
       name: "강제청산 기간 연장권",
       category: "protection",
-      price: 100000,
-      durationDays: null,   // null = 영구/소모형
+      price: 100000,          // 24h 연장당
       consumable: true,
+      enabled: true
+    },
+    "vault": {
+      name: "금고",
+      category: "protection",
+      price: 500000,
+      consumable: false,      // 소모되지 않음 (슬롯 영구 추가)
       enabled: true
     },
     ...
