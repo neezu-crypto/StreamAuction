@@ -430,6 +430,7 @@ CANCELLED  취소 (시스템 예외)</pre>
 <tr><td>매물 신고</td><td>❌</td><td>✅</td></tr>
 <tr><td>매물 숨기기</td><td>❌</td><td>✅</td></tr>
 <tr><td>경매 히스토리 열람</td><td>50,000G 결제</td><td>50,000G 결제</td></tr>
+<tr><td>랭킹 페이지 열람</td><td>❌</td><td>✅</td></tr>
 <tr><td>데이터 영속성</td><td>브라우저 종속</td><td>영구 보관</td></tr>
 </table>
 
@@ -857,7 +858,7 @@ RTDB auction/current (쿨다운 상태)
 <div id="s16" class="section-anchor">
 <h2>16. 매물 시세 랭킹 페이지 <span class="badge badge-phase">Phase 2</span></h2>
 
-<blockquote>모든 매물의 현재 시세를 순위별로 보여주는 공개 페이지. 로그인 없이 열람 가능.</blockquote>
+<blockquote>모든 매물의 현재 시세를 순위별로 보여주는 페이지. <strong>구글 로그인 유저만 열람 가능.</strong></blockquote>
 
 <h3>16.1 페이지 구성</h3>
 <table>
@@ -903,7 +904,7 @@ RTDB auction/current (쿨다운 상태)
 <tr><th>항목</th><th>내용</th></tr>
 <tr><td>조회 방식</td><td>페이지 로드 시 1회 Firestore 쿼리 (실시간 구독 없음)</td></tr>
 <tr><td>캐싱</td><td>브라우저 로컬 캐시 5분 (탭 전환 시 재조회 없이 메모리 데이터 사용)</td></tr>
-<tr><td>접근 제어</td><td>Firestore 보안 규칙: listings 컬렉션 read 공개 (기존 규칙 활용)</td></tr>
+<tr><td>접근 제어</td><td>구글 로그인 유저만 열람 가능. 미로그인·익명 유저는 로그인 유도 모달 표시 후 접근 차단. Firestore 보안 규칙: listings 컬렉션 read는 request.auth != null &amp;&amp; !isAnonymous 조건 적용</td></tr>
 <tr><td>Cloud Function</td><td>별도 CF 없음 — 클라이언트에서 직접 Firestore 쿼리</td></tr>
 </table>
 
@@ -922,7 +923,7 @@ RTDB auction/current (쿨다운 상태)
 </div>
 
 <p style="font-size:12px;color:#999;text-align:center;padding:1rem 0">
-  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-17 (경매 쿨다운·상점 반영·랭킹 페이지 추가) · 작성자: 프로젝트 오너 + Claude
+  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-17 (경매 쿨다운·상점 반영·랭킹 페이지 추가·랭킹 열람 조건 구글 로그인으로 변경) · 작성자: 오목지면시그
 </p>
 
 </div>
