@@ -220,7 +220,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <table>
 <tr><th>항목</th><th>비고</th></tr>
 <tr><td>통계 관리 탭</td><td>userEvents 수집 · adminGetStats CF · 관리자 통계 탭 UI — Section 17 참고</td></tr>
-<tr><td>Phase 2+ 전체</td><td>시세 감가상각, 광고 보상, Cloud Scheduler 등</td></tr>
+<tr><td>Phase 2+ 전체</td><td>광고 보상, Cloud Scheduler 등</td></tr>
 </table>
 </div>
 
@@ -404,23 +404,6 @@ CANCELLED  취소 (시스템 예외)</pre>
 <tr><td>강제청산</td><td>변동 없음 (무보유 처리)</td></tr>
 </table>
 
-<h3>시세 하락 메커니즘 <span class="badge badge-phase">Phase 2</span></h3>
-<table>
-<tr><th>무거래 기간</th><th>시세 변화</th></tr>
-<tr><td>7일</td><td>-5%</td></tr>
-<tr><td>14일</td><td>-5% (누적 -10%)</td></tr>
-<tr><td>21일</td><td>-5% (누적 -15%)</td></tr>
-<tr><td>이후 7일마다</td><td>추가 -5%</td></tr>
-<tr><td>하한선</td><td>50,000G</td></tr>
-</table>
-
-<h3>휴면 매물 강제 회수 <span class="badge badge-phase">Phase 2</span></h3>
-<table>
-<tr><th>항목</th><th>내용</th></tr>
-<tr><td>트리거</td><td>보유자 30일 미접속 + 14일 무거래</td></tr>
-<tr><td>회수 가격</td><td>시세의 70% (보유자에게 입금)</td></tr>
-<tr><td>회수 후</td><td>무보유 매물 (시세 유지)</td></tr>
-</table>
 </div>
 
 <div id="s6" class="section-anchor">
@@ -606,7 +589,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 </div>
 <div class="phase-card">
   <div class="phase-title">Phase 2 — 출시 1개월</div>
-  <div class="phase-item">시세 감가상각<br>휴면 매물 회수<br>광고 보상<br>Cloud Scheduler</div>
+  <div class="phase-item">광고 보상<br>Cloud Scheduler</div>
 </div>
 <div class="phase-card">
   <div class="phase-title">Phase 3 — 출시 3개월</div>
@@ -711,8 +694,6 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 </ul>
 <h3>우선순위 중간 — Phase 2</h3>
 <ul>
-<li>시세 감가상각 (7일 주기 -5%, 하한 50,000G)</li>
-<li>휴면 매물 강제 회수</li>
 <li>광고 시청 보상 시스템</li>
 <li>Cloud Scheduler 도입 (클라이언트 트리거 대체)</li>
 </ul>
@@ -1154,7 +1135,7 @@ RTDB auction/current (쿨다운 상태)
 </div>
 
 <p style="font-size:12px;color:#999;text-align:center;padding:1rem 0">
-  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-17 (금고 슬롯 구현 완료 반영) · 작성자: 오목지면시그
+  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-17 (금고 슬롯 구현 완료 · 시세 감가상각·휴면 매물 회수 삭제) · 작성자: 오목지면시그
 </p>
 
 </div>
