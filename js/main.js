@@ -6,7 +6,6 @@
 import {auth, db, functions, rtdb} from "./firebase-config.js";
 import {
   ref as dbRef, onValue as dbOnValue, set as dbSet, remove as dbRemove, onDisconnect,
-  get as dbGet,
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
 import {
   doc, getDoc, collection, query, where, getDocs,
@@ -43,25 +42,9 @@ let pendingReportListingId = null;
 let pendingReportListingName = null;
 
 // ===== 접속자 집계 / 접속 제한 =====
-const ACCESS_LIMIT = 30;
 let isAccessGated = false;
 let presenceUid = null;
 let presenceConnectedUnsub = null;
-
-async function checkAccessGate() {
-  const snap = await dbGet(dbRef(rtdb, "presence"));
-  return snap.exists() ? snap.size : 0;
-}
-
-async function isAdminUser(uid) {
-  try {
-    const adminSnap = await getDoc(doc(db, "system", "admin"));
-    const adminUids = adminSnap.exists() ? (adminSnap.data().adminUids || []) : [];
-    return adminUids.includes(uid);
-  } catch {
-    return false;
-  }
-}
 
 function showAccessGateModal() {
   $("accessGateModal")?.classList.add("show");
@@ -93,6 +76,7 @@ watchOnlineCount();
 // ===== Cloud Functions =====
 const initializeUserFn = httpsCallable(functions, "initializeUser");
 const convertAnonymousToGoogleFn = httpsCallable(functions, "convertAnonymousToGoogle");
+const endSessionFn = httpsCallable(functions, "endSession");
 
 // ===== 로그 =====
 function log(msg, isError = false) {
@@ -439,22 +423,23 @@ async function processUserLogin(user) {
   isProcessingLogin = true;
 
   try {
-    // 접속 제한 체크 (테스트 기간) — 관리자는 패스
-    const [onlineCount, isAdmin] = await Promise.all([
-      checkAccessGate(),
-      isAdminUser(user.uid),
-    ]);
-    if (!isAdmin && onlineCount >= ACCESS_LIMIT) {
-      isAccessGated = true;
-      showAccessGateModal();
-      log(`접속 제한: 현재 ${onlineCount}명 (최대 ${ACCESS_LIMIT}명)`, true);
-      return;
-    }
-
     log(`유저 초기화: ${user.uid.substring(0, 8)}...`);
     updateAuthUI(user, null);
 
-    const result = await initializeUserFn();
+    let result;
+    try {
+      result = await initializeUserFn();
+    } catch (e) {
+      // 서버사이드 접속 제한 — 클라이언트 위변조로 우회 불가
+      if (e.code === "functions/resource-exhausted") {
+        isAccessGated = true;
+        showAccessGateModal();
+        log(`접속 제한: 최대 인원 초과`, true);
+        return;
+      }
+      throw e;
+    }
+
     const userData = result.data;
     currentUserData = userData;
 
@@ -1256,6 +1241,17 @@ window.handleGoogleLogin = async function() {
 window.handleLogout = async function() {
   try {
     unsubscribeAuction();
+    // 서버 세션 제거 — 슬롯을 즉시 반환해 다른 유저가 접속 가능하도록
+    try { await endSessionFn(); } catch (_) {}
+    // presence도 즉시 제거 (onDisconnect 대기 없이)
+    if (presenceUid) {
+      dbRemove(dbRef(rtdb, `presence/${presenceUid}`));
+      presenceUid = null;
+    }
+    if (presenceConnectedUnsub) {
+      presenceConnectedUnsub();
+      presenceConnectedUnsub = null;
+    }
     await logout();
     log("로그아웃 완료");
   } catch (e) {

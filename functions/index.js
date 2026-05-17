@@ -468,6 +468,47 @@ exports.initializeUser = onCall(
       const isAnonymous = authProvider === "anonymous";
       const authType = isAnonymous ? "anonymous" : "google";
 
+      // ===== 서버사이드 접속 제한 =====
+      const SESSION_LIMIT = 30;
+      const sessionRef = rtdb.ref(`sessions/${uid}`);
+      const sessionSnap = await sessionRef.once("value");
+
+      if (!sessionSnap.exists()) {
+        // 관리자 여부 확인 (관리자는 제한 우회)
+        const adminSnap = await db.collection("system").doc("admin").get();
+        const adminUids = adminSnap.exists ? (adminSnap.data().adminUids || []) : [];
+        const isAdmin = adminUids.includes(uid);
+
+        if (!isAdmin) {
+          // 스테일 세션 정리 후 활성 세션 수 계산
+          const [sessionsSnap, presenceSnap] = await Promise.all([
+            rtdb.ref("sessions").once("value"),
+            rtdb.ref("presence").once("value"),
+          ]);
+          const sessions = sessionsSnap.val() || {};
+          const presence = presenceSnap.val() || {};
+
+          // presence 없는 세션은 스테일(unclean disconnect) → 제거
+          const staleUids = Object.keys(sessions).filter((sid) => !presence[sid]);
+          if (staleUids.length > 0) {
+            await Promise.all(staleUids.map((sid) => rtdb.ref(`sessions/${sid}`).remove()));
+          }
+
+          const activeCount = Object.keys(sessions).filter((sid) => presence[sid]).length;
+          if (activeCount >= SESSION_LIMIT) {
+            throw new HttpsError(
+                "resource-exhausted",
+                `접속 제한: 현재 접속자가 최대 인원(${SESSION_LIMIT}명)에 도달했습니다. 잠시 후 다시 접속해주세요.`,
+            );
+          }
+        }
+
+        // 세션 생성 (admin SDK만 쓸 수 있으므로 클라이언트 위변조 불가)
+        await sessionRef.set({uid, joinedAt: Date.now()});
+        logger.info(`세션 생성: uid=${uid}`);
+      }
+      // 세션이 이미 있으면(재로그인/새로고침) 제한 체크 없이 통과
+
       const configSnap = await db.collection("system").doc("config").get();
       const config = configSnap.data();
       const userRef = db.collection("users").doc(uid);
@@ -728,6 +769,8 @@ exports.registerAuction = onCall(
       const {soopId, displayName, startPrice, type: auctionType} = request.data;
       const uid = request.auth.uid;
       const isSelloff = auctionType === "selloff";
+
+      await requireSession(uid);
 
       // 공통 입력 검증
       if (!soopId || !/^[a-zA-Z0-9]+$/.test(soopId)) {
@@ -1003,6 +1046,8 @@ exports.placeBid = onCall(
       const {bidAmount} = request.data;
       const uid = request.auth.uid;
 
+      await requireSession(uid);
+
       if (!bidAmount || typeof bidAmount !== "number" || bidAmount <= 0) {
         throw new HttpsError("invalid-argument", "유효하지 않은 입찰가입니다.");
       }
@@ -1220,6 +1265,8 @@ exports.requestAuction = onCall(
 
       const {listingId} = request.data;
       const uid = request.auth.uid;
+
+      await requireSession(uid);
 
       if (!listingId || typeof listingId !== "string") {
         throw new HttpsError("invalid-argument", "매물 ID가 필요합니다.");
@@ -1448,6 +1495,33 @@ async function requireAdmin(request) {
     throw new HttpsError("permission-denied", "관리자 권한이 필요합니다.");
   }
 }
+
+// ============================================
+// 헬퍼: 세션 존재 체크 (접속 제한 우회 방지)
+// ============================================
+async function requireSession(uid) {
+  const sessionSnap = await rtdb.ref(`sessions/${uid}`).once("value");
+  if (!sessionSnap.exists()) {
+    throw new HttpsError(
+        "permission-denied",
+        "유효한 세션이 없습니다. 접속 인원 제한으로 이 작업을 수행할 수 없습니다.",
+    );
+  }
+}
+
+// ============================================
+// endSession: 로그아웃 시 세션 제거
+// ============================================
+exports.endSession = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      if (!request.auth) return {success: false};
+      const uid = request.auth.uid;
+      await rtdb.ref(`sessions/${uid}`).remove();
+      logger.info(`세션 종료: uid=${uid}`);
+      return {success: true};
+    },
+);
 
 // ============================================
 // adminGetDashboard: 대시보드 데이터
