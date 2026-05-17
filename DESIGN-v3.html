@@ -142,6 +142,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
     <a class="nav-btn" href="#s16">16. 랭킹</a>
     <a class="nav-btn" href="#s17">17. 통계 관리</a>
     <a class="nav-btn" href="#s18">18. 테스트 기간</a>
+    <a class="nav-btn" href="#s19">19. 보상형 광고</a>
   </div>
 </nav>
 
@@ -1187,8 +1188,257 @@ async function requireSession(uid) {
 
 <hr>
 
+<div id="s19" class="section-anchor">
+<h2>19. 보상형 광고 기획 <span class="badge badge-phase">Phase 2</span></h2>
+
+<blockquote>외부 광고 네트워크 없이 <strong>유저가 직접 G를 내고 자신의 SOOP 방송국을 홍보</strong>하고, 다른 유저는 해당 방송국을 방문하면 G를 받는 자생적 광고 생태계.</blockquote>
+
+<div class="info-box">
+  <div class="info-box-title">핵심 구조</div>
+  <div class="info-box-text">
+    광고주 (유저 A) : G를 내고 방송국 URL을 광고 슬롯에 등록<br>
+    시청자 (유저 B·C…) : 광고 슬롯의 방송국 링크를 클릭 → 방문 시 G 보상 수령
+  </div>
+</div>
+
+<h3>19.1 광고 신청자 (광고주) 정책</h3>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>신청 자격</td><td>Google 계정 전용</td></tr>
+<tr><td>광고 단가</td><td><strong>200,000G / 24시간</strong></td></tr>
+<tr><td>최소 기간</td><td>1일 (24시간)</td></tr>
+<tr><td>최대 기간</td><td>미정 (초기 7일 상한 예정)</td></tr>
+<tr><td>자동 단가 계산</td><td>기간(일) × 200,000G — 신청 모달 내 실시간 표시</td></tr>
+<tr><td>환불</td><td>불가 (경매 등록과 동일 정책)</td></tr>
+<tr><td>동시 광고 슬롯</td><td>제한 없음 (복수 광고주 동시 가능)</td></tr>
+<tr><td>필수 동의</td><td>개인정보 수집·이용 동의 (닉네임·SOOP ID 서비스 내 표시)</td></tr>
+<tr><td>광고 URL 형식</td><td><code>https://www.sooplive.com/station/{soopId}</code></td></tr>
+</table>
+
+<h3>19.2 광고 시청자 보상 정책</h3>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>시청 자격</td><td>로그인 유저 전체 (익명 포함)</td></tr>
+<tr><td>방법</td><td>보상 센터 → 광고 보상 탭 → 광고 카드 클릭 → 새 탭에서 방송국 페이지 열림</td></tr>
+<tr><td>1회 보상</td><td><strong>10,000G</strong> (방송국 페이지 1개당)</td></tr>
+<tr><td>보상 조건</td><td>광고 카드 클릭 시 <code>claimAdReward</code> CF 호출 성공 시 지급 (새 탭은 별개로 열림)</td></tr>
+<tr><td>1인 일일 한도</td><td><strong>3개 광고</strong> (최대 30,000G/일, KST 자정 초기화)</td></tr>
+<tr><td>동일 광고 중복 보상</td><td>동일 광고 페이지는 하루 1회만 보상 (익일 재수령 가능)</td></tr>
+</table>
+
+<h3>19.3 광고 신청 플로우</h3>
+<pre>보상 센터 모달 → "광고 보상" 탭 → "광고 신청하기" 버튼 클릭
+
+┌── 광고 신청 모달 ───────────────────────────┐
+│  닉네임     [________________]              │
+│  SOOP ID   [________________]              │
+│  기간       [  3  ] 일  (24시간 단위)       │
+│                                            │
+│  총 비용: 3일 × 200,000G = 600,000G        │
+│  내 잔액: 1,200,000G → 지불 후 600,000G   │
+│                                            │
+│  방송국 미리보기:                           │
+│  sooplive.com/station/yuhatty              │
+│                                            │
+│  [✓] 개인정보 수집·이용에 동의합니다       │
+│      (닉네임·SOOP ID가 서비스에 표시됩니다)│
+│                                            │
+│  [취소]              [광고 등록 확인]       │
+└────────────────────────────────────────────┘
+
+→ purchaseAd CF 호출 → G 차감 + ads 문서 생성
+→ 해당 기간 동안 광고 보상 탭에 카드 노출</pre>
+
+<h3>19.4 광고 시청 플로우</h3>
+<pre>보상 센터 모달 → "광고 보상" 탭
+
+┌── 광고 보상 탭 ──────────────────────────────┐
+│  오늘 보상 수령: 1 / 3 개 완료               │
+│                                             │
+│  📺 [yuhatty] SOOP 방송국                  │
+│      클릭하면 +10,000G                      │
+│      남은 시간: 18시간 22분                 │
+│      [방송국 방문하기 →]  ← 미수령 상태     │
+│                                             │
+│  📺 [streamer2] SOOP 방송국                │
+│      오늘 보상 수령 완료 ✅                 │
+│      [방송국 방문하기 →]  ← 수령 후 상태   │
+│                                             │
+│  📺 [streamer3] SOOP 방송국                │
+│      클릭하면 +10,000G                      │
+│      [방송국 방문하기 →]                    │
+│                                             │
+│  (광고 없음 상태: "현재 진행 중인 광고가     │
+│   없습니다. 광고를 직접 신청해보세요!")      │
+└──────────────────────────────────────────────┘
+
+버튼 클릭 시:
+1. claimAdReward CF 호출 (adId 전달)
+2. CF 검증 통과 → +10,000G 지급
+3. 새 탭: sooplive.com/station/{soopId} 열림
+4. 카드 상태 → "오늘 보상 수령 완료 ✅"</pre>
+
+<h3>19.5 Cloud Functions</h3>
+
+<h4>purchaseAd — 광고 등록</h4>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>인증</td><td>Google 계정 필수</td></tr>
+<tr><td>입력</td><td><code>{ displayName, soopId, durationDays, consentAgreed }</code></td></tr>
+<tr><td>처리</td><td>① 동의 여부 확인<br>② soopId 형식 검증 (영문+숫자, 1~20자)<br>③ 비용 계산: durationDays × 200,000<br>④ 잔액 체크<br>⑤ Firestore 트랜잭션: balance 차감 + <code>ads/{adId}</code> 생성<br>⑥ 반환: newBalance · adId · expiresAt</td></tr>
+<tr><td>반환</td><td><code>{ success, newBalance, adId, expiresAt }</code></td></tr>
+</table>
+
+<h4>claimAdReward — 광고 보상 수령</h4>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>인증</td><td>로그인 필수 (익명 포함)</td></tr>
+<tr><td>입력</td><td><code>{ adId }</code></td></tr>
+<tr><td>처리</td><td>① <code>ads/{adId}</code> 존재 및 유효 여부 확인 (expiresAt &gt; now)<br>② KST 날짜 비교 → 일일 카운트 초기화 여부 결정<br>③ 일일 한도 체크: adClaimCount &lt; 3<br>④ 해당 광고 오늘 이미 수령 여부 체크<br>⑤ Firestore 트랜잭션: balance+10000 / adClaimCount+1 / 수령 기록 갱신<br>⑥ 반환: newBalance · todayCount</td></tr>
+<tr><td>반환</td><td><code>{ success, newBalance, todayCount }</code></td></tr>
+</table>
+
+<h4>getActiveAds — 활성 광고 목록 조회</h4>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>인증</td><td>로그인 필수</td></tr>
+<tr><td>처리</td><td>Firestore <code>ads</code> 컬렉션에서 <code>expiresAt &gt; now</code> 필터링 후 반환. 시청자 클레임 상태도 함께 반환.</td></tr>
+<tr><td>반환</td><td><code>{ ads: [{ adId, displayName, soopId, stationUrl, expiresAt, claimedToday }] }</code></td></tr>
+</table>
+
+<h3>19.6 Firestore 데이터 구조</h3>
+<pre>// ads/{adId} — 광고 슬롯
+{
+  adId: string,
+  uid: string,              // 광고주 UID
+  displayName: string,      // 스트리머 닉네임
+  soopId: string,           // SOOP ID (소문자)
+  stationUrl: string,       // "https://www.sooplive.com/station/{soopId}"
+  durationDays: number,     // 신청 기간 (일)
+  totalCost: number,        // durationDays × 200,000
+  createdAt: Timestamp,
+  expiresAt: number,        // ms timestamp (createdAt + durationDays × 86400000)
+  consentAgreed: true,
+}
+
+// users/{uid} — 시청자 일일 수령 추적 (기존 문서에 필드 추가)
+{
+  adClaimDate: string,      // KST 날짜 "2026-05-18" — 날짜 변경 감지
+  adClaimCount: number,     // 오늘 수령한 광고 수 (0~3)
+}
+
+// users/{uid}/adClaims/{adId} — 광고별 수령 기록
+{
+  lastClaimedDate: string,  // KST 날짜 — 오늘 이미 받았는지 판별
+}</pre>
+
+<h3>19.7 Firestore 보안 규칙</h3>
+<table>
+<tr><th>컬렉션</th><th>규칙</th></tr>
+<tr><td><code>ads</code></td><td>누구나 read 가능 (활성 광고 목록 표시용) · write는 CF admin SDK만</td></tr>
+<tr><td><code>users/{uid}/adClaims</code></td><td>본인만 read · write는 CF admin SDK만</td></tr>
+</table>
+
+<h3>19.8 화폐 수지 분석</h3>
+<table>
+<tr><th>구분</th><th>방향</th><th>계산</th></tr>
+<tr><td>광고 등록비 (광고주 지출)</td><td>회수 (deflation)</td><td>광고주 수 × 기간 × 200,000G</td></tr>
+<tr><td>광고 보상 지급 (시청자 수령)</td><td>발행 (inflation)</td><td>DAU × 평균 수령 광고 수 × 10,000G</td></tr>
+</table>
+
+<div class="info-box">
+  <div class="info-box-title">수지 균형 시나리오 예시</div>
+  <div class="info-box-text">
+    광고주 1명이 1일 광고 등록 (200,000G 회수)<br>
+    DAU 30명이 각 1개 광고 클릭 시 (300,000G 발행)<br>
+    → 순 발행 +100,000G / 일<br><br>
+    광고주 2명이 1일 등록 (400,000G 회수)<br>
+    DAU 30명 × 평균 2개 클릭 (600,000G 발행)<br>
+    → 순 발행 +200,000G / 일<br><br>
+    <strong>광고주 수가 시청자 수보다 적으면 순발행 발생. 광고주 유인책(노출 효과)이 수요를 결정함.</strong>
+  </div>
+</div>
+
+<h3>19.9 어뷰징 방어</h3>
+<table>
+<tr><th>위협</th><th>방어</th></tr>
+<tr><td>CF 직접 호출로 보상 위조</td><td><code>ads/{adId}</code> 실제 존재 및 만료 여부 CF에서 검증 — 실제 광고 없이 수령 불가</td></tr>
+<tr><td>동일 광고 하루 여러 번 수령</td><td><code>adClaims/{adId}.lastClaimedDate</code> KST 날짜 비교로 차단</td></tr>
+<tr><td>일일 한도 초과</td><td>CF: <code>adClaimCount &lt; 3</code> Firestore 트랜잭션으로 원자적 처리</td></tr>
+<tr><td>가짜 soopId로 광고 등록</td><td>실제 방송국 URL 클릭 시 sooplive.com이 직접 판별 — 서비스는 URL 개통만 담당</td></tr>
+<tr><td>광고주 자기 광고 클릭 보상</td><td>CF: 광고주 UID와 시청자 UID 동일 시 보상 거부</td></tr>
+</table>
+
+<h3>19.10 개인정보 수집 동의 항목</h3>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>수집 항목</td><td>닉네임, SOOP ID</td></tr>
+<tr><td>수집 목적</td><td>광고 슬롯 내 방송국 정보 표시</td></tr>
+<tr><td>보유 기간</td><td>광고 만료 후 즉시 삭제 (Firestore 문서 보존 기간 정책 별도 수립)</td></tr>
+<tr><td>동의 거부 시</td><td>광고 등록 불가 (CF에서 consentAgreed 필드 검증)</td></tr>
+</table>
+
+<h3>19.11 구현 단계</h3>
+<div class="timeline">
+  <div class="timeline-item">
+    <div class="timeline-dot dot-todo">1</div>
+    <div>
+      <div class="timeline-title">Firestore 스키마 및 보안 규칙</div>
+      <div class="timeline-desc"><code>ads</code> 컬렉션 생성 · <code>users/{uid}/adClaims</code> 서브컬렉션 규칙 · ads 컬렉션 public read 규칙 추가.</div>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-dot dot-todo">2</div>
+    <div>
+      <div class="timeline-title">purchaseAd CF 구현</div>
+      <div class="timeline-desc">Google 계정 검증 · 동의 여부 · soopId 형식 · 잔액 트랜잭션 · ads 문서 생성. expiresAt = createdAt + durationDays × 86,400,000ms.</div>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-dot dot-todo">3</div>
+    <div>
+      <div class="timeline-title">claimAdReward CF 구현</div>
+      <div class="timeline-desc">광고 유효성 · 광고주 자기 수령 차단 · KST 날짜 초기화 · 일일 3개 한도 · adClaims 서브컬렉션 기록 · 잔액 트랜잭션.</div>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-dot dot-todo">4</div>
+    <div>
+      <div class="timeline-title">보상 센터 — 광고 보상 탭 UI</div>
+      <div class="timeline-desc">활성 광고 카드 목록 · 오늘 수령 현황 (N/3) · 카드별 클릭 → CF 호출 + 새 탭 오픈 · 수령 완료 상태 표시 · "광고 신청하기" 버튼.</div>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-dot dot-todo">5</div>
+    <div>
+      <div class="timeline-title">광고 신청 모달 UI</div>
+      <div class="timeline-desc">닉네임·SOOP ID 입력 · 기간 숫자 입력 → 비용 실시간 계산 · 방송국 URL 미리보기 · 개인정보 동의 체크박스 · 확인 버튼 → purchaseAd CF.</div>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-dot dot-todo">6</div>
+    <div>
+      <div class="timeline-title">system/config 연동</div>
+      <div class="timeline-desc"><code>adPricePerDay</code>(200,000) · <code>adRewardAmount</code>(10,000) · <code>adDailyClaimLimit</code>(3) 를 config에 추가 — 재배포 없이 조정 가능.</div>
+    </div>
+  </div>
+</div>
+
+<h3>19.12 미결 사항</h3>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>광고 신고</td><td>부적절한 광고(불법·음란 방송국 등) 신고 기능 — 운영자가 Firebase Console에서 삭제</td></tr>
+<tr><td>광고 최대 슬롯 수</td><td>동시 광고 수 상한 미정 — 초기 무제한, 운영 후 조정</td></tr>
+<tr><td>광고주 자기 광고 열람</td><td>자기 광고를 광고 탭에서 보여줄지 여부 — 보여주되 보상만 차단 (현재 방향)</td></tr>
+<tr><td>광고 만료 알림</td><td>만료 임박 시 광고주에게 알림 — Phase 3 (푸시 알림 연동 후)</td></tr>
+<tr><td>데이터 삭제 정책</td><td>만료된 ads 문서 자동 삭제 시점 미정 (Cloud Scheduler Phase 2)</td></tr>
+</table>
+</div>
+
+<hr>
+
 <p style="font-size:12px;color:#999;text-align:center;padding:1rem 0">
-  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-18 (테스트 기간 배너 · 잔액 히스토리 · 서버사이드 접속 제한 구현 완료) · 작성자: 오목지면시그
+  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-18 (보상형 광고 — 자체 G 기반 방송국 홍보 시스템 기획) · 작성자: 오목지면시그
 </p>
 
 </div>
