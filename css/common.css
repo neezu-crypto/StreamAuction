@@ -415,9 +415,9 @@ a {
 /* ===== Presence Bar ===== */
 .header-online-count {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: #4ade80;
   background: #0f1115;
-  border: 1px solid #2a2e38;
+  border: 1px solid #4ade8066;
   border-radius: 20px;
   padding: 3px 10px;
   white-space: nowrap;
