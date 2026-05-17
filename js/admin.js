@@ -42,7 +42,7 @@ function setupPresence(uid) {
 
 function watchOnlineCount() {
   dbOnValue(dbRef(rtdb, 'presence'), (snap) => {
-    const count = snap.exists() ? snap.numChildren() : 0;
+    const count = snap.exists() ? snap.size : 0;
     const el = document.getElementById('onlineCount');
     if (el) el.textContent = `접속 중: ${count.toLocaleString('ko-KR')}명`;
   });
