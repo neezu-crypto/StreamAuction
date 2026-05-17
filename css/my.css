@@ -161,6 +161,78 @@
 
 .my-stat-value.accent { color: #f5d142; }
 
+.my-stat-box--clickable {
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.my-stat-box--clickable:hover {
+  border-color: #f5d14266;
+  background: #14161c;
+}
+.my-stat-hint {
+  font-size: .65rem;
+  color: #4b5563;
+}
+
+/* ===== 잔액 변화 모달 ===== */
+.balance-history-net {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  background: #0f1115;
+  border: 1px solid #2a2e38;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+}
+.balance-history-net-label {
+  font-size: .8rem;
+  color: #6b7280;
+}
+.balance-history-net-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #e8e8e8;
+}
+.balance-history-net-value.pos { color: #4ade80; }
+.balance-history-net-value.neg { color: #f87171; }
+
+.balance-history-empty {
+  text-align: center;
+  color: #6b7280;
+  font-size: .85rem;
+  padding: 24px 0;
+}
+
+.balance-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.balance-history-group {}
+.balance-history-date {
+  font-size: .75rem;
+  color: #6b7280;
+  font-weight: 600;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #2a2e38;
+}
+.balance-history-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  font-size: .85rem;
+}
+.balance-history-icon { font-size: 1rem; }
+.balance-history-name { color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.balance-history-time { color: #4b5563; font-size: .75rem; white-space: nowrap; }
+.balance-history-delta { font-weight: 700; white-space: nowrap; }
+.balance-history-delta.pos { color: #4ade80; }
+.balance-history-delta.neg { color: #f87171; }
+
 /* ===== 섹션 공통 ===== */
 .my-section {
   margin-bottom: 32px;

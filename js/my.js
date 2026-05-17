@@ -226,8 +226,8 @@ function renderProfileCard() {
         <span class="my-profile-type ${typeClass}">${typeLabel}</span>
       </div>
       <div class="my-stats-row">
-        <div class="my-stat-box">
-          <div class="my-stat-label">잔액</div>
+        <div class="my-stat-box my-stat-box--clickable" onclick="openBalanceHistoryModal()" title="최근 7일 잔액 변화 보기">
+          <div class="my-stat-label">잔액 <span class="my-stat-hint">↗</span></div>
           <div class="my-stat-value accent">${formatG(ud.balance ?? 0)}</div>
         </div>
         <div class="my-stat-box">
@@ -491,6 +491,99 @@ function renderLoginPrompt() {
       <a class="btn-primary" href="index.html" style="display:inline-block;padding:10px 24px">메인으로 이동</a>
     </div>`;
 }
+
+// ===== 잔액 변화 모달 =====
+window.openBalanceHistoryModal = function() {
+  const body = $("balanceHistoryBody");
+  if (!body) return;
+
+  const now = Date.now();
+  const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+
+  const toKSTDateKey = (ms) => {
+    const d = new Date(ms + 9 * 60 * 60 * 1000);
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+  };
+  const toKSTDateLabel = (key) => {
+    const [, m, d] = key.split("-");
+    return `${parseInt(m)}월 ${parseInt(d)}일`;
+  };
+  const toKSTTime = (ms) => {
+    const d = new Date(ms + 9 * 60 * 60 * 1000);
+    return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
+  };
+
+  // 7일 내 거래만 필터
+  const events = [];
+  buyHistory.forEach((h) => {
+    const at = toMillis(h.endedAt);
+    if (!at || at < sevenDaysAgo) return;
+    events.push({at, delta: -h.finalPrice, name: h.displayName, type: "buy"});
+  });
+  sellHistory.forEach((h) => {
+    const at = toMillis(h.endedAt);
+    if (!at || at < sevenDaysAgo) return;
+    events.push({at, delta: Math.floor(h.finalPrice * 0.95), name: h.displayName, type: "sell"});
+  });
+  events.sort((a, b) => b.at - a.at);
+
+  const netDelta = events.reduce((s, e) => s + e.delta, 0);
+  const netSign = netDelta >= 0 ? "+" : "";
+  const netClass = netDelta > 0 ? "pos" : netDelta < 0 ? "neg" : "";
+
+  if (events.length === 0) {
+    body.innerHTML = `
+      <div class="balance-history-net">
+        <span class="balance-history-net-label">7일 순변화</span>
+        <span class="balance-history-net-value">0G</span>
+      </div>
+      <p class="balance-history-empty">최근 7일간 거래 내역이 없습니다.</p>`;
+    $("balanceHistoryModal")?.classList.add("show");
+    return;
+  }
+
+  // 날짜별 그룹
+  const groups = {};
+  const groupOrder = [];
+  events.forEach((e) => {
+    const key = toKSTDateKey(e.at);
+    if (!groups[key]) { groups[key] = []; groupOrder.push(key); }
+    groups[key].push(e);
+  });
+
+  const listHtml = groupOrder.map((key) => {
+    const items = groups[key].map((e) => {
+      const sign = e.delta >= 0 ? "+" : "";
+      const cls = e.delta > 0 ? "pos" : "neg";
+      const icon = e.type === "sell" ? "💰" : "🛒";
+      const typeLabel = e.type === "sell" ? "판매" : "매입";
+      return `
+        <div class="balance-history-item">
+          <span class="balance-history-icon">${icon}</span>
+          <span class="balance-history-name">${typeLabel} — ${escapeHtml(e.name)}</span>
+          <span class="balance-history-time">${toKSTTime(e.at)}</span>
+          <span class="balance-history-delta ${cls}">${sign}${formatG(e.delta)}</span>
+        </div>`;
+    }).join("");
+    return `<div class="balance-history-group">
+      <div class="balance-history-date">${toKSTDateLabel(key)}</div>
+      ${items}
+    </div>`;
+  }).join("");
+
+  body.innerHTML = `
+    <div class="balance-history-net">
+      <span class="balance-history-net-label">7일 순변화</span>
+      <span class="balance-history-net-value ${netClass}">${netSign}${formatG(netDelta)}</span>
+    </div>
+    <div class="balance-history-list">${listHtml}</div>`;
+
+  $("balanceHistoryModal")?.classList.add("show");
+};
+
+window.closeBalanceHistoryModal = function() {
+  $("balanceHistoryModal")?.classList.remove("show");
+};
 
 function renderAuthArea() {
   const area = $("authArea");

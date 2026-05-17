@@ -37,6 +37,17 @@
   <p>&copy; 2026 StreamAuction. MVP Build.</p>
 </footer>
 
+<!-- 잔액 변화 모달 -->
+<div class="modal-overlay" id="balanceHistoryModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>잔액 변화 (최근 7일)</h2>
+      <button class="modal-close" onclick="closeBalanceHistoryModal()">✕</button>
+    </div>
+    <div class="modal-body" id="balanceHistoryBody"></div>
+  </div>
+</div>
+
 <!-- 금고 매물 선택 모달 -->
 <div class="modal-overlay" id="vaultPickerModal">
   <div class="modal">
