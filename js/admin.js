@@ -20,6 +20,7 @@ const adminBanUserFn = httpsCallable(functions, 'adminBanUser');
 const adminAdjustBalanceFn = httpsCallable(functions, 'adminAdjustBalance');
 const adminGetConfigFn = httpsCallable(functions, 'adminGetConfig');
 const adminSetConfigFn = httpsCallable(functions, 'adminSetConfig');
+const adminGetUserActivityFn = httpsCallable(functions, 'adminGetUserActivity');
 
 // ===== 상태 =====
 let selectedUser = null;
@@ -252,6 +253,7 @@ window.handleUserSearch = async function() {
     selectedUser = result.data;
     renderUserDetail(selectedUser);
     $('userDetailCard').style.display = '';
+    loadUserActivity();
   } catch (e) {
     errEl.textContent = e.message;
     errEl.style.display = '';
@@ -291,6 +293,7 @@ function renderUserDetail(user) {
 
   $('balanceDeltaInput').value = '';
   $('balanceResult').style.display = 'none';
+  $('userActivityContent').innerHTML = `<p class="empty-msg">로딩 중...</p>`;
 
   $('banArea').innerHTML = user.isBanned
     ? `<button class="btn-sm btn-primary" onclick="handleToggleBan(false)">정지 해제</button>`
@@ -299,6 +302,49 @@ function renderUserDetail(user) {
         <button class="btn-sm btn-danger" onclick="handleToggleBan(true)">계정 정지</button>
        </div>`;
 }
+
+window.loadUserActivity = async function loadUserActivity() {
+  if (!selectedUser) return;
+  const el = $('userActivityContent');
+  el.innerHTML = `<p class="empty-msg">로딩 중...</p>`;
+  try {
+    const result = await adminGetUserActivityFn({uid: selectedUser.uid});
+    const {records} = result.data;
+    if (!records?.length) {
+      el.innerHTML = `<p class="empty-msg">경매 활동 없음</p>`;
+      return;
+    }
+    const TYPE_LABEL_MAP = {new: 'A', holder: 'B', selloff: 'C'};
+    el.innerHTML = `
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>스트리머</th>
+            <th>유형</th>
+            <th>시작가</th>
+            <th>낙찰가</th>
+            <th>결과</th>
+            <th>입찰</th>
+            <th>종료</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${records.map((r) => `
+            <tr>
+              <td>${r.displayName || r.soopId || '-'}</td>
+              <td><span class="type-tag type-${r.type}">${TYPE_LABEL_MAP[r.type] || r.type}</span></td>
+              <td>${formatG(r.startPrice)}</td>
+              <td>${formatG(r.finalPrice)}</td>
+              <td>${r.isWon ? '✅ 낙찰' : '❌ 유찰'}</td>
+              <td>${r.bidCount}</td>
+              <td>${formatDate(r.endedAt)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch (e) {
+    el.innerHTML = `<p class="empty-msg" style="color:#ef4444">오류: ${e.message}</p>`;
+  }
+};
 
 window.handleAdjustBalance = async function() {
   if (!selectedUser) return;

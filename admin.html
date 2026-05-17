@@ -132,6 +132,15 @@
           <h4>계정 정지 / 해제</h4>
           <div id="banArea"></div>
         </div>
+
+        <hr class="admin-divider">
+        <div class="admin-section">
+          <div class="admin-card-hd" style="margin-bottom:10px">
+            <h4>최근 경매 활동 (20건)</h4>
+            <button class="btn-sm btn-ghost" id="btnRefreshActivity" onclick="loadUserActivity()">새로고침</button>
+          </div>
+          <div id="userActivityContent"><p class="empty-msg">조회 버튼을 눌러 불러오세요</p></div>
+        </div>
       </div>
     </div>
 

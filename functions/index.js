@@ -2309,3 +2309,41 @@ exports.viewRanking = onCall(
       };
     },
 );
+
+// ============================================
+// adminGetUserActivity: 특정 유저의 최근 경매 활동 20건
+// ============================================
+exports.adminGetUserActivity = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      await requireAdmin(request);
+      const {uid} = request.data;
+      if (!uid || typeof uid !== "string") {
+        throw new HttpsError("invalid-argument", "UID가 필요합니다.");
+      }
+
+      const snap = await db.collection("auctionHistory")
+          .where("registeredBy", "==", uid.trim())
+          .orderBy("endedAt", "desc")
+          .limit(20)
+          .get();
+
+      const records = snap.docs.map((doc) => {
+        const d = doc.data();
+        return {
+          auctionId: doc.id,
+          listingId: d.listingId || null,
+          soopId: d.soopId || null,
+          displayName: d.displayName || null,
+          type: d.type || "new",
+          startPrice: d.startPrice || 0,
+          finalPrice: d.finalPrice || 0,
+          isWon: d.isWon || false,
+          bidCount: d.bidCount || 0,
+          endedAt: d.endedAt?.toMillis?.() || null,
+        };
+      });
+
+      return {records};
+    },
+);

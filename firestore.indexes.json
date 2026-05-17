@@ -17,6 +17,14 @@
       ]
     },
     {
+      "collectionGroup": "auctionHistory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "registeredBy", "order": "ASCENDING" },
+        { "fieldPath": "endedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "auctionRequests",
       "queryScope": "COLLECTION",
       "fields": [
