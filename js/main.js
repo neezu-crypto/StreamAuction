@@ -847,12 +847,8 @@ function showSearchFoundResult(listing, query) {
   const imgClass = listing.isMosaicked ? "search-profile-img img-mosaic" : "search-profile-img";
   const imgSrc = listing.profileImageUrl || "";
 
-  // 신고/차단 버튼 (본인 매물 제외)
-  const reportBlockHtml = !listing.isOwnedByMe ? `
-    <div class="report-block-row">
-      <button class="btn-block-listing" onclick="handleBlockListing('${escapeHtml(listing.listingId)}', true)">차단</button>
-      <button class="btn-report-listing" onclick="openReportModal('${escapeHtml(listing.listingId)}', '${escapeHtml(listing.displayName)}')">신고</button>
-    </div>` : "";
+  // 신고/차단 버튼 (임시 숨김)
+  const reportBlockHtml = "";
 
   resultDiv.innerHTML = `
     <div class="search-result-found">
