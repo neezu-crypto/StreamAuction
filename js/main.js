@@ -367,11 +367,15 @@ async function loadMyHoldings(uid) {
       const img = d.profileImageUrl || "assets/images/default-avatar.svg";
       const pending = pendingByListing[listingId];
 
+      const isUrgent = pending && (pending.expiresAt - Date.now()) < 2 * 60 * 60 * 1000;
       const requestBanner = pending ? `
-        <div class="holding-request-banner">
+        <div class="holding-request-banner${isUrgent ? " is-urgent" : ""}">
           <div class="request-badge-row">
             <span class="request-badge">📨 경매 요청 대기 중</span>
             <span class="request-expires">${formatRequestExpiry(pending.expiresAt)}</span>
+          </div>
+          <div class="request-warning">
+            ⚠️ 제한시간 내 미회신 시 <strong>강제청산</strong> — 매물 소유권 박탈, 현재 시세가 잔액으로 환급됩니다
           </div>
           <div class="request-actions">
             <button class="btn-approve" onclick="event.stopPropagation();handleApproveRequest('${pending.requestId}')">승인</button>
@@ -386,7 +390,7 @@ async function loadMyHoldings(uid) {
         </button>` : `<span class="request-status-badge">경매 진행 중</span>`;
 
       return `
-        <div class="holding-card${pending ? " holding-card--has-request" : ""}" onclick="searchByHolding('${d.soopId}')">
+        <div class="holding-card${pending ? " holding-card--has-request" : ""}${isUrgent ? " is-urgent-card" : ""}" onclick="searchByHolding('${d.soopId}')">
           <img class="holding-img" src="${img}"
             onerror="this.src='assets/images/default-avatar.svg'" alt="프로필">
           <div class="holding-info">

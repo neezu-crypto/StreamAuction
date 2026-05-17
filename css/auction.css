@@ -1058,6 +1058,39 @@
   white-space: nowrap;
 }
 
+.request-warning {
+  font-size: 0.78rem;
+  color: #f59e0b;
+  line-height: 1.45;
+  padding: 5px 8px;
+  background: rgba(245, 158, 11, 0.08);
+  border-left: 2px solid #f59e0b;
+  border-radius: 0 4px 4px 0;
+}
+
+.request-warning strong {
+  color: #fbbf24;
+}
+
+.holding-request-banner.is-urgent {
+  border-color: #dc2626aa;
+  background: #1f1015;
+}
+
+.holding-request-banner.is-urgent .request-warning {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+  border-left-color: #ef4444;
+}
+
+.holding-request-banner.is-urgent .request-warning strong {
+  color: #fca5a5;
+}
+
+.holding-card--has-request.is-urgent-card {
+  border-color: #dc2626 !important;
+}
+
 .request-actions {
   display: flex;
   gap: 8px;
