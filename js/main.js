@@ -69,6 +69,8 @@ function watchOnlineCount() {
     const count = snap.exists() ? snap.size : 0;
     const el = document.getElementById("onlineCount");
     if (el) el.textContent = `접속 중: ${count.toLocaleString("ko-KR")}명`;
+    const banner = document.getElementById("bannerOnlineCount");
+    if (banner) banner.textContent = count.toLocaleString("ko-KR");
   });
 }
 

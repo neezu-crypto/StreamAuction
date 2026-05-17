@@ -141,6 +141,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
     <a class="nav-btn" href="#s15">15. 상점</a>
     <a class="nav-btn" href="#s16">16. 랭킹</a>
     <a class="nav-btn" href="#s17">17. 통계 관리</a>
+    <a class="nav-btn" href="#s18">18. 테스트 기간</a>
   </div>
 </nav>
 
@@ -151,8 +152,8 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
   <p class="hero-sub">스트리머 닉네임을 사고파는 실시간 경매 게임 — Trade the Streamers You Love</p>
   <div class="hero-badges">
     <span class="badge badge-done">v3 경매 중심 재설계</span>
-    <span class="badge badge-phase">2026-05-16 최종 업데이트</span>
-    <span class="badge badge-new">매물 상세 페이지 구현 완료</span>
+    <span class="badge badge-phase">2026-05-18 최종 업데이트</span>
+    <span class="badge badge-new">테스트 기간 배너 · 잔액 히스토리 구현 완료</span>
   </div>
 </div>
 
@@ -181,7 +182,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 </div>
 
 <div id="s0" class="section-anchor">
-<h2>구현 현황 요약 <span class="badge badge-new">2026-05-15 기준</span></h2>
+<h2>구현 현황 요약 <span class="badge badge-new">2026-05-18 기준</span></h2>
 
 <h3>✅ 구현 완료</h3>
 <table>
@@ -207,7 +208,11 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>경매 히스토리 열람 BM</td><td>viewAuctionHistory CF (50,000G 차감 · 트랜잭션) · 검색 결과 내 "히스토리 열람" 버튼 · 상세 페이지 내 열람 버튼 · 히스토리 모달 (날짜/유형/시작가/최종가/입찰 수/결과 테이블)</td></tr>
 <tr><td>매물 상세 페이지 BM</td><td>listing.html?id={listingId} — <strong>50,000G 결제 게이트</strong> (viewListingDetail CF · 트랜잭션) · 미결제 시 프로필+이름 미리보기만 노출 · 결제 후 6개 스탯(현재 시세/역대 최고가·최저가/총 거래량/거래 횟수/마지막 거래) + 보유 현황별 액션 버튼(등록/요청/손절/승인·거부) + 히스토리 열람 + 신고/차단 표시 · 경매 등록 등 내부 액션 후에도 isPaid 유지 · 검색 결과 카드에 "상세 페이지 50,000G" 뱃지 링크 추가</td></tr>
 <tr><td>출석 보상 시스템</td><td>claimDailyReward CF (KST 기준 하루 1회 · 연속 스트릭 · 7/30일 보너스 · Google 전용) · 보상 센터 모달 내 출석 카드 (스트릭 표시 · 진행바 · 즉시 잔액 반영 · 미수령 시 헤더 버튼 점 표시) · 관리자 유저 상세 출석 정보 표시 · 시스템 설정 출석 보상값 편집</td></tr>
-<tr><td>기반</td><td>Firestore/RTDB 보안 규칙 (auctionRequests 포함), 모바일 반응형 UI</td></tr>
+<tr><td>서버사이드 접속 제한</td><td>RTDB <code>sessions/$uid</code> (admin SDK 전용 쓰기) + <code>initializeUser</code> 진입 시 세션 수 검사 (최대 30명) + <code>requireSession()</code> 게이트 (placeBid · registerAuction · requestAuction) + <code>endSession</code> CF (로그아웃 시 슬롯 즉시 반환) + 스테일 세션 자동 정리 (presence 교차 검증). 클라이언트 위변조로 우회 불가.</td></tr>
+<tr><td>테스트 기간 배너</td><td>메인 페이지 헤더 하단 고정 주황/노랑 그라디언트 띠 — "⚠️ 테스트 기간 운영 중 · 동시 접속 최대 30명 제한 · 현재 접속: N명". RTDB presence 실시간 구독으로 N 갱신.</td></tr>
+<tr><td>익명 유저 로그인 버튼</td><td>익명 상태에서 헤더(메인·마이페이지) 로그아웃 버튼 → 구글 로그인 버튼으로 대체. 클릭 시 익명→구글 전환 플로우 진입.</td></tr>
+<tr><td>잔액 변화 히스토리 모달</td><td>마이페이지 잔액 stat 박스 클릭 → 최근 7일 잔액 변화 모달. 탭 2개: ① 지출/획득 내역 (auctionHistory 기반 매입·판매 이벤트) ② 총 잔액 변화 (Firestore <code>users/{uid}/balanceHistory</code> 서브컬렉션 — 클라이언트에서 페이지 진입·보상 수령·건너뛰기 시 자동 기록). 날짜별 그룹 + 7일 순변화 요약.</td></tr>
+<tr><td>기반</td><td>Firestore/RTDB 보안 규칙 (auctionRequests · balanceHistory 포함), 모바일 반응형 UI</td></tr>
 </table>
 
 <h3>🔄 부분 구현</h3>
@@ -584,8 +589,8 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <h3>Phase 분류</h3>
 <div class="phase-row">
 <div class="phase-card">
-  <div class="phase-title">Phase 1 — MVP</div>
-  <div class="phase-item">경매 핵심 루프<br>경매 간 10분 쿨다운<br>쿨다운 건너뛰기 50,000G<br>인증/유저 시스템<br>강제청산<br>신고/차단<br>어뷰징 방어<br>매물 상세 열람 BM<br>경매 히스토리 BM<br>출석 보상<br>튜토리얼 UI<br>관리자 페이지<br>상점 페이지 (Phase 2 선반영)</div>
+  <div class="phase-title">Phase 1 — MVP ✅ 완료</div>
+  <div class="phase-item">경매 핵심 루프<br>경매 간 10분 쿨다운<br>쿨다운 건너뛰기 50,000G<br>인증/유저 시스템<br>강제청산<br>신고/차단<br>어뷰징 방어<br>매물 상세 열람 BM<br>경매 히스토리 BM<br>출석 보상<br>튜토리얼 UI<br>관리자 페이지<br>상점 페이지 (Phase 2 선반영)<br>서버사이드 접속 제한<br>테스트 기간 배너<br>잔액 히스토리 모달</div>
 </div>
 <div class="phase-card">
   <div class="phase-title">Phase 2 — 출시 1개월</div>
@@ -614,9 +619,9 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
   </div>
 </div>
 <div class="timeline-item">
-  <div class="timeline-dot dot-inprogress">3</div>
+  <div class="timeline-dot dot-done">3</div>
   <div>
-    <div class="timeline-title">Step 3 — RTDB 활성화 <span class="badge badge-new">진행 중</span></div>
+    <div class="timeline-title">Step 3 — RTDB 활성화 <span class="badge badge-done">완료</span></div>
     <div class="timeline-desc">Realtime Database 활성화, 보안 규칙 설정, firebase-config.js 업데이트, API 키 제한 추가</div>
   </div>
 </div>
@@ -649,10 +654,10 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
   </div>
 </div>
 <div class="timeline-item">
-  <div class="timeline-dot dot-todo">8</div>
+  <div class="timeline-dot dot-done">8</div>
   <div>
-    <div class="timeline-title">Step 8 — 마무리</div>
-    <div class="timeline-desc">유형 B/C 완성 ✅, 강제청산 ✅, 경매 수수료 ✅, 에러 처리 강화, 베타 테스트</div>
+    <div class="timeline-title">Step 8 — 보안 강화 및 마무리 <span class="badge badge-done">완료</span></div>
+    <div class="timeline-desc">서버사이드 접속 제한 (RTDB sessions + CF 게이트) ✅ · Firestore 캐시 무력화 ✅ · 테스트 기간 배너 ✅ · 익명 유저 로그인 버튼 ✅ · 잔액 히스토리 모달 ✅ · balanceHistory 서브컬렉션 Firestore 규칙 ✅</div>
   </div>
 </div>
 </div>
@@ -678,6 +683,9 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <div class="checklist-item"><input type="checkbox" checked> <span>Firestore/RTDB 보안 규칙으로 클라이언트 직접 조작 차단</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>마이페이지 (my.html) — 프로필, 보유 매물, 거래 내역, 출석 스트릭, 손절 등록</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>닉네임 변경 (마이페이지 인라인 편집, 2~20자, 이모지 차단)</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>서버사이드 접속 제한 — 클라이언트 위변조로 우회 불가 (RTDB sessions + CF requireSession 게이트)</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>테스트 기간 배너 — 메인 헤더 하단 상시 표시 (주황/노랑 띠, 실시간 접속자 수)</span></div>
+<div class="checklist-item"><input type="checkbox" checked> <span>잔액 변화 히스토리 모달 — 마이페이지 잔액 클릭 → 7일 거래 내역 + Firestore balanceHistory 탭</span></div>
 </div>
 </div>
 
@@ -1134,8 +1142,53 @@ RTDB auction/current (쿨다운 상태)
 </table>
 </div>
 
+<div id="s18" class="section-anchor">
+<h2>18. 테스트 기간 운영 정책 <span class="badge badge-done">구현 완료</span></h2>
+
+<h3>접속 인원 제한</h3>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>최대 동시 접속</td><td><strong>30명</strong></td></tr>
+<tr><td>제한 방식</td><td>서버사이드 — RTDB <code>sessions/$uid</code> (admin SDK 전용 쓰기) + CF 게이트</td></tr>
+<tr><td>클라이언트 우회</td><td><strong>불가</strong> — 클라이언트 변수 조작·직접 HTTP 호출 모두 CF 단에서 차단</td></tr>
+<tr><td>스테일 세션 정리</td><td><code>initializeUser</code> 진입 시 presence 교차 검증 → 오래된 세션 자동 삭제</td></tr>
+<tr><td>슬롯 반환</td><td>정상 로그아웃 시 <code>endSession</code> CF 즉시 호출 · 탭 종료 시 다음 진입자가 정리</td></tr>
+<tr><td>관리자</td><td><code>system/admin.adminUids</code> 등록 UID 제한 면제</td></tr>
+<tr><td>제한 도달 시 표시</td><td>풀스크린 모달 (닫기 불가) + 새로고침 버튼</td></tr>
+</table>
+
+<h3>테스트 기간 배너</h3>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>위치</td><td>메인 페이지(index.html) 헤더 하단 — 헤더와 함께 sticky, 항상 상단 고정</td></tr>
+<tr><td>디자인</td><td>주황→노랑 그라디언트 띠 (#b45309 → #f59e0b), 진한 글씨</td></tr>
+<tr><td>내용</td><td>⚠️ 테스트 기간 운영 중 · 동시 접속 최대 30명 제한 · 현재 접속: N명</td></tr>
+<tr><td>N 갱신</td><td>RTDB <code>presence</code> 실시간 구독 — <code>watchOnlineCount()</code>가 헤더 카운트와 배너 카운트 동시 업데이트</td></tr>
+</table>
+
+<h3>접속자 수 표시</h3>
+<table>
+<tr><th>위치</th><th>표시 방식</th></tr>
+<tr><td>헤더 우측 (<code>header-right</code>)</td><td>"접속 중: N명" 초록색 텍스트</td></tr>
+<tr><td>테스트 배너 내</td><td>"현재 접속: N명" — 배너 문구 일부</td></tr>
+</table>
+
+<h3>CF 게이트 구조</h3>
+<pre>// RTDB 보안 규칙
+"sessions": { ".read": "auth != null" }
+// .write 없음 → admin SDK만 쓰기 가능
+
+// requireSession(uid) — placeBid · registerAuction · requestAuction 앞단에서 호출
+async function requireSession(uid) {
+  const snap = await rtdb.ref(`sessions/${uid}`).once("value");
+  if (!snap.exists()) throw new HttpsError("permission-denied", "유효한 세션 없음");
+}</pre>
+</div>
+
+<hr>
+
 <p style="font-size:12px;color:#999;text-align:center;padding:1rem 0">
-  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-17 (금고 슬롯 구현 완료 · 시세 감가상각·휴면 매물 회수 삭제) · 작성자: 오목지면시그
+  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-18 (테스트 기간 배너 · 잔액 히스토리 · 서버사이드 접속 제한 구현 완료) · 작성자: 오목지면시그
 </p>
 
 </div>
