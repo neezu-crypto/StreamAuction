@@ -2,10 +2,11 @@
 // listing.js - 매물 상세 페이지
 // ============================================
 
-import {auth, db, functions} from "./firebase-config.js";
+import {auth, db, functions, rtdb} from "./firebase-config.js";
 import {
-  doc, getDoc,
+  doc, getDocFromServer,
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+import {ref as dbRef, onValue as dbOnValue} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
 import {httpsCallable} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-functions.js";
 import {watchAuthState, logout} from "./auth.js";
 import {
@@ -60,7 +61,7 @@ async function init() {
 // ===== 매물 로드 =====
 async function loadListing() {
   try {
-    const snap = await getDoc(doc(db, "listings", listingId));
+    const snap = await getDocFromServer(doc(db, "listings", listingId));
     if (snap.exists()) {
       currentListing = {id: snap.id, ...snap.data()};
       document.title = `${currentListing.displayName} - StreamAuction`;
@@ -157,7 +158,7 @@ async function loadPendingRequest() {
   // 보유자거나 요청자인 경우에만 읽기 가능
   if (currentListing.ownerId !== uid) return;
   try {
-    const snap = await getDoc(doc(db, "auctionRequests", currentListing.pendingRequestId));
+    const snap = await getDocFromServer(doc(db, "auctionRequests", currentListing.pendingRequestId));
     if (snap.exists()) {
       pendingRequest = {id: snap.id, ...snap.data()};
     }
@@ -738,3 +739,15 @@ function showToast(msg) {
 
 // ===== 시작 =====
 init();
+
+// 경매 종료 시 isLocked 자동 갱신
+(function() {
+  let prevStatus = null;
+  dbOnValue(dbRef(rtdb, "auction/current"), async (snap) => {
+    const status = snap.val()?.status ?? null;
+    if (prevStatus === "running" && status !== "running") {
+      await refreshListing();
+    }
+    prevStatus = status;
+  });
+})();
