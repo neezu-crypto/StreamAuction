@@ -41,6 +41,7 @@ let isRegistering = false;
 let isEditingNickname = false;
 
 const initializeUserFn = httpsCallable(functions, "initializeUser");
+const setVaultListingFn = httpsCallable(functions, "setVaultListing");
 
 // ===== 초기화 =====
 watchAuthState(async (user) => {
@@ -109,6 +110,7 @@ function renderAll() {
 
   container.innerHTML = `
     ${renderProfileCard()}
+    ${renderVault()}
     <div class="my-section">
       <div class="my-section-header">
         <span class="my-section-title">보유 매물</span>
@@ -186,14 +188,79 @@ function renderProfileCard() {
     </div>`;
 }
 
+function renderVault() {
+  const ud = currentUserData;
+  if (!ud) return "";
+  const slots = ud.vaultSlots || 0;
+  const uid = auth.currentUser?.uid;
+
+  if (slots === 0) {
+    return `
+      <div class="my-section my-vault-section">
+        <div class="my-section-header">
+          <span class="my-section-title">🏦 금고</span>
+        </div>
+        <div class="my-vault-empty">
+          금고 슬롯이 없습니다.
+          <a href="shop.html" class="my-vault-shop-link">상점에서 구매하기 →</a>
+        </div>
+      </div>`;
+  }
+
+  const vaulted = myHoldings.filter((h) => h.vaultedBy === uid);
+  const usedSlots = vaulted.length;
+  const freeSlots = slots - usedSlots;
+
+  const slotCards = Array.from({length: slots}, (_, i) => {
+    const item = vaulted[i] || null;
+    if (item) {
+      const img = item.profileImageUrl || "assets/images/default-avatar.svg";
+      return `
+        <div class="vault-slot vault-slot--filled">
+          <img class="vault-slot-img" src="${img}"
+            onerror="this.src='assets/images/default-avatar.svg'" alt="프로필">
+          <div class="vault-slot-info">
+            <div class="vault-slot-name">${escapeHtml(item.displayName)}</div>
+            <div class="vault-slot-id">@${escapeHtml(item.soopId)}</div>
+            <div class="vault-slot-price">${formatG(item.currentPrice)}</div>
+          </div>
+          <div class="vault-slot-badge">강제청산 면제</div>
+          <button class="btn-vault-out"
+            onclick="handleUnvaultListing('${escapeHtml(item.id)}')">인출</button>
+        </div>`;
+    }
+    return `
+      <div class="vault-slot vault-slot--empty">
+        <div class="vault-slot-empty-icon">🔓</div>
+        <div class="vault-slot-empty-text">빈 슬롯</div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="my-section my-vault-section">
+      <div class="my-section-header">
+        <span class="my-section-title">🏦 금고</span>
+        <span class="my-section-count">${usedSlots} / ${slots} 사용 중</span>
+      </div>
+      ${freeSlots > 0 && myHoldings.filter((h) => h.vaultedBy !== uid).length > 0 ? `
+        <div class="vault-assign-hint">보유 매물 카드의 <strong>금고 보관</strong> 버튼으로 매물을 보관하세요.</div>
+      ` : ""}
+      <div class="vault-slots-grid">${slotCards}</div>
+    </div>`;
+}
+
 function renderHoldings() {
   if (myHoldings.length === 0) {
     return `<div class="my-empty">보유 중인 매물이 없어요</div>`;
   }
 
+  const uid = auth.currentUser?.uid;
+  const hasVaultSlots = (currentUserData?.vaultSlots || 0) > 0;
+
   return `<div class="my-holdings-grid">${myHoldings.map((d) => {
     const pending = pendingByListing[d.id];
     const img = d.profileImageUrl || "assets/images/default-avatar.svg";
+    const isVaulted = d.vaultedBy === uid;
 
     const actionBtn = d.isLocked
       ? `<span class="request-status-badge">경매 진행 중</span>`
@@ -202,30 +269,43 @@ function renderHoldings() {
            손절 등록
          </button>`;
 
+    const vaultBtn = hasVaultSlots && !d.isLocked ? (
+      isVaulted
+        ? `<button class="btn-vault btn-vault--out"
+             onclick="handleUnvaultListing('${escapeHtml(d.id)}')">🔓 인출</button>`
+        : `<button class="btn-vault btn-vault--in"
+             onclick="handleVaultListing('${escapeHtml(d.id)}')">🏦 금고 보관</button>`
+    ) : "";
+
+    const vaultBadge = isVaulted
+      ? `<span class="my-vault-badge">🏦 금고 보관 중 · 강제청산 면제</span>` : "";
+
     const requestRow = pending ? `
-      <div class="my-holding-request-row">
+      <div class="my-holding-request-row${isVaulted ? " is-vaulted" : ""}">
         <span class="my-request-badge">📨 경매 요청 대기 중</span>
+        ${isVaulted ? `<span class="my-vault-exempt-badge">🏦 강제청산 면제</span>` : `
         <div class="my-request-btns">
           <button class="btn-approve"
             onclick="handleApproveRequest('${escapeHtml(pending.requestId)}')">승인</button>
           <button class="btn-reject"
             onclick="handleRejectRequest('${escapeHtml(pending.requestId)}')">거부</button>
-        </div>
+        </div>`}
       </div>` : "";
 
     return `
-      <div class="my-holding-card${pending ? " has-request" : ""}">
+      <div class="my-holding-card${pending ? " has-request" : ""}${isVaulted ? " is-vaulted" : ""}">
         <img class="my-holding-img" src="${img}"
           onerror="this.src='assets/images/default-avatar.svg'" alt="프로필">
         <div class="my-holding-info">
           <div class="my-holding-name">${escapeHtml(d.displayName)}</div>
           <div class="my-holding-id">@${escapeHtml(d.soopId)}</div>
+          ${vaultBadge}
         </div>
         <div class="my-holding-price">
           <div class="my-holding-price-label">현재 시세</div>
           <div class="my-holding-price-value">${formatG(d.currentPrice)}</div>
         </div>
-        <div class="my-holding-actions">${actionBtn}</div>
+        <div class="my-holding-actions">${actionBtn}${vaultBtn}</div>
         ${requestRow}
       </div>`;
   }).join("")}</div>`;
@@ -538,5 +618,28 @@ window.saveNickname = async function() {
   } catch (e) {
     if (errEl) errEl.textContent = e.message || "변경에 실패했습니다.";
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "저장"; }
+  }
+};
+
+// ===== 금고 =====
+window.handleVaultListing = async function(listingId) {
+  try {
+    await setVaultListingFn({listingId, action: "vault"});
+    const holding = myHoldings.find((h) => h.id === listingId);
+    if (holding) holding.vaultedBy = auth.currentUser?.uid;
+    renderAll();
+  } catch (e) {
+    alert(`금고 보관 실패: ${e.message}`);
+  }
+};
+
+window.handleUnvaultListing = async function(listingId) {
+  try {
+    await setVaultListingFn({listingId, action: "unvault"});
+    const holding = myHoldings.find((h) => h.id === listingId);
+    if (holding) holding.vaultedBy = null;
+    renderAll();
+  } catch (e) {
+    alert(`인출 실패: ${e.message}`);
   }
 };

@@ -114,6 +114,13 @@ async function checkAndFinalizeExpiredRequests() {
       return;
     }
 
+    // 금고 보관 중이면 강제청산 면제
+    if (listing.vaultedBy && listing.vaultedBy === listing.ownerId) {
+      batch.update(listingSnap.ref, {pendingRequestId: null});
+      logger.info(`강제청산 면제(금고): listingId=${reqData.listingId}, ownerId=${listing.ownerId}`);
+      return;
+    }
+
     const refundAmount = listing.currentPrice || 0;
 
     // 매물 무보유 전환
@@ -225,6 +232,7 @@ async function doFinalizeAuction(current) {
         pendingRequestId: null,
         isLocked: false,
         immunityUntil: null,
+        vaultedBy: null,
       });
     } else {
       // 유찰: 소유권 유지
@@ -494,6 +502,7 @@ exports.initializeUser = onCall(
             detailViewPassExpiresAt: userData.detailViewPassExpiresAt || null,
             historyViewPassExpiresAt: userData.historyViewPassExpiresAt || null,
             queuePriorityPassExpiresAt: userData.queuePriorityPassExpiresAt || null,
+            vaultSlots: userData.vaultSlots || 0,
           };
         }
 
@@ -2068,6 +2077,12 @@ const SHOP_ITEMS = {
     category: "convenience",
     passField: "historyViewPassExpiresAt",
   },
+  vault_slot: {
+    name: "금고 슬롯",
+    price: 500000,
+    category: "protection",
+    googleOnly: true,
+  },
 };
 const PASS_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -2156,6 +2171,10 @@ exports.purchaseShopItem = onCall(
         update.ownedLimit = FieldValue.increment(1);
       }
 
+      if (itemId === "vault_slot") {
+        update.vaultSlots = FieldValue.increment(1);
+      }
+
       if (item.passField) {
         const now = Date.now();
         const current = user[item.passField] || 0;
@@ -2168,6 +2187,64 @@ exports.purchaseShopItem = onCall(
     },
 );
 
+
+// ============================================
+// setVaultListing: 금고 보관 / 인출
+// ============================================
+exports.setVaultListing = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+      const uid = request.auth.uid;
+      const {listingId, action} = request.data;
+
+      if (!listingId || !["vault", "unvault"].includes(action)) {
+        throw new HttpsError("invalid-argument", "잘못된 요청입니다.");
+      }
+
+      const userRef = db.collection("users").doc(uid);
+      const listingRef = db.collection("listings").doc(listingId);
+      const [userSnap, listingSnap] = await Promise.all([userRef.get(), listingRef.get()]);
+
+      if (!userSnap.exists) throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+      if (!listingSnap.exists) throw new HttpsError("not-found", "매물을 찾을 수 없습니다.");
+
+      const user = userSnap.data();
+      const listing = listingSnap.data();
+
+      if (user.isBanned) throw new HttpsError("permission-denied", "정지된 계정입니다.");
+      if (listing.ownerId !== uid) {
+        throw new HttpsError("permission-denied", "내 매물만 금고에 보관할 수 있습니다.");
+      }
+
+      if (action === "vault") {
+        const vaultSlots = user.vaultSlots || 0;
+        if (vaultSlots <= 0) {
+          throw new HttpsError("failed-precondition", "금고 슬롯이 없습니다. 상점에서 구매하세요.");
+        }
+        if (listing.vaultedBy === uid) {
+          throw new HttpsError("failed-precondition", "이미 금고에 보관 중입니다.");
+        }
+        const vaultedSnap = await db.collection("listings").where("vaultedBy", "==", uid).get();
+        if (vaultedSnap.size >= vaultSlots) {
+          throw new HttpsError(
+              "failed-precondition",
+              `금고 슬롯이 부족합니다. (${vaultedSnap.size}/${vaultSlots})`,
+          );
+        }
+        await listingRef.update({vaultedBy: uid});
+        logger.info(`금고 보관: uid=${uid}, listingId=${listingId}`);
+        return {success: true, vaultedBy: uid};
+      } else {
+        if (listing.vaultedBy !== uid) {
+          throw new HttpsError("failed-precondition", "이 매물은 금고에 보관 중이 아닙니다.");
+        }
+        await listingRef.update({vaultedBy: null});
+        logger.info(`금고 인출: uid=${uid}, listingId=${listingId}`);
+        return {success: true, vaultedBy: null};
+      }
+    },
+);
 
 // ============================================
 // skipCooldown: 경매 대기시간 즉시 건너뛰기 (50,000G)

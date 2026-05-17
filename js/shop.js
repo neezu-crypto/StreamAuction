@@ -41,6 +41,18 @@ const SHOP_ITEMS = [
     targetType: "immunity",
   },
   {
+    id: "vault_slot",
+    icon: "🏦",
+    name: "금고 슬롯",
+    cat: "protection",
+    catLabel: "보호",
+    price: 500000,
+    priceLabel: "500,000G",
+    desc: "계정에 금고 슬롯 1칸을 영구 추가합니다. 슬롯에 보유 매물 1개를 보관하면 강제청산이 완전 면제됩니다. 손절 후 슬롯은 재사용 가능합니다.",
+    needsTarget: false,
+    googleOnly: true,
+  },
+  {
     id: "holding_limit_expansion",
     icon: "📦",
     name: "보유 한도 +1",
