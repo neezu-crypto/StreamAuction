@@ -2,10 +2,11 @@
 // my.js - 마이페이지
 // ============================================
 
-import {auth, db, functions} from "./firebase-config.js";
+import {auth, db, functions, rtdb} from "./firebase-config.js";
 import {
-  doc, getDoc, collection, query, where, getDocs,
+  doc, getDoc, getDocFromServer, collection, query, where, getDocs,
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+import {ref as dbRef, onValue as dbOnValue} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
 import {httpsCallable} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-functions.js";
 import {watchAuthState, logout} from "./auth.js";
 import {
@@ -39,6 +40,7 @@ let activeTab = "all";
 let pendingRegisterData = {};
 let isRegistering = false;
 let isEditingNickname = false;
+let auctionWatcherUnsub = null;
 
 const initializeUserFn = httpsCallable(functions, "initializeUser");
 const setVaultListingFn = httpsCallable(functions, "setVaultListing");
@@ -60,6 +62,7 @@ watchAuthState(async (user) => {
   renderAuthArea();
   await Promise.all([loadHoldings(user.uid), loadTradeHistory(user.uid)]);
   renderAll();
+  setupAuctionEndWatcher(user.uid);
 });
 
 // ===== 데이터 로드 =====
@@ -80,14 +83,32 @@ async function loadHoldings(uid) {
     pendingByListing = {};
     reqSnap.forEach((d) => { pendingByListing[d.data().listingId] = d.data(); });
 
-    // 매물 배치 조회
-    const snaps = await Promise.all(ids.map((id) => getDoc(doc(db, "listings", id))));
+    // 매물 배치 조회 (서버에서 직접 조회해 isLocked 등 최신값 보장)
+    const snaps = await Promise.all(ids.map((id) => getDocFromServer(doc(db, "listings", id))));
     myHoldings = snaps
         .filter((s) => s.exists())
         .map((s) => ({id: s.id, ...s.data()}));
   } catch (e) {
     console.error("보유 매물 로드 실패:", e);
   }
+}
+
+// 경매 종료 시 isLocked 자동 해제를 위해 RTDB auction/current 감시
+function setupAuctionEndWatcher(uid) {
+  if (auctionWatcherUnsub) {
+    auctionWatcherUnsub();
+    auctionWatcherUnsub = null;
+  }
+  let prevStatus = null;
+  auctionWatcherUnsub = dbOnValue(dbRef(rtdb, "auction/current"), async (snap) => {
+    const status = snap.val()?.status ?? null;
+    // 경매가 running → 다른 상태로 전환될 때만 갱신
+    if (prevStatus === "running" && status !== "running") {
+      await loadHoldings(uid);
+      renderAll();
+    }
+    prevStatus = status;
+  });
 }
 
 async function loadTradeHistory(uid) {
