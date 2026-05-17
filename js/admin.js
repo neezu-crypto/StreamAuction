@@ -2,11 +2,14 @@
 // admin.js - StreamAuction 관리자 페이지
 // ============================================
 
-import {auth, functions} from './firebase-config.js';
+import {auth, functions, rtdb} from './firebase-config.js';
 import {
   onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider,
 } from 'https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js';
 import {httpsCallable} from 'https://www.gstatic.com/firebasejs/12.12.1/firebase-functions.js';
+import {
+  ref as dbRef, onValue as dbOnValue, set as dbSet, remove as dbRemove, onDisconnect,
+} from 'https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js';
 
 // ===== CF 참조 =====
 const adminGetDashboardFn = httpsCallable(functions, 'adminGetDashboard');
@@ -20,6 +23,31 @@ const adminSetConfigFn = httpsCallable(functions, 'adminSetConfig');
 
 // ===== 상태 =====
 let selectedUser = null;
+
+// ===== 접속자 집계 =====
+let presenceUid = null;
+
+function setupPresence(uid) {
+  if (presenceUid === uid) return;
+  if (presenceUid) dbRemove(dbRef(rtdb, `presence/${presenceUid}`));
+  presenceUid = uid;
+  dbOnValue(dbRef(rtdb, '.info/connected'), (snap) => {
+    if (snap.val() !== true) return;
+    const presRef = dbRef(rtdb, `presence/${uid}`);
+    onDisconnect(presRef).remove();
+    dbSet(presRef, { t: Date.now() });
+  });
+}
+
+function watchOnlineCount() {
+  dbOnValue(dbRef(rtdb, 'presence'), (snap) => {
+    const count = snap.exists() ? snap.numChildren() : 0;
+    const el = document.getElementById('onlineCount');
+    if (el) el.textContent = `접속 중: ${count.toLocaleString('ko-KR')}명`;
+  });
+}
+
+watchOnlineCount();
 
 // ===== DOM 헬퍼 =====
 const $ = (id) => document.getElementById(id);
@@ -49,6 +77,7 @@ onAuthStateChanged(auth, async (user) => {
     <span style="font-size:.85rem;color:#9ba3b4;margin-right:10px">${user.displayName || user.email || user.uid.substring(0, 8)}</span>
     <button class="btn-sm btn-ghost" onclick="handleAdminLogout()">로그아웃</button>
   `;
+  setupPresence(user.uid);
   await tryLoadAdmin();
 });
 

@@ -376,6 +376,16 @@ a {
   background-color: #353a47;
 }
 
+/* ===== Presence Bar ===== */
+.presence-bar {
+  background: #1a1d24;
+  border-bottom: 1px solid #2a2e38;
+  padding: 5px 20px;
+  text-align: center;
+  font-size: .75rem;
+  color: #6b7280;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 640px) {
   .header-inner { padding: 0 16px; }

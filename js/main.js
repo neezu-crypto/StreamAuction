@@ -3,7 +3,10 @@
 // 인증 + 경매 시스템 통합
 // ============================================
 
-import {auth, db, functions} from "./firebase-config.js";
+import {auth, db, functions, rtdb} from "./firebase-config.js";
+import {
+  ref as dbRef, onValue as dbOnValue, set as dbSet, remove as dbRemove, onDisconnect,
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
 import {
   doc, getDoc, collection, query, where, getDocs,
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
@@ -37,6 +40,33 @@ let isSearching = false;
 let pendingRegisterData = null;
 let pendingReportListingId = null;
 let pendingReportListingName = null;
+
+// ===== 접속자 집계 =====
+let presenceUid = null;
+let presenceConnectedUnsub = null;
+
+function setupPresence(uid) {
+  if (presenceUid === uid) return;
+  if (presenceUid) dbRemove(dbRef(rtdb, `presence/${presenceUid}`));
+  if (presenceConnectedUnsub) presenceConnectedUnsub();
+  presenceUid = uid;
+  presenceConnectedUnsub = dbOnValue(dbRef(rtdb, ".info/connected"), (snap) => {
+    if (snap.val() !== true) return;
+    const presRef = dbRef(rtdb, `presence/${uid}`);
+    onDisconnect(presRef).remove();
+    dbSet(presRef, { t: Date.now() });
+  });
+}
+
+function watchOnlineCount() {
+  dbOnValue(dbRef(rtdb, "presence"), (snap) => {
+    const count = snap.exists() ? snap.numChildren() : 0;
+    const el = document.getElementById("onlineCount");
+    if (el) el.textContent = `접속 중: ${count.toLocaleString("ko-KR")}명`;
+  });
+}
+
+watchOnlineCount();
 
 // ===== Cloud Functions =====
 const initializeUserFn = httpsCallable(functions, "initializeUser");
@@ -406,6 +436,9 @@ async function processUserLogin(user) {
 
     // 입찰 UI 갱신
     updateBidUI();
+
+    // 접속자 집계
+    setupPresence(user.uid);
   } catch (e) {
     log(`초기화 실패: ${e.message}`, true);
   } finally {

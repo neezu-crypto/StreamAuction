@@ -1454,7 +1454,7 @@ exports.adminGetDashboard = onCall(
           db.collection("listings").count().get(),
           rtdb.ref("auction/current").once("value"),
           rtdb.ref("auction/queue").once("value"),
-          db.collection("auctionHistory").orderBy("endedAt", "desc").limit(10).get(),
+          db.collection("auctionHistory").orderBy("endedAt", "desc").limit(20).get(),
         ]);
 
       const queue = queueSnap.val() || {};
