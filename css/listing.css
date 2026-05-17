@@ -105,6 +105,12 @@
   white-space: nowrap;
 }
 
+.listing-live-badge--waiting {
+  background: #111827;
+  border-color: #374151;
+  color: #9ba3b4;
+}
+
 /* ===== Stats ===== */
 .listing-stats {
   display: grid;
@@ -141,6 +147,15 @@
 .listing-stat-value.muted { color: #9ba3b4; font-weight: 500; font-size: .9rem; }
 
 /* ===== Live Banner ===== */
+.listing-live-banner--waiting {
+  background: #0f1115;
+  border-bottom-color: #2a2e38;
+}
+
+.listing-live-banner--waiting .listing-live-banner-text {
+  color: #6b7280;
+}
+
 .listing-live-banner {
   margin: 0;
   padding: 16px 32px;

@@ -1021,6 +1021,17 @@
   color: #f5d142;
 }
 
+.request-status-badge.auction-live {
+  border-color: #7f1d1d;
+  color: #f87171;
+  background: #1e1010;
+}
+
+.request-status-badge.auction-waiting {
+  border-color: #374151;
+  color: #6b7280;
+}
+
 .holding-card--has-request {
   border-color: #7c3aed !important;
 }

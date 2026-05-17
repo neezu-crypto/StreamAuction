@@ -246,7 +246,14 @@ async function renderDetail() {
   const imgClass = listing.isMosaicked ? "listing-hero-img img-mosaic" : "listing-hero-img";
   const imgSrc = listing.profileImageUrl || "assets/images/default-avatar.svg";
   const mosaicLabel = listing.isMosaicked ? `<div class="listing-mosaic-label">신고됨</div>` : "";
-  const liveBadge = listing.isLocked ? `<span class="listing-live-badge">🔴 경매 진행 중</span>` : "";
+  const isActiveAuction = listing.isLocked &&
+    currentAuctionInfo?.status === "active" &&
+    currentAuctionInfo?.listingId === listing.id;
+  const liveBadge = isActiveAuction
+    ? `<span class="listing-live-badge">🔴 경매 진행 중</span>`
+    : listing.isLocked
+    ? `<span class="listing-live-badge listing-live-badge--waiting">⏳ 경매 대기 중</span>`
+    : "";
 
   const heroHtml = `
     <div class="listing-hero">
@@ -295,10 +302,14 @@ async function renderDetail() {
     </div>`;
 
   // ── 3. 경매 진행 중 배너 ──
-  const liveBannerHtml = listing.isLocked ? `
+  const liveBannerHtml = isActiveAuction ? `
     <div class="listing-live-banner">
       <span class="listing-live-banner-text">🔴 지금 경매가 진행 중입니다 — 메인 페이지에서 입찰하세요</span>
       <a class="btn-go-main" href="index.html">입찰하러 가기 →</a>
+    </div>`
+    : listing.isLocked ? `
+    <div class="listing-live-banner listing-live-banner--waiting">
+      <span class="listing-live-banner-text">⏳ 경매 대기 중 — 이전 경매가 끝나면 자동으로 시작됩니다</span>
     </div>` : "";
 
   // ── 4. 액션 섹션 ──
@@ -740,14 +751,27 @@ function showToast(msg) {
 // ===== 시작 =====
 init();
 
-// 경매 종료 시 isLocked 자동 갱신
+// RTDB auction/current 감시: 경매 종료 시 새로고침 + 진행 중/대기 중 배지 갱신
+let currentAuctionInfo = null;
 (function() {
   let prevStatus = null;
+  let prevListingId = null;
   dbOnValue(dbRef(rtdb, "auction/current"), async (snap) => {
-    const status = snap.val()?.status ?? null;
-    if (prevStatus === "running" && status !== "running") {
+    const data = snap.val();
+    const status = data?.status ?? null;
+    const auctionListingId = data?.listingId ?? null;
+    currentAuctionInfo = data ? {status, listingId: auctionListingId} : null;
+
+    // 경매 종료(active → 다른 상태): Firestore에서 재조회
+    if (prevStatus === "active" && status !== "active") {
       await refreshListing();
+    } else if (prevStatus !== status || prevListingId !== auctionListingId) {
+      // 상태/대상 매물만 바뀐 경우: 재조회 없이 UI만 갱신
+      if (isPaid) renderDetail();
+      else renderView();
     }
+
     prevStatus = status;
+    prevListingId = auctionListingId;
   });
 })();

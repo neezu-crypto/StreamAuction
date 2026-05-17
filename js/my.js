@@ -41,6 +41,7 @@ let pendingRegisterData = {};
 let isRegistering = false;
 let isEditingNickname = false;
 let auctionWatcherUnsub = null;
+let currentAuctionInfo = null; // RTDB auction/current 요약 { status, listingId }
 
 const initializeUserFn = httpsCallable(functions, "initializeUser");
 const setVaultListingFn = httpsCallable(functions, "setVaultListing");
@@ -93,21 +94,34 @@ async function loadHoldings(uid) {
   }
 }
 
-// 경매 종료 시 isLocked 자동 해제를 위해 RTDB auction/current 감시
+// RTDB auction/current 감시: 경매 진행 중/대기 중 구분 + 종료 시 홀딩 새로고침
 function setupAuctionEndWatcher(uid) {
   if (auctionWatcherUnsub) {
     auctionWatcherUnsub();
     auctionWatcherUnsub = null;
   }
   let prevStatus = null;
+  let prevListingId = null;
   auctionWatcherUnsub = dbOnValue(dbRef(rtdb, "auction/current"), async (snap) => {
-    const status = snap.val()?.status ?? null;
-    // 경매가 running → 다른 상태로 전환될 때만 갱신
-    if (prevStatus === "running" && status !== "running") {
+    const data = snap.val();
+    const status = data?.status ?? null;
+    const listingId = data?.listingId ?? null;
+    currentAuctionInfo = data ? {status, listingId} : null;
+
+    const statusChanged = prevStatus !== status;
+    const listingChanged = prevListingId !== listingId;
+
+    // 경매 종료(active → 다른 상태)일 때 Firestore에서 홀딩 재조회
+    if (prevStatus === "active" && status !== "active") {
       await loadHoldings(uid);
+    }
+    // 상태나 대상 매물이 바뀌면 즉시 re-render (진행 중 / 대기 중 배지 갱신)
+    if (statusChanged || listingChanged) {
       renderAll();
     }
+
     prevStatus = status;
+    prevListingId = listingId;
   });
 }
 
@@ -281,8 +295,13 @@ function renderHoldings() {
     const img = d.profileImageUrl || "assets/images/default-avatar.svg";
     const isVaulted = d.vaultedBy === uid;
 
-    const actionBtn = d.isLocked
-      ? `<span class="request-status-badge">경매 진행 중</span>`
+    const isActiveAuction = d.isLocked &&
+      currentAuctionInfo?.status === "active" &&
+      currentAuctionInfo?.listingId === d.id;
+    const actionBtn = isActiveAuction
+      ? `<span class="request-status-badge auction-live">🔴 경매 진행 중</span>`
+      : d.isLocked
+      ? `<span class="request-status-badge auction-waiting">⏳ 경매 대기 중</span>`
       : `<button class="btn-selloff btn-selloff--small"
            onclick="openSelloffModal('${escapeHtml(d.soopId)}','${escapeHtml(d.displayName)}',${d.currentPrice||50000})">
            손절 등록
