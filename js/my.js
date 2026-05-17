@@ -7,7 +7,7 @@ import {
   doc, getDoc, collection, query, where, getDocs,
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 import {httpsCallable} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-functions.js";
-import {watchAuthState} from "./auth.js";
+import {watchAuthState, logout} from "./auth.js";
 import {
   registerAuction, respondToAuctionRequest, updateUserNickname,
   formatG, validateSoopId, validateNickname, getSoopProfileUrl,
@@ -361,8 +361,18 @@ function renderAuthArea() {
       <strong>${escapeHtml(name)}</strong>
       <span style="color:#9ba3b4;font-size:.88rem">${formatG(currentUserData.balance ?? 0)}</span>
     </span>
-    <a class="btn-secondary" href="shop.html" style="padding:5px 12px;font-size:.82rem">🛒 상점</a>`;
+    <a class="btn-secondary" href="shop.html" style="padding:5px 12px;font-size:.82rem">🛒 상점</a>
+    <button onclick="handleLogout()" class="btn-logout-header">로그아웃</button>`;
 }
+
+window.handleLogout = async function() {
+  try {
+    await logout();
+    location.href = "index.html";
+  } catch (e) {
+    alert(`로그아웃 실패: ${e.message}`);
+  }
+};
 
 // ===== 탭 전환 =====
 window.switchTab = function(tab) {

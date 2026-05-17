@@ -376,6 +376,25 @@ a {
   background-color: #353a47;
 }
 
+/* ===== 헤더 로그아웃 버튼 ===== */
+.btn-logout-header {
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid #374151;
+  color: #6b7280;
+  border-radius: 6px;
+  font-size: .78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+  white-space: nowrap;
+}
+
+.btn-logout-header:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
 /* ===== Presence Bar ===== */
 .presence-bar {
   background: #1a1d24;
