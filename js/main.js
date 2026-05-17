@@ -663,11 +663,14 @@ function onQueueUpdate(queue) {
 
   section.style.display = "";
   list.innerHTML = queue.map((item, i) => `
-    <div class="queue-item">
+    <div class="queue-item${item.isPriority ? " queue-item--priority" : ""}">
       <div class="queue-item-left">
         <span class="queue-number">${i + 1}</span>
         <div>
-          <div class="queue-name">${escapeHtml(item.displayName)}</div>
+          <div class="queue-name">
+            ${escapeHtml(item.displayName)}
+            ${item.isPriority ? `<span class="queue-priority-badge">⚡ 우선</span>` : ""}
+          </div>
           <div class="queue-id">${item.soopId}</div>
         </div>
       </div>

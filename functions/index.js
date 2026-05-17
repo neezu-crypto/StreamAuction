@@ -838,6 +838,8 @@ exports.registerAuction = onCall(
         }
 
         const listingData = listingSnap.data();
+        const hasPriorityPassSelloff = userData.queuePriorityPassExpiresAt &&
+          userData.queuePriorityPassExpiresAt > Date.now();
         const auctionId = db.collection("_").doc().id;
         await rtdb.ref(`auction/queue/${auctionId}`).set({
           auctionId,
@@ -850,7 +852,8 @@ exports.registerAuction = onCall(
           sellerId: uid,
           requestId: null,
           startPrice,
-          queuedAt: Date.now(),
+          isPriority: hasPriorityPassSelloff ? true : false,
+          queuedAt: hasPriorityPassSelloff ? 0 : Date.now(),
         });
 
         // 매물 잠금
@@ -985,6 +988,7 @@ exports.registerAuction = onCall(
         profileImageUrl: generatedProfileImageUrl,
         registeredBy: uid,
         startPrice,
+        isPriority: hasPriorityPass ? true : false,
         queuedAt: hasPriorityPass ? 0 : Date.now(),
       });
 
@@ -1456,6 +1460,7 @@ exports.respondToAuctionRequest = onCall(
         sellerId: uid,
         requestId,
         startPrice: sp,
+        isPriority: requesterHasPriorityPass ? true : false,
         queuedAt: requesterHasPriorityPass ? 0 : Date.now(),
       };
 
