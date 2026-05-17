@@ -56,9 +56,10 @@
 /* ===== 경매 카드 ===== */
 .auction-card {
   background: #1a1d24;
-  border: 1px solid #2a2e38;
+  border: 2px solid #ef4444;
   border-radius: 16px;
   overflow: hidden;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.25);
 }
 
 .auction-header {
