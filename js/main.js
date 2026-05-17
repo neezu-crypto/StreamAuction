@@ -6,6 +6,7 @@
 import {auth, db, functions, rtdb} from "./firebase-config.js";
 import {
   ref as dbRef, onValue as dbOnValue, set as dbSet, remove as dbRemove, onDisconnect,
+  get as dbGet,
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
 import {
   doc, getDoc, collection, query, where, getDocs,
@@ -41,9 +42,30 @@ let pendingRegisterData = null;
 let pendingReportListingId = null;
 let pendingReportListingName = null;
 
-// ===== 접속자 집계 =====
+// ===== 접속자 집계 / 접속 제한 =====
+const ACCESS_LIMIT = 30;
+let isAccessGated = false;
 let presenceUid = null;
 let presenceConnectedUnsub = null;
+
+async function checkAccessGate() {
+  const snap = await dbGet(dbRef(rtdb, "presence"));
+  return snap.exists() ? snap.size : 0;
+}
+
+async function isAdminUser(uid) {
+  try {
+    const adminSnap = await getDoc(doc(db, "system", "admin"));
+    const adminUids = adminSnap.exists() ? (adminSnap.data().adminUids || []) : [];
+    return adminUids.includes(uid);
+  } catch {
+    return false;
+  }
+}
+
+function showAccessGateModal() {
+  $("accessGateModal")?.classList.add("show");
+}
 
 function setupPresence(uid) {
   if (presenceUid === uid) return;
@@ -417,6 +439,18 @@ async function processUserLogin(user) {
   isProcessingLogin = true;
 
   try {
+    // 접속 제한 체크 (테스트 기간) — 관리자는 패스
+    const [onlineCount, isAdmin] = await Promise.all([
+      checkAccessGate(),
+      isAdminUser(user.uid),
+    ]);
+    if (!isAdmin && onlineCount >= ACCESS_LIMIT) {
+      isAccessGated = true;
+      showAccessGateModal();
+      log(`접속 제한: 현재 ${onlineCount}명 (최대 ${ACCESS_LIMIT}명)`, true);
+      return;
+    }
+
     log(`유저 초기화: ${user.uid.substring(0, 8)}...`);
     updateAuthUI(user, null);
 
@@ -444,6 +478,9 @@ async function processUserLogin(user) {
 
     // 접속자 집계
     setupPresence(user.uid);
+
+    // 초기 경매 상태 로드 (만료 경매 정산 트리거 포함)
+    loadInitialState().catch((e) => log(`초기 상태 로드 실패: ${e.message}`, true));
   } catch (e) {
     log(`초기화 실패: ${e.message}`, true);
   } finally {
@@ -1265,9 +1302,6 @@ subscribeAuction({
   onBidsUpdate,
   onTimer,
 });
-
-// 초기 상태 로드 (만료 경매 정산 트리거 포함)
-loadInitialState().catch((e) => log(`초기 상태 로드 실패: ${e.message}`, true));
 
 log("앱 초기화 완료");
 

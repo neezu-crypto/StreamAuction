@@ -180,6 +180,19 @@
   <p>&copy; 2026 StreamAuction. MVP Build.</p>
 </footer>
 
+<!-- 접속 제한 모달 (테스트 기간) -->
+<div class="modal-overlay" id="accessGateModal">
+  <div class="modal access-gate-modal">
+    <div class="access-gate-icon">🚧</div>
+    <h2>테스트 기간 유저 제한</h2>
+    <p class="modal-message">
+      현재 접속자가 최대 인원(30명)에 도달했습니다.<br>
+      잠시 후 다시 접속해 주세요.
+    </p>
+    <button class="btn-primary" onclick="location.reload()">새로고침</button>
+  </div>
+</div>
+
 <!-- 경매 등록 모달 -->
 <div class="modal-overlay" id="registerModal">
   <div class="modal">

@@ -303,6 +303,23 @@ a {
   line-height: 1.7;
 }
 
+/* 접속 제한 모달 (테스트 기간) */
+#accessGateModal {
+  z-index: 9999;
+  background-color: rgba(0, 0, 0, 0.92);
+  pointer-events: all;
+}
+
+.access-gate-modal {
+  border-color: #f59e0b66;
+  max-width: 400px;
+}
+
+.access-gate-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+}
+
 .bonus-card {
   background: linear-gradient(135deg, #2a2e38 0%, #353a47 100%);
   border: 1px solid #f5d14233;
