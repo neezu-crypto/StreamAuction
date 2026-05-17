@@ -493,6 +493,23 @@ function renderLoginPrompt() {
 }
 
 // ===== 잔액 변화 모달 =====
+let _bhData = null; // 모달 열릴 때 한 번만 계산
+
+const _toKSTDateKey = (ms) => {
+  const d = new Date(ms + 9 * 60 * 60 * 1000);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+};
+const _toKSTDateLabel = (key) => {
+  const [, m, d] = key.split("-");
+  return `${parseInt(m)}월 ${parseInt(d)}일`;
+};
+const _toKSTTime = (ms) => {
+  const d = new Date(ms + 9 * 60 * 60 * 1000);
+  return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
+};
+const _fmtDelta = (v) => `${v >= 0 ? "+" : ""}${formatG(v)}`;
+const _deltaClass = (v) => v > 0 ? "pos" : v < 0 ? "neg" : "";
+
 window.openBalanceHistoryModal = function() {
   const body = $("balanceHistoryBody");
   if (!body) return;
@@ -500,20 +517,7 @@ window.openBalanceHistoryModal = function() {
   const now = Date.now();
   const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
 
-  const toKSTDateKey = (ms) => {
-    const d = new Date(ms + 9 * 60 * 60 * 1000);
-    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-  };
-  const toKSTDateLabel = (key) => {
-    const [, m, d] = key.split("-");
-    return `${parseInt(m)}월 ${parseInt(d)}일`;
-  };
-  const toKSTTime = (ms) => {
-    const d = new Date(ms + 9 * 60 * 60 * 1000);
-    return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
-  };
-
-  // 7일 내 거래만 필터
+  // 7일 내 거래 이벤트 생성
   const events = [];
   buyHistory.forEach((h) => {
     const at = toMillis(h.endedAt);
@@ -527,62 +531,102 @@ window.openBalanceHistoryModal = function() {
   });
   events.sort((a, b) => b.at - a.at);
 
-  const netDelta = events.reduce((s, e) => s + e.delta, 0);
-  const netSign = netDelta >= 0 ? "+" : "";
-  const netClass = netDelta > 0 ? "pos" : netDelta < 0 ? "neg" : "";
-
-  if (events.length === 0) {
-    body.innerHTML = `
-      <div class="balance-history-net">
-        <span class="balance-history-net-label">7일 순변화</span>
-        <span class="balance-history-net-value">0G</span>
-      </div>
-      <p class="balance-history-empty">최근 7일간 거래 내역이 없습니다.</p>`;
-    $("balanceHistoryModal")?.classList.add("show");
-    return;
-  }
-
-  // 날짜별 그룹
+  // 날짜별 이벤트 그룹
   const groups = {};
-  const groupOrder = [];
   events.forEach((e) => {
-    const key = toKSTDateKey(e.at);
-    if (!groups[key]) { groups[key] = []; groupOrder.push(key); }
+    const key = _toKSTDateKey(e.at);
+    if (!groups[key]) groups[key] = [];
     groups[key].push(e);
   });
 
-  const listHtml = groupOrder.map((key) => {
-    const items = groups[key].map((e) => {
-      const sign = e.delta >= 0 ? "+" : "";
-      const cls = e.delta > 0 ? "pos" : "neg";
-      const icon = e.type === "sell" ? "💰" : "🛒";
-      const typeLabel = e.type === "sell" ? "판매" : "매입";
-      return `
-        <div class="balance-history-item">
-          <span class="balance-history-icon">${icon}</span>
-          <span class="balance-history-name">${typeLabel} — ${escapeHtml(e.name)}</span>
-          <span class="balance-history-time">${toKSTTime(e.at)}</span>
-          <span class="balance-history-delta ${cls}">${sign}${formatG(e.delta)}</span>
-        </div>`;
-    }).join("");
-    return `<div class="balance-history-group">
-      <div class="balance-history-date">${toKSTDateLabel(key)}</div>
-      ${items}
-    </div>`;
-  }).join("");
+  // 최근 7일 날짜 키 목록 (오늘 포함, 내림차순)
+  const dayKeys = Array.from({length: 7}, (_, i) => {
+    return _toKSTDateKey(now - i * 24 * 60 * 60 * 1000);
+  });
+
+  // 일별 순변화
+  const dailyNet = dayKeys.map((key) => ({
+    key,
+    net: (groups[key] || []).reduce((s, e) => s + e.delta, 0),
+  }));
+
+  const totalNet = events.reduce((s, e) => s + e.delta, 0);
+
+  _bhData = {events, groups, dayKeys, dailyNet, totalNet};
 
   body.innerHTML = `
-    <div class="balance-history-net">
-      <span class="balance-history-net-label">7일 순변화</span>
-      <span class="balance-history-net-value ${netClass}">${netSign}${formatG(netDelta)}</span>
+    <div class="bh-tabs">
+      <button class="bh-tab is-active" id="bhTab-transactions" onclick="switchBalanceTab('transactions')">지출/획득 내역</button>
+      <button class="bh-tab" id="bhTab-summary" onclick="switchBalanceTab('summary')">총 잔액 변화</button>
     </div>
-    <div class="balance-history-list">${listHtml}</div>`;
+    <div id="bhTabContent"></div>`;
 
+  _renderBalanceTab("transactions");
   $("balanceHistoryModal")?.classList.add("show");
+};
+
+function _renderBalanceTab(tab) {
+  const content = $("bhTabContent");
+  if (!content || !_bhData) return;
+  const {events, groups, dayKeys, dailyNet, totalNet} = _bhData;
+
+  if (tab === "transactions") {
+    if (events.length === 0) {
+      content.innerHTML = `<p class="balance-history-empty">최근 7일간 거래 내역이 없습니다.</p>`;
+      return;
+    }
+    // 날짜 있는 키만, 이벤트 있는 날짜 기준으로
+    const usedKeys = dayKeys.filter((k) => groups[k]?.length);
+    content.innerHTML = usedKeys.map((key) => {
+      const items = groups[key].map((e) => `
+        <div class="balance-history-item">
+          <span class="balance-history-icon">${e.type === "sell" ? "💰" : "🛒"}</span>
+          <span class="balance-history-name">${e.type === "sell" ? "판매" : "매입"} — ${escapeHtml(e.name)}</span>
+          <span class="balance-history-time">${_toKSTTime(e.at)}</span>
+          <span class="balance-history-delta ${_deltaClass(e.delta)}">${_fmtDelta(e.delta)}</span>
+        </div>`).join("");
+      return `<div class="balance-history-group">
+        <div class="balance-history-date">${_toKSTDateLabel(key)}</div>
+        ${items}
+      </div>`;
+    }).join("");
+  } else {
+    // 총 잔액 변화 탭
+    const maxAbs = Math.max(...dailyNet.map((d) => Math.abs(d.net)), 1);
+    const rows = dailyNet.map(({key, net}) => {
+      const pct = Math.round((Math.abs(net) / maxAbs) * 100);
+      const cls = _deltaClass(net);
+      const barDir = net >= 0 ? "bh-bar-pos" : "bh-bar-neg";
+      return `
+        <div class="bh-daily-row">
+          <span class="bh-daily-date">${_toKSTDateLabel(key)}</span>
+          <div class="bh-bar-wrap">
+            ${net !== 0 ? `<div class="bh-bar ${barDir}" style="width:${pct}%"></div>` : `<div class="bh-bar-zero"></div>`}
+          </div>
+          <span class="bh-daily-val ${cls}">${net !== 0 ? _fmtDelta(net) : "—"}</span>
+        </div>`;
+    }).join("");
+
+    content.innerHTML = `
+      <div class="bh-net-summary">
+        <span class="bh-net-label">7일 순변화</span>
+        <span class="bh-net-value ${_deltaClass(totalNet)}">${_fmtDelta(totalNet)}</span>
+      </div>
+      <div class="bh-daily-chart">${rows}</div>`;
+  }
+}
+
+window.switchBalanceTab = function(tab) {
+  ["transactions", "summary"].forEach((t) => {
+    const btn = $(`bhTab-${t}`);
+    if (btn) btn.classList.toggle("is-active", t === tab);
+  });
+  _renderBalanceTab(tab);
 };
 
 window.closeBalanceHistoryModal = function() {
   $("balanceHistoryModal")?.classList.remove("show");
+  _bhData = null;
 };
 
 function renderAuthArea() {
