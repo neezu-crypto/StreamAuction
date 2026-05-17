@@ -9,6 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
 import {
   doc, getDoc, collection, query, where, getDocs,
+  addDoc, serverTimestamp, orderBy, limit,
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 import {
   loginAnonymous, loginGoogle, linkAnonymousToGoogle,
@@ -77,6 +78,24 @@ watchOnlineCount();
 const initializeUserFn = httpsCallable(functions, "initializeUser");
 const convertAnonymousToGoogleFn = httpsCallable(functions, "convertAnonymousToGoogle");
 const endSessionFn = httpsCallable(functions, "endSession");
+
+// ===== 잔액 히스토리 기록 =====
+async function recordBalanceHistory(uid, newBalance) {
+  if (typeof newBalance !== "number") return;
+  try {
+    const histRef = collection(db, "users", uid, "balanceHistory");
+    const lastSnap = await getDocs(query(histRef, orderBy("at", "desc"), limit(1)));
+    const lastBalance = lastSnap.empty ? null : lastSnap.docs[0].data().balance;
+    if (lastBalance === newBalance) return;
+    await addDoc(histRef, {
+      balance: newBalance,
+      delta: lastBalance !== null ? newBalance - lastBalance : 0,
+      at: serverTimestamp(),
+    });
+  } catch (e) {
+    console.error("잔액 히스토리 기록 실패:", e);
+  }
+}
 
 // ===== 로그 =====
 function log(msg, isError = false) {
@@ -444,6 +463,7 @@ async function processUserLogin(user) {
 
     const userData = result.data;
     currentUserData = userData;
+    recordBalanceHistory(user.uid, userData.balance);
 
     log(`초기화 완료: ${userData.isNewUser ? "신규" : "기존"}, ${formatG(userData.balance)}`);
     updateAuthUI(user, userData);
@@ -1271,6 +1291,7 @@ window.handleSkipCooldown = async function() {
   try {
     const result = await skipCooldown();
     if (currentUserData) currentUserData.balance = result.newBalance;
+    if (auth.currentUser) recordBalanceHistory(auth.currentUser.uid, result.newBalance);
     updateAuthUI(auth.currentUser, currentUserData);
     btn.style.display = "none";
   } catch (e) {
@@ -1492,6 +1513,7 @@ window.handleClaimDailyReward = async function() {
       currentUserData.consecutiveLoginDays = result.newStreak;
       currentUserData.lastDailyRewardAt = Date.now();
     }
+    if (auth.currentUser) recordBalanceHistory(auth.currentUser.uid, result.newBalance);
     updateAuthUI(auth.currentUser, currentUserData);
     renderDailyRewardSection(currentUserData);
     updateRewardBtn(currentUserData);

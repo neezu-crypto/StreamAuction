@@ -23,6 +23,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // users/{uid}/balanceHistory: 본인만 읽기/생성, 수정·삭제 불가
+    match /users/{userId}/balanceHistory/{docId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && request.resource.data.balance is number
+        && request.resource.data.balance >= 0
+        && request.resource.data.delta is number;
+      allow update, delete: if false;
+    }
+
     // listings: 누구나 읽기, 쓰기는 Cloud Functions만
     match /listings/{listingId} {
       allow read: if true;

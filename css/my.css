@@ -270,6 +270,46 @@
 .bh-daily-val.pos { color: #4ade80; }
 .bh-daily-val.neg { color: #f87171; }
 
+/* ===== 총 잔액 변화 탭 — 히스토리 타임라인 ===== */
+.bh-loading {
+  text-align: center;
+  padding: 24px;
+  color: #6b7280;
+  font-size: .9rem;
+}
+
+.bh-hist-header {
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: 8px;
+  padding: 4px 10px 6px;
+  font-size: .72rem;
+  color: #4b5563;
+  border-bottom: 1px solid #2a2e38;
+  margin-bottom: 4px;
+}
+
+.bh-hist-item {
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: .85rem;
+}
+
+.bh-hist-item:hover { background: #1e2231; }
+
+.bh-hist-time { color: #6b7280; white-space: nowrap; font-size: .78rem; }
+
+.bh-hist-delta { font-weight: 700; white-space: nowrap; }
+.bh-hist-delta.pos { color: #4ade80; }
+.bh-hist-delta.neg { color: #f87171; }
+.bh-hist-delta.zero { color: #6b7280; font-weight: 400; font-style: italic; }
+
+.bh-hist-balance { text-align: right; white-space: nowrap; color: #e2e8f0; }
+
 /* ===== 섹션 공통 ===== */
 .my-section {
   margin-bottom: 32px;

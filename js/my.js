@@ -5,6 +5,7 @@
 import {auth, db, functions, rtdb} from "./firebase-config.js";
 import {
   doc, getDoc, getDocFromServer, collection, query, where, getDocs,
+  addDoc, serverTimestamp, orderBy, limit,
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 import {ref as dbRef, onValue as dbOnValue} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
 import {httpsCallable} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-functions.js";
@@ -56,6 +57,7 @@ watchAuthState(async (user) => {
   try {
     const res = await initializeUserFn();
     currentUserData = res.data;
+    recordBalanceHistory(user.uid, currentUserData.balance);
   } catch (e) {
     console.error("initializeUser 실패:", e);
   }
@@ -492,6 +494,24 @@ function renderLoginPrompt() {
     </div>`;
 }
 
+// ===== 잔액 히스토리 기록 =====
+async function recordBalanceHistory(uid, newBalance) {
+  if (typeof newBalance !== "number") return;
+  try {
+    const histRef = collection(db, "users", uid, "balanceHistory");
+    const lastSnap = await getDocs(query(histRef, orderBy("at", "desc"), limit(1)));
+    const lastBalance = lastSnap.empty ? null : lastSnap.docs[0].data().balance;
+    if (lastBalance === newBalance) return; // 변동 없으면 기록 안 함
+    await addDoc(histRef, {
+      balance: newBalance,
+      delta: lastBalance !== null ? newBalance - lastBalance : 0,
+      at: serverTimestamp(),
+    });
+  } catch (e) {
+    console.error("잔액 히스토리 기록 실패:", e);
+  }
+}
+
 // ===== 잔액 변화 모달 =====
 let _bhData = null; // 모달 열릴 때 한 번만 계산
 
@@ -565,17 +585,16 @@ window.openBalanceHistoryModal = function() {
   $("balanceHistoryModal")?.classList.add("show");
 };
 
-function _renderBalanceTab(tab) {
+async function _renderBalanceTab(tab) {
   const content = $("bhTabContent");
   if (!content || !_bhData) return;
-  const {events, groups, dayKeys, dailyNet, totalNet} = _bhData;
+  const {events, groups, dayKeys} = _bhData;
 
   if (tab === "transactions") {
     if (events.length === 0) {
       content.innerHTML = `<p class="balance-history-empty">최근 7일간 거래 내역이 없습니다.</p>`;
       return;
     }
-    // 날짜 있는 키만, 이벤트 있는 날짜 기준으로
     const usedKeys = dayKeys.filter((k) => groups[k]?.length);
     content.innerHTML = usedKeys.map((key) => {
       const items = groups[key].map((e) => `
@@ -590,38 +609,91 @@ function _renderBalanceTab(tab) {
         ${items}
       </div>`;
     }).join("");
+
   } else {
-    // 총 잔액 변화 탭
-    const maxAbs = Math.max(...dailyNet.map((d) => Math.abs(d.net)), 1);
-    const rows = dailyNet.map(({key, net}) => {
-      const pct = Math.round((Math.abs(net) / maxAbs) * 100);
-      const cls = _deltaClass(net);
-      const barDir = net >= 0 ? "bh-bar-pos" : "bh-bar-neg";
-      return `
-        <div class="bh-daily-row">
-          <span class="bh-daily-date">${_toKSTDateLabel(key)}</span>
-          <div class="bh-bar-wrap">
-            ${net !== 0 ? `<div class="bh-bar ${barDir}" style="width:${pct}%"></div>` : `<div class="bh-bar-zero"></div>`}
-          </div>
-          <span class="bh-daily-val ${cls}">${net !== 0 ? _fmtDelta(net) : "—"}</span>
-        </div>`;
+    // 총 잔액 변화 탭 — Firestore balanceHistory 로드
+    content.innerHTML = `<p class="bh-loading">불러오는 중...</p>`;
+    const uid = auth.currentUser?.uid;
+    if (!uid) { content.innerHTML = `<p class="balance-history-empty">로그인이 필요합니다.</p>`; return; }
+
+    let entries = [];
+    try {
+      const histRef = collection(db, "users", uid, "balanceHistory");
+      const snap = await getDocs(query(histRef, orderBy("at", "desc"), limit(200)));
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      entries = snap.docs
+          .map((d) => {
+            const data = d.data();
+            return {...data, atMs: data.at?.toMillis?.() ?? 0};
+          })
+          .filter((e) => e.atMs >= sevenDaysAgo)
+          .sort((a, b) => a.atMs - b.atMs); // 오래된 순
+    } catch (e) {
+      content.innerHTML = `<p class="balance-history-empty">불러오기 실패: ${e.message}</p>`;
+      return;
+    }
+
+    if (entries.length === 0) {
+      content.innerHTML = `<p class="balance-history-empty">최근 7일간 잔액 변화 기록이 없습니다.<br><small style="color:#4b5563">마이페이지 방문 시 자동으로 기록됩니다.</small></p>`;
+      return;
+    }
+
+    // 순변화: 마지막 잔액 - (첫 번째 잔액 - 첫 번째 delta)
+    const startBalance = entries[0].balance - (entries[0].delta ?? 0);
+    const endBalance = entries[entries.length - 1].balance;
+    const netChange = endBalance - startBalance;
+
+    // 날짜별 그룹 (내림차순 표시)
+    const histGroups = {};
+    const histGroupOrder = [];
+    [...entries].reverse().forEach((e) => {
+      const key = _toKSTDateKey(e.atMs);
+      if (!histGroups[key]) { histGroups[key] = []; histGroupOrder.push(key); }
+      histGroups[key].push(e);
+    });
+
+    const listHtml = histGroupOrder.map((key) => {
+      const rows = histGroups[key].map((e) => {
+        const hasDelta = e.delta !== 0;
+        return `
+          <div class="bh-hist-item">
+            <span class="bh-hist-time">${_toKSTTime(e.atMs)}</span>
+            <span class="bh-hist-delta ${hasDelta ? _deltaClass(e.delta) : "zero"}">
+              ${hasDelta ? _fmtDelta(e.delta) : "기록 시작"}
+            </span>
+            <span class="bh-hist-balance">${formatG(e.balance)}</span>
+          </div>`;
+      }).join("");
+      return `<div class="balance-history-group">
+        <div class="balance-history-date">${_toKSTDateLabel(key)}</div>
+        ${rows}
+      </div>`;
     }).join("");
 
     content.innerHTML = `
       <div class="bh-net-summary">
-        <span class="bh-net-label">7일 순변화</span>
-        <span class="bh-net-value ${_deltaClass(totalNet)}">${_fmtDelta(totalNet)}</span>
+        <div>
+          <div class="bh-net-label">7일 순변화</div>
+          <div class="bh-net-value ${_deltaClass(netChange)}">${_fmtDelta(netChange)}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="bh-net-label">현재 잔액</div>
+          <div class="bh-net-value">${formatG(endBalance)}</div>
+        </div>
       </div>
-      <div class="bh-daily-chart">${rows}</div>`;
+      <div class="bh-hist-header">
+        <span>시간</span><span>변화</span><span style="text-align:right">잔액</span>
+      </div>
+      <div class="balance-history-list">${listHtml}</div>`;
   }
 }
 
-window.switchBalanceTab = function(tab) {
+window.switchBalanceTab = async function(tab) {
   ["transactions", "summary"].forEach((t) => {
     const btn = $(`bhTab-${t}`);
     if (btn) btn.classList.toggle("is-active", t === tab);
   });
-  _renderBalanceTab(tab);
+  await _renderBalanceTab(tab);
 };
 
 window.closeBalanceHistoryModal = function() {
