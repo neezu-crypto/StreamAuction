@@ -232,6 +232,8 @@ function renderVault() {
   const usedSlots = vaulted.length;
   const freeSlots = slots - usedSlots;
 
+  const canVault = myHoldings.filter((h) => h.vaultedBy !== uid && !h.isLocked);
+
   const slotCards = Array.from({length: slots}, (_, i) => {
     const item = vaulted[i] || null;
     if (item) {
@@ -250,10 +252,12 @@ function renderVault() {
             onclick="handleUnvaultListing('${escapeHtml(item.id)}')">인출</button>
         </div>`;
     }
+    const clickable = canVault.length > 0;
     return `
-      <div class="vault-slot vault-slot--empty">
-        <div class="vault-slot-empty-icon">🔓</div>
-        <div class="vault-slot-empty-text">빈 슬롯</div>
+      <div class="vault-slot vault-slot--empty${clickable ? " vault-slot--clickable" : ""}"
+        ${clickable ? `onclick="openVaultPickerModal()" title="클릭해서 매물 선택"` : ""}>
+        <div class="vault-slot-empty-icon">${clickable ? "➕" : "🔓"}</div>
+        <div class="vault-slot-empty-text">${clickable ? "클릭해서 매물 보관" : "빈 슬롯"}</div>
       </div>`;
   }).join("");
 
@@ -263,9 +267,6 @@ function renderVault() {
         <span class="my-section-title">🏦 금고</span>
         <span class="my-section-count">${usedSlots} / ${slots} 사용 중</span>
       </div>
-      ${freeSlots > 0 && myHoldings.filter((h) => h.vaultedBy !== uid).length > 0 ? `
-        <div class="vault-assign-hint">보유 매물 카드의 <strong>금고 보관</strong> 버튼으로 매물을 보관하세요.</div>
-      ` : ""}
       <div class="vault-slots-grid">${slotCards}</div>
     </div>`;
 }
@@ -643,6 +644,47 @@ window.saveNickname = async function() {
 };
 
 // ===== 금고 =====
+window.openVaultPickerModal = function() {
+  const uid = auth.currentUser?.uid;
+  const available = myHoldings.filter((h) => h.vaultedBy !== uid && !h.isLocked);
+  const list = $("vaultPickerList");
+  if (!list) return;
+
+  if (available.length === 0) {
+    list.innerHTML = `
+      <div class="vault-picker-empty">
+        보관 가능한 매물이 없습니다.<br>
+        경매 진행 중이 아닌 매물만 금고에 보관할 수 있습니다.
+      </div>`;
+  } else {
+    list.innerHTML = `<div class="vault-picker-list">${available.map((h) => {
+      const img = h.profileImageUrl || "assets/images/default-avatar.svg";
+      return `
+        <div class="vault-picker-item" onclick="pickVaultItem('${escapeHtml(h.id)}')">
+          <img class="vault-picker-img" src="${img}"
+            onerror="this.src='assets/images/default-avatar.svg'" alt="">
+          <div class="vault-picker-info">
+            <div class="vault-picker-name">${escapeHtml(h.displayName)}</div>
+            <div class="vault-picker-id">@${escapeHtml(h.soopId)}</div>
+            <div class="vault-picker-price">${formatG(h.currentPrice)}</div>
+          </div>
+          <span class="vault-picker-arrow">→</span>
+        </div>`;
+    }).join("")}</div>`;
+  }
+
+  $("vaultPickerModal")?.classList.add("show");
+};
+
+window.closeVaultPickerModal = function() {
+  $("vaultPickerModal")?.classList.remove("show");
+};
+
+window.pickVaultItem = async function(listingId) {
+  closeVaultPickerModal();
+  await window.handleVaultListing(listingId);
+};
+
 window.handleVaultListing = async function(listingId) {
   try {
     await setVaultListingFn({listingId, action: "vault"});

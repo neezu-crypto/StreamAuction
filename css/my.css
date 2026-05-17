@@ -500,6 +500,64 @@
 .vault-slot-empty-icon { font-size: 1.4rem; }
 .vault-slot-empty-text { font-size: 0.8rem; }
 
+.vault-slot--clickable {
+  cursor: pointer;
+  border-color: #374151;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.vault-slot--clickable:hover {
+  background: #111827;
+  border-color: #f5d142;
+  color: #f5d142;
+}
+
+.vault-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vault-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #0f1115;
+  border: 1px solid #2a2e38;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.vault-picker-item:hover {
+  background: #1a1f2e;
+  border-color: #f5d14266;
+}
+.vault-picker-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.vault-picker-info { flex: 1; min-width: 0; }
+.vault-picker-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e8e8e8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vault-picker-id { font-size: 0.75rem; color: #9ba3b4; }
+.vault-picker-price { font-size: 0.82rem; color: #f5d142; font-weight: 600; margin-top: 2px; }
+.vault-picker-arrow { color: #9ba3b4; font-size: 1rem; flex-shrink: 0; }
+.vault-picker-empty {
+  text-align: center;
+  color: #9ba3b4;
+  padding: 24px 0;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
 .vault-slot-img {
   width: 40px;
   height: 40px;

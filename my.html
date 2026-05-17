@@ -37,6 +37,22 @@
   <p>&copy; 2026 StreamAuction. MVP Build.</p>
 </footer>
 
+<!-- 금고 매물 선택 모달 -->
+<div class="modal-overlay" id="vaultPickerModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>🏦 금고에 보관할 매물 선택</h2>
+      <button class="modal-close" onclick="closeVaultPickerModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="vaultPickerList"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeVaultPickerModal()">취소</button>
+    </div>
+  </div>
+</div>
+
 <!-- 손절 경매 등록 모달 -->
 <div class="modal-overlay" id="registerModal">
   <div class="modal">
