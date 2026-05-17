@@ -413,13 +413,15 @@ a {
 }
 
 /* ===== Presence Bar ===== */
-.presence-bar {
-  background: #1a1d24;
-  border-bottom: 1px solid #2a2e38;
-  padding: 5px 20px;
-  text-align: center;
-  font-size: .75rem;
+.header-online-count {
+  font-size: 0.75rem;
   color: #6b7280;
+  background: #0f1115;
+  border: 1px solid #2a2e38;
+  border-radius: 20px;
+  padding: 3px 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* ===== Responsive ===== */
