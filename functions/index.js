@@ -2229,3 +2229,83 @@ exports.skipCooldown = onCall(
       return {success: true, newBalance};
     },
 );
+
+// ============================================
+// viewRanking: 랭킹 페이지 열람 (50,000G)
+// 구글 로그인 유저 전용
+// ============================================
+const RANKING_COST = 50000;
+
+exports.viewRanking = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+      }
+      const uid = request.auth.uid;
+
+      const userRef = db.collection("users").doc(uid);
+      let newBalance;
+
+      await db.runTransaction(async (tx) => {
+        const userSnap = await tx.get(userRef);
+        if (!userSnap.exists) throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+        const userData = userSnap.data();
+
+        if (userData.authType !== "google") {
+          throw new HttpsError("permission-denied", "구글 로그인 유저만 이용할 수 있습니다.");
+        }
+        if (userData.balance < RANKING_COST) {
+          throw new HttpsError(
+              "failed-precondition",
+              `잔액이 부족합니다. (필요: ${RANKING_COST.toLocaleString()}G, 보유: ${userData.balance.toLocaleString()}G)`,
+          );
+        }
+        newBalance = userData.balance - RANKING_COST;
+        tx.update(userRef, {balance: FieldValue.increment(-RANKING_COST)});
+      });
+
+      const toItem = (doc) => {
+        const d = doc.data();
+        return {
+          listingId: doc.id,
+          soopId: d.soopId,
+          displayName: d.displayName,
+          profileImageUrl: d.profileImageUrl || null,
+          currentPrice: d.currentPrice || 0,
+          totalTradeCount: d.totalTradeCount || 0,
+          highestPrice: d.highestPrice || 0,
+          ownerId: d.ownerId || null,
+          ownerName: d.ownerName || null,
+          isMosaicked: d.isMosaicked || false,
+        };
+      };
+
+      const [priceSnap, tradeSnap, highestSnap] = await Promise.all([
+        db.collection("listings")
+            .where("currentPrice", ">", 0)
+            .orderBy("currentPrice", "desc")
+            .limit(50)
+            .get(),
+        db.collection("listings")
+            .where("totalTradeCount", ">", 0)
+            .orderBy("totalTradeCount", "desc")
+            .limit(50)
+            .get(),
+        db.collection("listings")
+            .where("highestPrice", ">", 0)
+            .orderBy("highestPrice", "desc")
+            .limit(50)
+            .get(),
+      ]);
+
+      logger.info(`랭킹 열람: uid=${uid}, cost=${RANKING_COST}G`);
+      return {
+        success: true,
+        newBalance,
+        byPrice: priceSnap.docs.map(toItem),
+        byTrade: tradeSnap.docs.map(toItem),
+        byHighest: highestSnap.docs.map(toItem),
+      };
+    },
+);

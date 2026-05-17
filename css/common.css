@@ -234,6 +234,24 @@ a {
   color: #6b7280;
 }
 
+/* ===== 페이지 내 상단 네비 ===== */
+.page-nav {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  max-width: 900px;
+  margin: 0 auto 16px;
+  padding: 0 20px;
+}
+
+.page-nav a {
+  color: #9ba3b4;
+  font-size: .9rem;
+  transition: color .15s;
+}
+
+.page-nav a:hover { color: #e8e8e8; }
+
 /* ============================================
    환영 모달
    ============================================ */

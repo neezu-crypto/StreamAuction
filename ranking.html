@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>랭킹 - StreamAuction</title>
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/auction.css">
+  <link rel="stylesheet" href="css/ranking.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <a href="index.html" class="logo">StreamAuction</a>
+    <div class="header-right">
+      <div class="auth-area" id="authArea">
+        <span class="loading">로딩 중...</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+  <nav class="page-nav">
+    <a href="index.html">← 메인으로</a>
+  </nav>
+
+  <div class="ranking-header">
+    <h1 class="ranking-title">📊 매물 시세 랭킹</h1>
+    <p class="ranking-desc">현재 거래되는 매물의 순위를 확인하세요</p>
+  </div>
+
+  <div id="rankingContent">
+    <div class="ranking-loading">로딩 중...</div>
+  </div>
+</main>
+
+<footer class="footer">
+  <p>&copy; 2026 StreamAuction. MVP Build.</p>
+</footer>
+
+<!-- 구글 로그인 필요 모달 -->
+<div class="modal-overlay" id="loginRequiredModal">
+  <div class="modal">
+    <h2>Google 로그인 필요</h2>
+    <p class="modal-message">랭킹 페이지는 구글 로그인 유저만 이용할 수 있습니다.</p>
+    <div class="modal-buttons">
+      <button class="btn-primary" onclick="location.href='index.html'">로그인하러 가기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 열람 비용 확인 모달 -->
+<div class="modal-overlay" id="payModal">
+  <div class="modal">
+    <h2>📊 랭킹 열람</h2>
+    <p class="modal-message">랭킹을 열람하면 <strong>50,000G</strong>가 차감됩니다.<br>계속하시겠습니까?</p>
+    <div class="balance-preview" id="payBalancePreview"></div>
+    <div class="modal-error" id="payError" style="display:none"></div>
+    <div class="modal-buttons">
+      <button class="btn-secondary" onclick="location.href='index.html'">취소</button>
+      <button class="btn-primary" id="btnConfirmPay" onclick="confirmViewRanking()">50,000G 차감하고 열람</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/ranking.js"></script>
+</body>
+</html>

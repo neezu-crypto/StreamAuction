@@ -269,6 +269,8 @@ function updateAuthUI(user, userData) {
 
     const typeLabel = userData.authType === "anonymous" ? "익명 유저" : "Google 유저";
     authArea.innerHTML = `
+      <a href="ranking.html" style="font-size:.82rem;color:#9ba3b4;text-decoration:none;padding:4px 10px;border:1px solid #2a2e38;border-radius:6px;transition:color .15s"
+        onmouseover="this.style.color='#e8e8e8'" onmouseout="this.style.color='#9ba3b4'">📊 랭킹</a>
       <a href="shop.html" style="font-size:.82rem;color:#9ba3b4;text-decoration:none;padding:4px 10px;border:1px solid #2a2e38;border-radius:6px;transition:color .15s"
         onmouseover="this.style.color='#e8e8e8'" onmouseout="this.style.color='#9ba3b4'">🛒 상점</a>
       <a href="my.html" style="font-size:.82rem;color:#9ba3b4;text-decoration:none;padding:4px 10px;border:1px solid #2a2e38;border-radius:6px;transition:color .15s"
@@ -1196,7 +1198,7 @@ window.handleSkipCooldown = async function() {
   try {
     const result = await skipCooldown();
     if (currentUserData) currentUserData.balance = result.newBalance;
-    renderUserBalance();
+    updateAuthUI(auth.currentUser, currentUserData);
     btn.style.display = "none";
   } catch (e) {
     setText("skipCooldownError", e.message || "처리 중 오류가 발생했습니다.");
@@ -1341,7 +1343,7 @@ window.handleViewHistory = async function(listingId, displayName) {
   try {
     const result = await viewAuctionHistory(listingId);
     if (currentUserData) currentUserData.balance = result.newBalance;
-    renderUserBalance();
+    updateAuthUI(auth.currentUser, currentUserData);
 
     if (!result.history || result.history.length === 0) {
       body.innerHTML = `<p class="history-empty">경매 기록이 없습니다.</p>`;
@@ -1420,7 +1422,7 @@ window.handleClaimDailyReward = async function() {
       currentUserData.consecutiveLoginDays = result.newStreak;
       currentUserData.lastDailyRewardAt = Date.now();
     }
-    renderUserBalance();
+    updateAuthUI(auth.currentUser, currentUserData);
     renderDailyRewardSection(currentUserData);
     updateRewardBtn(currentUserData);
 
@@ -1457,17 +1459,3 @@ window.closeHistoryModal = function() {
   const modal = $("historyModal");
   if (modal) modal.classList.remove("show");
 };
-
-function renderUserBalance() {
-  if (!currentUserData) return;
-  setText("balance", formatG(currentUserData.balance));
-  const authArea = $("authArea");
-  if (!authArea) return;
-  const typeLabel = currentUserData.authType === "anonymous" ? "익명 유저" : "Google 유저";
-  authArea.innerHTML = `
-    <span style="font-size:.85rem;color:#9ba3b4">
-      <strong style="color:#f5d142">${typeLabel}</strong>
-      · ${formatG(currentUserData.balance)}
-    </span>
-  `;
-}

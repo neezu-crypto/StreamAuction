@@ -1,0 +1,262 @@
+/* ============================================
+   ranking.css - 랭킹 페이지 스타일
+   ============================================ */
+
+
+.ranking-header {
+  text-align: center;
+  padding: 32px 20px 16px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.ranking-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #f5d142;
+  margin-bottom: 6px;
+}
+
+.ranking-desc {
+  font-size: .9rem;
+  color: #9ba3b4;
+}
+
+/* ===== 로딩 =====  */
+.ranking-loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: #9ba3b4;
+  font-size: .95rem;
+}
+
+/* ===== 탭 ===== */
+.ranking-tabs {
+  display: flex;
+  gap: 8px;
+  max-width: 900px;
+  margin: 0 auto 4px;
+  padding: 0 20px;
+  flex-wrap: wrap;
+}
+
+.ranking-tab {
+  padding: 8px 18px;
+  border-radius: 8px;
+  background: #1f2937;
+  color: #9ba3b4;
+  border: 1px solid #2a2e38;
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+
+.ranking-tab:hover {
+  background: #252b38;
+  color: #e8e8e8;
+}
+
+.ranking-tab.active {
+  background: #2a2e3f;
+  color: #f5d142;
+  border-color: #f5d142;
+}
+
+/* ===== 비용 안내 ===== */
+.ranking-cost-notice {
+  max-width: 900px;
+  margin: 0 auto 12px;
+  padding: 0 20px;
+  font-size: .8rem;
+  color: #6b7280;
+}
+
+/* ===== 테이블 ===== */
+.ranking-table-wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 20px;
+  overflow-x: auto;
+}
+
+.ranking-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .9rem;
+}
+
+.ranking-table thead tr {
+  background: #1a1d24;
+  border-bottom: 1px solid #2a2e38;
+}
+
+.ranking-table th {
+  padding: 12px 10px;
+  text-align: left;
+  color: #9ba3b4;
+  font-weight: 600;
+  font-size: .8rem;
+  white-space: nowrap;
+}
+
+.ranking-row {
+  border-bottom: 1px solid #1f2937;
+  cursor: pointer;
+  transition: background .12s;
+}
+
+.ranking-row:hover {
+  background: #1a1d24;
+}
+
+.ranking-table td {
+  padding: 12px 10px;
+  vertical-align: middle;
+}
+
+/* ===== 컬럼 ===== */
+.col-rank {
+  width: 48px;
+  text-align: center;
+}
+
+.col-listing { min-width: 180px; }
+.col-price, .col-highest, .col-trade { white-space: nowrap; }
+.col-owner { color: #9ba3b4; font-size: .85rem; white-space: nowrap; }
+
+td.highlight {
+  color: #f5d142;
+  font-weight: 700;
+}
+
+th.col-price, th.col-highest, th.col-trade { text-align: right; }
+td.col-price, td.col-highest, td.col-trade { text-align: right; }
+
+/* ===== 순위 표시 ===== */
+.rank-medal {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.rank-number {
+  font-size: .95rem;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+/* ===== 매물 셀 ===== */
+.listing-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.listing-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #2a2e38;
+}
+
+.listing-info {
+  min-width: 0;
+}
+
+.listing-name {
+  font-weight: 600;
+  font-size: .9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.listing-soop-id {
+  font-size: .78rem;
+  color: #9ba3b4;
+}
+
+/* ===== 모자이크 ===== */
+.img-mosaic {
+  filter: blur(6px);
+}
+
+.mosaic-text {
+  filter: blur(5px);
+  user-select: none;
+}
+
+.mosaic-badge {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: .7rem;
+  color: #f87171;
+  background: rgba(248, 113, 113, .12);
+  border: 1px solid rgba(248, 113, 113, .3);
+  border-radius: 4px;
+  padding: 1px 5px;
+  vertical-align: middle;
+}
+
+/* ===== 새로고침 버튼 ===== */
+.ranking-refresh-row {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.btn-refresh {
+  background: #1f2937;
+  border: 1px solid #2a2e38;
+  color: #9ba3b4;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+
+.btn-refresh:hover {
+  background: #252b38;
+  color: #e8e8e8;
+}
+
+.btn-refresh:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* ===== 빈 상태 / 에러 ===== */
+.ranking-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6b7280;
+  font-size: .95rem;
+}
+
+/* ===== 결제 모달 =====  */
+.balance-preview {
+  margin: 10px 0 4px;
+  font-size: .85rem;
+  color: #9ba3b4;
+  text-align: center;
+}
+
+.modal-error {
+  color: #f87171;
+  font-size: .85rem;
+  text-align: center;
+  margin-top: 6px;
+}
+
+/* ===== 반응형 ===== */
+@media (max-width: 600px) {
+  .ranking-tabs { gap: 6px; }
+  .ranking-tab { padding: 7px 12px; font-size: .8rem; }
+  .col-owner { display: none; }
+  .listing-name { max-width: 100px; }
+}
