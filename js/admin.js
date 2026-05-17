@@ -15,6 +15,7 @@ import {
 const adminGetDashboardFn = httpsCallable(functions, 'adminGetDashboard');
 const adminForceFinalizeFn = httpsCallable(functions, 'adminForceFinalize');
 const adminClearQueueFn = httpsCallable(functions, 'adminClearQueue');
+const adminForceUnlockListingFn = httpsCallable(functions, 'adminForceUnlockListing');
 const adminGetUserFn = httpsCallable(functions, 'adminGetUser');
 const adminBanUserFn = httpsCallable(functions, 'adminBanUser');
 const adminAdjustBalanceFn = httpsCallable(functions, 'adminAdjustBalance');
@@ -233,6 +234,31 @@ window.handleClearQueue = async function() {
     await refreshAuctionTab();
   } catch (e) {
     alert(`실패: ${e.message}`);
+  }
+};
+
+window.handleForceUnlock = async function() {
+  const listingId = $('unlockListingId')?.value?.trim();
+  const resultEl = $('unlockResult');
+  if (!listingId) {
+    resultEl.textContent = 'listings 문서 ID를 입력하세요.';
+    resultEl.style.color = '#f87171';
+    return;
+  }
+  if (!confirm(`매물 "${listingId}"의 잠금을 강제 해제하시겠습니까?\nRTDB 대기열에도 있으면 함께 제거됩니다.`)) return;
+
+  const btn = document.querySelector('[onclick="handleForceUnlock()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '처리 중...'; }
+  try {
+    const res = await adminForceUnlockListingFn({listingId});
+    resultEl.textContent = `✅ ${res.data.message}`;
+    resultEl.style.color = '#4ade80';
+    $('unlockListingId').value = '';
+  } catch (e) {
+    resultEl.textContent = `❌ ${e.message}`;
+    resultEl.style.color = '#f87171';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '잠금 해제'; }
   }
 };
 

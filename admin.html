@@ -94,6 +94,17 @@
           </div>
           <div id="auctionQueueCard"></div>
         </div>
+        <div class="admin-card">
+          <div class="admin-card-hd">
+            <h3>매물 잠금 강제 해제</h3>
+          </div>
+          <p class="admin-card-desc">경매가 없는데 매물이 "경매 진행 중"으로 stuck된 경우 사용합니다.</p>
+          <div class="search-row" style="margin-top:12px">
+            <input type="text" id="unlockListingId" class="admin-input" placeholder="listings 문서 ID 입력">
+            <button class="btn-warning btn-sm" onclick="handleForceUnlock()">잠금 해제</button>
+          </div>
+          <div id="unlockResult" style="margin-top:10px;font-size:.85rem"></div>
+        </div>
       </div>
     </div>
 

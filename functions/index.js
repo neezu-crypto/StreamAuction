@@ -1515,6 +1515,46 @@ exports.adminForceFinalize = onCall(
 );
 
 // ============================================
+// adminForceUnlockListing: isLocked stuck 강제 해제
+// ============================================
+exports.adminForceUnlockListing = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      await requireAdmin(request);
+      const {listingId} = request.data;
+      if (!listingId || typeof listingId !== "string") {
+        throw new HttpsError("invalid-argument", "listingId가 필요합니다.");
+      }
+
+      const listingRef = db.collection("listings").doc(listingId);
+      const snap = await listingRef.get();
+      if (!snap.exists) {
+        throw new HttpsError("not-found", "매물을 찾을 수 없습니다.");
+      }
+
+      const listing = snap.data();
+      if (!listing.isLocked) {
+        return {success: true, message: "이미 잠금 해제 상태입니다.", isLocked: false};
+      }
+
+      // RTDB queue에서도 해당 매물 제거 (있으면)
+      const queueSnap = await rtdb.ref("auction/queue").once("value");
+      const queue = queueSnap.val() || {};
+      for (const [key, entry] of Object.entries(queue)) {
+        if (entry.listingId === listingId) {
+          await rtdb.ref(`auction/queue/${key}`).remove();
+          logger.info(`관리자 잠금해제: queue 항목 제거 key=${key}, listingId=${listingId}`);
+          break;
+        }
+      }
+
+      await listingRef.update({isLocked: false, pendingRequestId: null});
+      logger.info(`관리자 잠금해제: listingId=${listingId} by ${request.auth.uid}`);
+      return {success: true, message: "잠금이 해제되었습니다.", isLocked: false};
+    },
+);
+
+// ============================================
 // adminClearQueue: 대기열 전체 삭제
 // ============================================
 exports.adminClearQueue = onCall(
