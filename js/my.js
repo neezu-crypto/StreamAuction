@@ -232,8 +232,6 @@ function renderVault() {
   const usedSlots = vaulted.length;
   const freeSlots = slots - usedSlots;
 
-  const canVault = myHoldings.filter((h) => h.vaultedBy !== uid && !h.isLocked);
-
   const slotCards = Array.from({length: slots}, (_, i) => {
     const item = vaulted[i] || null;
     if (item) {
@@ -252,12 +250,11 @@ function renderVault() {
             onclick="handleUnvaultListing('${escapeHtml(item.id)}')">인출</button>
         </div>`;
     }
-    const clickable = canVault.length > 0;
     return `
-      <div class="vault-slot vault-slot--empty${clickable ? " vault-slot--clickable" : ""}"
-        ${clickable ? `onclick="openVaultPickerModal()" title="클릭해서 매물 선택"` : ""}>
-        <div class="vault-slot-empty-icon">${clickable ? "➕" : "🔓"}</div>
-        <div class="vault-slot-empty-text">${clickable ? "클릭해서 매물 보관" : "빈 슬롯"}</div>
+      <div class="vault-slot vault-slot--empty vault-slot--clickable"
+        onclick="openVaultPickerModal()" title="클릭해서 매물 선택">
+        <div class="vault-slot-empty-icon">➕</div>
+        <div class="vault-slot-empty-text">클릭해서 매물 보관</div>
       </div>`;
   }).join("");
 
