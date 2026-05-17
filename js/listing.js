@@ -756,17 +756,39 @@ let currentAuctionInfo = null;
 (function() {
   let prevStatus = null;
   let prevListingId = null;
+  let isFirstFire = true;
+
   dbOnValue(dbRef(rtdb, "auction/current"), async (snap) => {
     const data = snap.val();
     const status = data?.status ?? null;
     const auctionListingId = data?.listingId ?? null;
     currentAuctionInfo = data ? {status, listingId: auctionListingId} : null;
 
-    // 경매 종료(active → 다른 상태): Firestore에서 재조회
+    const isLocked = currentListing?.isLocked;
+
+    if (isFirstFire) {
+      isFirstFire = false;
+      // 초기 로드: 이 매물이 잠겨있는데 active 경매 대상이 아니면 서버 재확인
+      const lockedNotActive = isLocked &&
+        (status !== "active" || auctionListingId !== listingId);
+      if (lockedNotActive) await refreshListing();
+      else if (isPaid) renderDetail();
+      else renderView();
+      prevStatus = status;
+      prevListingId = auctionListingId;
+      return;
+    }
+
+    // 경매 종료(active → 다른 상태): Firestore 재조회
     if (prevStatus === "active" && status !== "active") {
       await refreshListing();
-    } else if (prevStatus !== status || prevListingId !== auctionListingId) {
-      // 상태/대상 매물만 바뀐 경우: 재조회 없이 UI만 갱신
+    }
+    // 대기열 소진으로 null이 됐는데 매물이 아직 잠겨있으면 재확인
+    else if (status === null && isLocked) {
+      await refreshListing();
+    }
+    // 상태·대상 매물만 바뀐 경우: UI만 갱신
+    else if (prevStatus !== status || prevListingId !== auctionListingId) {
       if (isPaid) renderDetail();
       else renderView();
     }

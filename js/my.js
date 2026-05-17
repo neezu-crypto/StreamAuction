@@ -102,6 +102,8 @@ function setupAuctionEndWatcher(uid) {
   }
   let prevStatus = null;
   let prevListingId = null;
+  let isFirstFire = true;
+
   auctionWatcherUnsub = dbOnValue(dbRef(rtdb, "auction/current"), async (snap) => {
     const data = snap.val();
     const status = data?.status ?? null;
@@ -110,12 +112,33 @@ function setupAuctionEndWatcher(uid) {
 
     const statusChanged = prevStatus !== status;
     const listingChanged = prevListingId !== listingId;
+    const hasLockedHoldings = myHoldings.some((h) => h.isLocked);
 
-    // 경매 종료(active → 다른 상태)일 때 Firestore에서 홀딩 재조회
+    if (isFirstFire) {
+      isFirstFire = false;
+      // 초기 로드: 잠긴 매물이 있는데 해당 매물이 active 경매가 아니면 서버 재확인
+      // (finalizeAuction 직후 Firestore/RTDB 전파 타이밍 차이 보정)
+      const hasLockedNotActive = myHoldings.some(
+          (h) => h.isLocked && (status !== "active" || listingId !== h.id));
+      if (hasLockedNotActive) {
+        await loadHoldings(uid);
+      }
+      renderAll();
+      prevStatus = status;
+      prevListingId = listingId;
+      return;
+    }
+
+    // 경매 종료: active → 다른 상태
     if (prevStatus === "active" && status !== "active") {
       await loadHoldings(uid);
     }
-    // 상태나 대상 매물이 바뀌면 즉시 re-render (진행 중 / 대기 중 배지 갱신)
+    // 대기열 소진으로 RTDB가 null이 됐는데 잠긴 매물이 남아있으면 재확인
+    else if (status === null && hasLockedHoldings) {
+      await loadHoldings(uid);
+    }
+
+    // 상태·대상 매물이 바뀌면 re-render (배지 갱신)
     if (statusChanged || listingChanged) {
       renderAll();
     }
