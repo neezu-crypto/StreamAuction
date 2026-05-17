@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 import {ref as dbRef, onValue as dbOnValue} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
 import {httpsCallable} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-functions.js";
-import {watchAuthState, logout} from "./auth.js";
+import {watchAuthState, logout, loginGoogle, linkAnonymousToGoogle} from "./auth.js";
 import {
   registerAuction, respondToAuctionRequest, updateUserNickname,
   formatG, validateSoopId, validateNickname, getSoopProfileUrl,
@@ -503,7 +503,9 @@ function renderAuthArea() {
       <span style="color:#9ba3b4;font-size:.88rem">${formatG(currentUserData.balance ?? 0)}</span>
     </span>
     <a class="btn-secondary" href="shop.html" style="padding:5px 12px;font-size:.82rem">🛒 상점</a>
-    <button onclick="handleLogout()" class="btn-logout-header">로그아웃</button>`;
+    ${currentUserData.authType === "anonymous"
+      ? `<button onclick="handleGoogleLogin()" class="btn-primary" style="font-size:.82rem;padding:5px 12px">Google 로그인</button>`
+      : `<button onclick="handleLogout()" class="btn-logout-header">로그아웃</button>`}`;
 }
 
 window.handleLogout = async function() {
@@ -512,6 +514,17 @@ window.handleLogout = async function() {
     location.href = "index.html";
   } catch (e) {
     alert(`로그아웃 실패: ${e.message}`);
+  }
+};
+
+window.handleGoogleLogin = async function() {
+  try {
+    const result = await linkAnonymousToGoogle();
+    if (result.status !== "linked") await loginGoogle();
+  } catch (e) {
+    if (e.code !== "auth/popup-closed-by-user") {
+      alert(`로그인 실패: ${e.message}`);
+    }
   }
 };
 

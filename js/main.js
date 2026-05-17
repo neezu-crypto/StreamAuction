@@ -315,7 +315,9 @@ function updateAuthUI(user, userData) {
         <strong style="color:#f5d142">${typeLabel}</strong>
         · ${formatG(userData.balance)}
       </span>
-      <button onclick="handleLogout()" class="btn-logout-header">로그아웃</button>
+      ${userData.authType === "anonymous"
+        ? `<button onclick="handleGoogleLogin()" class="btn-primary" style="font-size:.82rem;padding:5px 12px">Google 로그인</button>`
+        : `<button onclick="handleLogout()" class="btn-logout-header">로그아웃</button>`}
     `;
   } else {
     setText("authStatus", "-");
