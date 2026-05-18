@@ -677,17 +677,48 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 
 <div id="s12" class="section-anchor">
 <h2>12. 비즈니스 모델</h2>
+
+<h3>G 소각원 (유료 기능)</h3>
 <table>
-<tr><th>항목</th><th>설명</th><th>Phase</th></tr>
-<tr><td>매물 상세 페이지 열람</td><td>시세 통계 6개 + 거래 액션 버튼 접근 → 50,000G</td><td><span class="badge badge-done">MVP</span></td></tr>
-<tr><td>경매 히스토리 열람</td><td>과거 경매 결과 + 입찰 기록 → 50,000G (상세 페이지 내 별도 과금)</td><td><span class="badge badge-done">MVP</span></td></tr>
-<tr><td>경매 간 쿨다운 건너뛰기</td><td>쿨다운 중 50,000G 지불 → 즉시 다음 경매 시작 (skipCooldown CF)</td><td><span class="badge badge-done">MVP</span></td></tr>
-<tr><td>랭킹 페이지 열람</td><td>구글 로그인 유저 전용. 페이지 진입 시 50,000G 차감 → 시세·거래횟수·역대최고가 3탭 제공 (viewRanking CF)</td><td><span class="badge badge-done">MVP</span></td></tr>
-<tr><td>강제청산 기간 연장권</td><td>보유 매물 강제청산 회신 기한 24h씩 연장 (80,000G / 24h) — 사전 구매 가능, requestAuction 시 자동 적용</td><td><span class="badge badge-done">MVP</span></td></tr>
-<tr><td>면역 연장권 / 보유 한도 확장 / 패스 3종</td><td>면역 연장 100,000G · 한도+1 1,000,000G · 금고 슬롯 1,500,000G · 대기열·상세·히스토리 패스 각 300,000G/30일 — shop.html 상점</td><td><span class="badge badge-done">MVP</span></td></tr>
-<tr><td>금고</td><td>금고 슬롯 1칸 영구 구매 — 매물 1개 보관 시 강제청산 완전 면제, 손절 후 슬롯 재사용 가능. 구글 전용.</td><td><span class="badge badge-done">구현 완료</span></td></tr>
-<tr><td>광고</td><td>배너, 영상 광고 (보상형)</td><td><span class="badge badge-phase">Phase 2</span></td></tr>
-<tr><td>스킨/칭호/프로필 테두리</td><td>코스메틱 아이템 — 상점에서 G로 구매</td><td><span class="badge badge-phase">Phase 3</span></td></tr>
+<tr><th>항목</th><th>금액</th><th>설명</th><th>Phase</th></tr>
+<tr><td>매물 상세 페이지 열람</td><td>50,000G / 1회</td><td>시세 통계 6개 + 거래 액션 버튼 접근. 상세 열람 패스 보유 시 무료.</td><td><span class="badge badge-done">구현 완료</span></td></tr>
+<tr><td>경매 히스토리 열람</td><td>50,000G / 1회</td><td>과거 경매 결과 + 입찰 기록. 히스토리 패스 보유 시 무료.</td><td><span class="badge badge-done">구현 완료</span></td></tr>
+<tr><td>랭킹 페이지 열람</td><td>50,000G / 1회</td><td>구글 계정 전용. 시세·거래횟수·역대최고가 3탭 제공. (viewRanking CF)</td><td><span class="badge badge-done">구현 완료</span></td></tr>
+<tr><td>경매 간 쿨다운 건너뛰기</td><td>50,000G / 1회</td><td>쿨다운 중 즉시 다음 경매 시작. (skipCooldown CF)</td><td><span class="badge badge-done">구현 완료</span></td></tr>
+<tr><td>강제청산 기간 연장권</td><td>100,000G / 24h</td><td>강제청산 회신 기한 24h 연장. 사전 구매 후 requestAuction 시 자동 적용.</td><td><span class="badge badge-done">구현 완료</span></td></tr>
+<tr><td>면역 연장권</td><td>100,000G / 1회</td><td>낙찰 후 면역 기간 연장.</td><td><span class="badge badge-done">구현 완료</span></td></tr>
+<tr><td>소유자 표시 등록</td><td>30,000G / 1회</td><td>매물 보유자가 상세 페이지에 닉네임 + SOOP ID를 등록. 다른 유저가 방송국 페이지로 이동 가능. 소유권 이전 시 자동 삭제. (setOwnerTag CF)</td><td><span class="badge badge-done">구현 완료</span></td></tr>
+<tr><td>상세 열람 패스</td><td>300,000G / 30일</td><td>기간 내 상세 페이지 무제한 열람.</td><td><span class="badge badge-done">구현 완료</span></td></tr>
+<tr><td>히스토리 패스</td><td>300,000G / 30일</td><td>기간 내 경매 히스토리 무제한 열람.</td><td><span class="badge badge-done">구현 완료</span></td></tr>
+<tr><td>대기열 우선권 패스</td><td>300,000G / 30일</td><td>기간 내 경매 대기열 우선 배치.</td><td><span class="badge badge-done">구현 완료</span></td></tr>
+<tr><td>보유 한도 +1</td><td>1,000,000G / 영구</td><td>기본 보유 한도 1슬롯 영구 확장. Google 계정 전용.</td><td><span class="badge badge-done">구현 완료</span></td></tr>
+<tr><td>금고 슬롯</td><td>1,500,000G / 영구</td><td>매물 1개 보관 슬롯. 금고 매물은 강제청산 완전 면제. 손절 후 슬롯 재사용 가능. Google 계정 전용.</td><td><span class="badge badge-done">구현 완료</span></td></tr>
+<tr><td>스킨/칭호/프로필 테두리</td><td>미정</td><td>코스메틱 아이템 — 상점에서 G로 구매.</td><td><span class="badge badge-phase">Phase 3</span></td></tr>
+</table>
+
+<h3>G 발행원 (무료 지급)</h3>
+<table>
+<tr><th>항목</th><th>금액</th><th>설명</th><th>Phase</th></tr>
+<tr><td>회원가입 보너스</td><td>500,000G / 1회</td><td>최초 가입 시 1회 지급.</td><td><span class="badge badge-done">구현 완료</span></td></tr>
+<tr><td>출석 보상</td><td>50,000G / 1일</td><td>일일 1회. 7일 연속 출석 시 추가 보너스.</td><td><span class="badge badge-done">구현 완료</span></td></tr>
+<tr><td>광고 시청 보상</td><td>5,000G / 1회 (최대 3회/일)</td><td>보상형 광고 시청 후 claimAdReward CF 호출. (claimAdReward CF)</td><td><span class="badge badge-done">구현 완료</span></td></tr>
+<tr><td>강제청산 환급</td><td>시세 100%</td><td>미회신 강제청산 발동 시 현재 시세 전액 환급.</td><td><span class="badge badge-done">구현 완료</span></td></tr>
+</table>
+
+<h3>경매 수수료</h3>
+<p>경매 낙찰 시 수수료 없음 — 낙찰가 <strong>100%</strong>가 매도자에게 즉시 지급됩니다. 초기 유저 유입 및 거래 활성화 우선 정책이며, 서비스 규모 확대 시 재검토 예정.</p>
+
+<h3>G 경제 균형 분석</h3>
+<table>
+<tr><th>구분</th><th>항목</th><th>1유저 기준</th><th>비고</th></tr>
+<tr><td rowspan="3"><strong>발행</strong></td><td>가입 보너스</td><td>500,000G (1회)</td><td>-</td></tr>
+<tr><td>출석 보상</td><td>50,000G/일</td><td>연속 30일 ≈ 1,500,000G</td></tr>
+<tr><td>광고 보상</td><td>최대 15,000G/일</td><td>5,000G × 3회</td></tr>
+<tr><td rowspan="5"><strong>소각</strong></td><td>상세/히스토리 열람</td><td>50,000G/회</td><td>패스로 정액화 가능</td></tr>
+<tr><td>쿨다운 건너뛰기 / 랭킹</td><td>50,000G/회</td><td>-</td></tr>
+<tr><td>보호 아이템 (연장권류)</td><td>100,000G~</td><td>상황별 지출</td></tr>
+<tr><td>소유자 표시</td><td>30,000G/회</td><td>소유권 이전 시 재등록 필요</td></tr>
+<tr><td>패스 / 한도 확장 / 금고</td><td>300,000G ~ 1,500,000G</td><td>고가 아이템 → 주요 소각 동력</td></tr>
 </table>
 
 <h3>절대 금지</h3>
