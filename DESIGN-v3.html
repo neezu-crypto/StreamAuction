@@ -146,6 +146,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
     <a class="nav-btn" href="#s20">20. 중계방송</a>
     <a class="nav-btn" href="#s21">21. 이용약관</a>
     <a class="nav-btn" href="#s22">22. 개인정보 처리방침</a>
+    <a class="nav-btn" href="#s23">23. 위변조 방지</a>
   </div>
 </nav>
 
@@ -187,6 +188,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
     <a class="toc-item" href="#s20">20. 중계방송 홍보</a>
     <a class="toc-item" href="#s21">21. 이용약관</a>
     <a class="toc-item" href="#s22">22. 개인정보 처리방침</a>
+    <a class="toc-item" href="#s23">23. 위변조 방지 대책</a>
   </div>
 </div>
 
@@ -507,17 +509,63 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 </div>
 
 <div id="s9" class="section-anchor">
-<h2>9. 어뷰징 방어 시스템</h2>
+<h2>9. 어뷰징 방어 시스템 <span class="badge badge-done">구현 완료</span></h2>
+
+<h3>9.1 경매 조작 방어</h3>
 <table>
-<tr><th>어뷰징</th><th>v3 방어</th><th>상태</th></tr>
-<tr><td>자전거래</td><td>경매 공개 → 다른 유저가 끼어들 수 있음</td><td><span class="badge badge-done">구현</span></td></tr>
-<tr><td>시세 펌핑</td><td>자기 매물 입찰 불가 + 공개 경매</td><td><span class="badge badge-done">구현</span></td></tr>
-<tr><td>허위 입찰</td><td>입찰 취소 불가 + 에스크로</td><td><span class="badge badge-done">구현</span></td></tr>
-<tr><td>익명 계정 재등록</td><td>경매 등록 후 1시간 쿨다운 (구글 계정 면제)</td><td><span class="badge badge-done">구현</span></td></tr>
-<tr><td>가격 조작</td><td>경매 기록 전부 공개</td><td><span class="badge badge-todo">미구현 Phase 2</span></td></tr>
-<tr><td>봇 트래픽</td><td>분당 N회 이상 입찰 차단</td><td><span class="badge badge-todo">미구현 Phase 2</span></td></tr>
-<tr><td>동일 IP</td><td>같은 IP 경매 등록 + 입찰 동시 차단</td><td><span class="badge badge-todo">미구현</span></td></tr>
+<tr><th>어뷰징</th><th>방어 수단</th><th>구현 위치</th><th>상태</th></tr>
+<tr><td>자기 매물 입찰 (자전거래)</td><td><code>listing.ownerId === uid</code> 검증 → <code>permission-denied</code></td><td>placeBid CF</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>시세 펌핑</td><td>자기 매물 입찰 불가 + 전체 공개 경매 구조로 타인 개입 가능</td><td>placeBid CF</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>허위 입찰 (취소 어뷰징)</td><td>입찰 취소 기능 없음 + 에스크로 방식(입찰 즉시 잔액 차감, 패찰 시 자동 환급)</td><td>placeBid CF</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>스나이핑 (마감 직전 입찰)</td><td>종료 15초 이내 입찰 시 15초 자동 연장 (<code>SNIPE_WINDOW_MS</code> / <code>SNIPE_EXTENSION_MS</code>)</td><td>placeBid CF</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>최저가 미만 입찰</td><td>현재가 + 10,000G 미만 입찰 거부 (<code>minBid = currentPrice + 10000</code>)</td><td>placeBid CF</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>보유 한도 초과 낙찰</td><td><code>ownedCount >= ownedLimit</code> 체크 → 입찰 거부</td><td>placeBid CF</td><td><span class="badge badge-done">구현</span></td></tr>
 </table>
+
+<h3>9.2 경매 등록 어뷰징 방어</h3>
+<table>
+<tr><th>어뷰징</th><th>방어 수단</th><th>구현 위치</th><th>상태</th></tr>
+<tr><td>익명 계정 반복 등록</td><td>익명 유저: 마지막 등록 후 1시간 쿨다운. Google 계정 면제.</td><td>registerAuction CF</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>시작가 허위 설정</td><td>시작가 50,000G 미만 등록 거부 (서버 검증)</td><td>registerAuction CF</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>존재하지 않는 매물 등록</td><td>SOOP ID 정규식 검증 (<code>/^[a-zA-Z0-9]+$/</code>) + 소문자 정규화</td><td>registerAuction CF</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>보유 한도 초과 등록</td><td><code>ownedCount >= ownedLimit</code> 체크 (익명 1개 / Google 5개 기본)</td><td>registerAuction CF</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>잔액 없이 등록 (유찰 자동낙찰 대비)</td><td>Type A 등록 시 <code>balance >= startPrice</code> 체크</td><td>registerAuction CF</td><td><span class="badge badge-done">구현</span></td></tr>
+</table>
+
+<h3>9.3 유찰 면역 및 요청 남용 방어</h3>
+<table>
+<tr><th>어뷰징</th><th>방어 수단</th><th>구현 위치</th><th>상태</th></tr>
+<tr><td>유찰 직후 즉시 재요청</td><td>유찰 시 24시간 면역 자동 부여 (<code>immunityUntil = now + 24h</code>). 면역 중 요청 거부.</td><td>finalizeAuction · requestAuction CF</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>경매 거부 후 즉시 재요청</td><td>보유자 거부 시 24시간 면역 설정</td><td>respondToAuctionRequest CF</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>강제청산 회피 (무응답)</td><td>24시간 미회신 시 강제청산 자동 처리 → 시세 100% 보유자에게 환급 + 무보유 전환</td><td>checkAndFinalizeExpiredRequests CF</td><td><span class="badge badge-done">구현</span></td></tr>
+</table>
+
+<h3>9.4 계정 및 접속 어뷰징 방어</h3>
+<table>
+<tr><th>어뷰징</th><th>방어 수단</th><th>구현 위치</th><th>상태</th></tr>
+<tr><td>정지 계정 활동</td><td><code>isBanned</code> 플래그 체크. 입찰·등록·요청 등 모든 CF에서 차단.</td><td>전체 CF</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>세션 없이 핵심 기능 접근</td><td><code>requireSession(uid)</code>: RTDB <code>sessions/{uid}</code> 존재 여부 확인. 입찰·등록·요청 게이트.</td><td>placeBid · registerAuction · requestAuction CF</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>접속자 수 조작 (presence 위변조)</td><td>sessions/presence 노드 Admin SDK 전용 쓰기. <code>presenceVersion</code> 카운터로 stale 콜백 차단.</td><td>RTDB 규칙 + 클라이언트 setupPresence</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>접속 제한 우회 (스테일 세션)</td><td>initializeUser에서 presence 없는 sessions를 스테일 판별 후 제거 → 활성 카운트 재산출</td><td>initializeUser CF</td><td><span class="badge badge-done">구현</span></td></tr>
+</table>
+
+<h3>9.5 보상 어뷰징 방어</h3>
+<table>
+<tr><th>어뷰징</th><th>방어 수단</th><th>구현 위치</th><th>상태</th></tr>
+<tr><td>출석 보상 중복 수령</td><td>KST 날짜 기준 트랜잭션 내 <code>lastDailyRewardAt</code> 재확인</td><td>claimDailyReward CF</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>광고 보상 일일 한도 초과</td><td>KST 날짜 기준 <code>adClaimCount</code> 트랜잭션 내 재확인 (최대 3회)</td><td>claimAdReward CF</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>동일 광고 중복 보상</td><td><code>users/{uid}/adClaims/{adId}</code> 서브컬렉션에 당일 수령 기록</td><td>claimAdReward CF</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>본인 광고 보상 수령</td><td><code>ad.uid === uid</code> 체크 → 거부</td><td>claimAdReward CF</td><td><span class="badge badge-done">구현</span></td></tr>
+</table>
+
+<h3>9.6 미구현 / 향후 과제</h3>
+<table>
+<tr><th>어뷰징</th><th>계획된 방어 수단</th><th>상태</th></tr>
+<tr><td>봇 트래픽 / 반복 CF 호출</td><td>Firebase App Check 도입 또는 호출 간격 Rate Limit 적용</td><td><span class="badge badge-todo">Phase 2</span></td></tr>
+<tr><td>동일 IP 다중 계정</td><td>IP 기반 계정 중복 감지 (Cloud Functions IP 헤더 활용)</td><td><span class="badge badge-todo">미정</span></td></tr>
+<tr><td>현금 충전 위변조</td><td>PG사 webhook 서버 검증 (클라이언트 결제 완료 신호 미신뢰)</td><td><span class="badge badge-todo">충전 도입 전 필수</span></td></tr>
+</table>
+
 </div>
 
 <div id="s10" class="section-anchor">
@@ -545,43 +593,85 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 </div>
 
 <div id="s11" class="section-anchor">
-<h2>11. 화폐 발행원 정책</h2>
-<h3>가입 보너스</h3>
+<h2>11. 화폐 발행원 정책 <span class="badge badge-new">2026-05-19 최신화</span></h2>
+
+<blockquote>G는 순수 인게임 화폐. 현금 환전(G→현금) 영구 금지. 발행(inflation)과 소각(deflation)의 균형이 경제 건전성을 결정한다.</blockquote>
+
+<h3>11.1 초기 지급 (1회성 발행)</h3>
 <div class="stat-grid">
 <div class="stat"><div class="stat-label">익명 가입</div><div class="stat-value">200,000G</div></div>
-<div class="stat"><div class="stat-label">구글 가입</div><div class="stat-value">1,000,000G</div></div>
-<div class="stat"><div class="stat-label">전환 보너스</div><div class="stat-value">+800,000G</div></div>
+<div class="stat"><div class="stat-label">Google 가입</div><div class="stat-value">1,000,000G</div></div>
+<div class="stat"><div class="stat-label">익명→Google 전환 보너스</div><div class="stat-value">+800,000G</div></div>
 </div>
 
-<h3>구글 유저 수입원 (출석/광고/튜토리얼)</h3>
+<h3>11.2 지속 발행원 (Google 계정 전용)</h3>
 <table>
-<tr><th>항목</th><th>값</th></tr>
-<tr><td>출석 1~2일</td><td>5,000G/일</td></tr>
-<tr><td>출석 3일+</td><td>10,000G/일</td></tr>
-<tr><td>출석 7일 특별</td><td>30,000G</td></tr>
-<tr><td>출석 30일 특별</td><td>100,000G</td></tr>
-<tr><td>광고 시청 (일 3회 한도)</td><td>5,000G/회</td></tr>
-<tr><td>첫 경매 등록 (1회)</td><td>10,000G</td></tr>
-<tr><td>첫 낙찰 (1회)</td><td>30,000G</td></tr>
-<tr><td>첫 손절 경매 (1회)</td><td>5,000G</td></tr>
-<tr><td>첫 강제청산 경험 (1회)</td><td>10,000G</td></tr>
+<tr><th>항목</th><th>금액</th><th>조건</th></tr>
+<tr><td>출석 1~2일차</td><td>5,000G / 일</td><td>당일 KST 기준 1회</td></tr>
+<tr><td>출석 3일차 이상</td><td>10,000G / 일</td><td>연속 출석 유지 시</td></tr>
+<tr><td>7일 연속 보너스</td><td>30,000G</td><td>7일 배수 도달 시 (7·14·21·28일…)</td></tr>
+<tr><td>30일 연속 보너스</td><td>100,000G</td><td>30일 배수 도달 시 (30·60·90일…)</td></tr>
+<tr><td>보상형 광고 시청</td><td>5,000G / 건</td><td>일 최대 3건 (광고별 1일 1회)</td></tr>
 </table>
 
-<h3>회수 메커니즘</h3>
+<h3>11.3 튜토리얼 보상 (1회성, Google 계정 전용)</h3>
 <table>
-<tr><th>항목</th><th>회수율</th></tr>
-<tr><td>경매 수수료</td><td>낙찰가의 5% (판매자 부담)</td></tr>
-<tr><td>보유자 없는 매물 등록비</td><td>최소 시세 50,000G 즉시 차감 (등록 시점)</td></tr>
-<tr><td>신규 매물 낙찰금</td><td>100% 시스템 회수</td></tr>
-<tr><td>매물 상세 페이지 열람</td><td>50,000G</td></tr>
-<tr><td>경매 히스토리 열람</td><td>50,000G (상세 페이지 결제와 별도)</td></tr>
-<tr><td>쿨다운 건너뛰기</td><td>50,000G</td></tr>
-<tr><td>강제청산 기간 연장권</td><td>80,000G / 24h</td></tr>
-<tr><td>면역 연장권</td><td>80,000G / 24h</td></tr>
-<tr><td>보유 한도 +1</td><td>1,000,000G</td></tr>
-<tr><td>패스권 3종 (대기열 우선권·상세 열람·히스토리)</td><td>각 300,000G / 30일</td></tr>
-<tr><td>강제청산 시세 환급</td><td>0% 회수 (보유자에게 100%)</td></tr>
+<tr><th>항목</th><th>금액</th></tr>
+<tr><td>첫 경매 등록</td><td>10,000G</td></tr>
+<tr><td>첫 낙찰</td><td>30,000G</td></tr>
+<tr><td>첫 손절 경매</td><td>10,000G</td></tr>
+<tr><td>첫 강제청산 경험</td><td>20,000G</td></tr>
+<tr><th>합계 (최대)</th><th>70,000G</th></tr>
 </table>
+
+<h3>11.4 월간 무료 수입 추산 (30일 개근 기준)</h3>
+<table>
+<tr><th>항목</th><th>월 수령량</th></tr>
+<tr><td>출석 기본 (1~2일 5,000G + 3일~ 10,000G)</td><td>290,000G</td></tr>
+<tr><td>7일 보너스 × 4회 (7·14·21·28일)</td><td>120,000G</td></tr>
+<tr><td>30일 보너스</td><td>100,000G</td></tr>
+<tr><td>광고 보상 (5,000G × 3건 × 30일)</td><td>450,000G</td></tr>
+<tr><th>합계 (광고 풀 수령)</th><th>960,000G / 월</th></tr>
+<tr><th>합계 (출석만)</th><th>510,000G / 월</th></tr>
+</table>
+
+<h3>11.5 소각 메커니즘 (deflation)</h3>
+<table>
+<tr><th>항목</th><th>소각량</th><th>상태</th></tr>
+<tr><td>신규 매물 등록비</td><td>50,000G (basePrice) 즉시 차감</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>신규 매물 낙찰금</td><td>낙찰가 100% 시스템 회수</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>매물 상세 페이지 열람</td><td>50,000G</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>경매 히스토리 열람</td><td>50,000G</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>랭킹 페이지 열람</td><td>50,000G</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>쿨다운 건너뛰기</td><td>50,000G</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>강제청산 기간 연장권</td><td>100,000G / 24h</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>면역 연장권</td><td>100,000G</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>보유 한도 +1</td><td>1,000,000G (영구)</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>금고 슬롯</td><td>1,500,000G (영구)</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>패스권 3종</td><td>각 300,000G / 30일</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>보상형 광고 등록비</td><td>200,000G / 일 × 기간</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>경매 수수료</td><td>-</td><td><span class="badge badge-todo">미구현</span></td></tr>
+</table>
+
+<h3>11.6 유저 간 G 이동 (zero-sum, 발행·소각 아님)</h3>
+<table>
+<tr><th>항목</th><th>이동 방향</th></tr>
+<tr><td>Type B 경매 낙찰</td><td>낙찰자 → 보유자 (전액 이동)</td></tr>
+<tr><td>강제청산</td><td>시스템 → 보유자 (현재 시세 100% 환급)</td></tr>
+<tr><td>입찰 패찰</td><td>에스크로 차감 → 즉시 환급 (이전 최고입찰자)</td></tr>
+</table>
+
+<h3>11.7 경제 균형 메모</h3>
+<div class="info-box">
+  <div class="info-box-title">월 발행·소각 추산 (활성 유저 100명 기준)</div>
+  <div class="info-box-text">
+    <strong>발행:</strong> 100명 × 960,000G = 96,000,000G / 월<br>
+    <strong>소각 추산:</strong> 상세 열람 300건 × 50,000G + 패스권 20개 × 300,000G + 연장권·기타 = 약 25,000,000~40,000,000G / 월<br>
+    <strong>순 발행:</strong> 약 56,000,000~71,000,000G / 월 → 장기적으로 G 희소성 감소 위험<br>
+    <strong>대응 방향:</strong> 현금 충전 도입 시 광고·출석 보상 재조정 필요. 경매 수수료(소각) 구현 시 균형 개선.
+  </div>
+</div>
+
 </div>
 
 <div id="s12" class="section-anchor">
@@ -1967,10 +2057,105 @@ async function requireSession(uid) {
 </table>
 </div>
 
+<div id="s23" class="section-anchor">
+<h2>23. 위변조 방지 대책 <span class="badge badge-done">구현 완료</span></h2>
+
+<blockquote>모든 핵심 로직은 Firebase Cloud Functions(서버)에서 실행되며, 클라이언트는 UI 렌더링과 CF 호출만 담당한다. 클라이언트가 전달하는 값은 서버에서 독립적으로 재검증하므로 조작이 불가능하다.</blockquote>
+
+<h3>23.1 기본 원칙</h3>
+<table>
+<tr><th>원칙</th><th>설명</th></tr>
+<tr><td>서버 신뢰 원칙</td><td>잔액·소유권·가격 등 게임 상태는 오직 CF(Admin SDK)만 변경. 클라이언트는 읽기 전용 UI.</td></tr>
+<tr><td>입력값 독립 검증</td><td>클라이언트가 전달한 모든 값(itemId, price, listingId 등)을 서버에서 Firestore 원본과 대조 후 사용.</td></tr>
+<tr><td>Firestore 보안 규칙</td><td>클라이언트의 직접 쓰기(잔액·소유권 변경 등) 전면 차단. CF(Admin SDK)만 허용.</td></tr>
+<tr><td>RTDB 보안 규칙</td><td>sessions·presence 노드는 Admin SDK 전용 쓰기. 클라이언트는 자신의 presence만 쓸 수 있음.</td></tr>
+</table>
+
+<h3>23.2 영역별 위변조 방어</h3>
+
+<h4>잔액(G) 조작</h4>
+<table>
+<tr><th>위협</th><th>방어</th><th>상태</th></tr>
+<tr><td>클라이언트에서 잔액 직접 수정</td><td>Firestore 규칙: <code>users/{uid}.balance</code> 클라이언트 쓰기 차단. CF만 <code>FieldValue.increment</code>로 변경.</td><td><span class="badge badge-done">완료</span></td></tr>
+<tr><td>CF 호출 시 잔액 파라미터 조작</td><td>CF 내부에서 Firestore 원본 잔액을 직접 조회 후 차감. 클라이언트가 전달한 금액은 사용하지 않음.</td><td><span class="badge badge-done">완료</span></td></tr>
+<tr><td>동시 요청으로 잔액 음수 유도 (TOCTOU)</td><td>모든 잔액 차감은 <code>db.runTransaction</code> 내부에서 재조회 후 처리. 비원자적 경로 없음.</td><td><span class="badge badge-done">완료</span></td></tr>
+</table>
+
+<h4>상점 아이템 가격 조작</h4>
+<table>
+<tr><th>위협</th><th>방어</th><th>상태</th></tr>
+<tr><td>구매 요청에 낮은 가격 삽입</td><td>CF 내부 <code>SHOP_ITEMS</code> 상수에서 가격 결정. 클라이언트가 가격을 전달하지 않음 — <code>itemId</code>만 전달.</td><td><span class="badge badge-done">완료</span></td></tr>
+<tr><td>존재하지 않는 itemId 전달</td><td><code>SHOP_ITEMS[itemId]</code>가 없으면 <code>not-found</code> 에러.</td><td><span class="badge badge-done">완료</span></td></tr>
+<tr><td>Google 전용 아이템 익명 구매</td><td><code>item.googleOnly</code> 플래그 + <code>sign_in_provider</code> 검증.</td><td><span class="badge badge-done">완료</span></td></tr>
+<tr><td>타인 매물에 연장권 사용</td><td><code>listing.ownerId === uid</code> 검증. 불일치 시 <code>permission-denied</code>.</td><td><span class="badge badge-done">완료</span></td></tr>
+</table>
+
+<h4>광고 보상 어뷰징</h4>
+<table>
+<tr><th>위협</th><th>방어</th><th>상태</th></tr>
+<tr><td>보상액 파라미터 조작</td><td>CF가 Firestore <code>system/config.adRewardAmount</code>에서 직접 조회. 클라이언트 전달값 미사용.</td><td><span class="badge badge-done">완료</span></td></tr>
+<tr><td>일일 한도 초과 수령</td><td>KST 날짜 기반 <code>adClaimDate/adClaimCount</code>를 트랜잭션 내에서 검증. 한도(3개) 초과 시 거부.</td><td><span class="badge badge-done">완료</span></td></tr>
+<tr><td>동일 광고 중복 수령</td><td><code>users/{uid}/adClaims/{adId}</code> 서브컬렉션에 오늘 날짜 기록. 중복 시 거부.</td><td><span class="badge badge-done">완료</span></td></tr>
+<tr><td>본인 광고 수령</td><td><code>ad.uid === uid</code> 체크. 자기 광고는 보상 불가.</td><td><span class="badge badge-done">완료</span></td></tr>
+<tr><td>만료 광고 수령</td><td>CF에서 <code>ad.expiresAt &lt; now</code> 체크. 클라이언트 필터 우회해도 CF에서 차단.</td><td><span class="badge badge-done">완료</span></td></tr>
+</table>
+
+<h4>출석 보상 어뷰징</h4>
+<table>
+<tr><th>위협</th><th>방어</th><th>상태</th></tr>
+<tr><td>하루 여러 번 수령</td><td>트랜잭션 내 KST 날짜 비교 (<code>lastDailyRewardAt</code>). 당일 재수령 시 <code>already-exists</code>.</td><td><span class="badge badge-done">완료</span></td></tr>
+<tr><td>보상액 파라미터 조작</td><td>보상액은 <code>system/config</code>에서 CF가 직접 산출. 클라이언트 입력값 없음.</td><td><span class="badge badge-done">완료</span></td></tr>
+<tr><td>연속 스트릭 조작</td><td>스트릭 계산을 트랜잭션 내 <code>consecutiveLoginDays</code>와 <code>lastDailyRewardAt</code> 기준으로 서버에서 계산.</td><td><span class="badge badge-done">완료</span></td></tr>
+</table>
+
+<h4>경매 조작</h4>
+<table>
+<tr><th>위협</th><th>방어</th><th>상태</th></tr>
+<tr><td>자기 매물 입찰</td><td><code>listing.ownerId === uid</code> 체크 후 거부.</td><td><span class="badge badge-done">완료</span></td></tr>
+<tr><td>최고가 미만 입찰</td><td>RTDB 트랜잭션 내 <code>currentBid</code> 재확인.</td><td><span class="badge badge-done">완료</span></td></tr>
+<tr><td>보유 한도 초과 등록</td><td>CF에서 <code>ownedCount >= ownedLimit</code> 체크.</td><td><span class="badge badge-done">완료</span></td></tr>
+<tr><td>세션 없이 입찰·등록 시도</td><td><code>requireSession(uid)</code> 게이트: RTDB <code>sessions/{uid}</code> 존재 여부 확인. 없으면 거부.</td><td><span class="badge badge-done">완료</span></td></tr>
+</table>
+
+<h4>접속 제한 우회</h4>
+<table>
+<tr><th>위협</th><th>방어</th><th>상태</th></tr>
+<tr><td>세션 카운트 클라이언트 조작</td><td>세션·presence 쓰기는 Admin SDK 전용. RTDB 규칙으로 클라이언트 직접 쓰기 차단.</td><td><span class="badge badge-done">완료</span></td></tr>
+<tr><td>스테일 세션으로 슬롯 고갈</td><td><code>initializeUser</code>에서 presence 없는 sessions를 스테일로 판별하고 제거 후 카운트.</td><td><span class="badge badge-done">완료</span></td></tr>
+<tr><td>접속자 수 presence 중복 등록 (로그아웃·로그인 반복)</td><td><code>presenceVersion</code> 카운터로 stale 콜백 무시. <code>clearPresence()</code>로 원자적 정리. CF 호출 전 이전 presence 선제 제거.</td><td><span class="badge badge-done">완료</span></td></tr>
+</table>
+
+<h4>관리자 권한 탈취</h4>
+<table>
+<tr><th>위협</th><th>방어</th><th>상태</th></tr>
+<tr><td>클라이언트에서 관리자 CF 직접 호출</td><td>모든 admin CF에서 <code>requireAdmin(request)</code> 실행 — <code>system/admin.adminUids</code> 배열 대조.</td><td><span class="badge badge-done">완료</span></td></tr>
+<tr><td>adminUids 클라이언트 수정</td><td>Firestore 규칙: <code>system/admin</code> 문서 클라이언트 쓰기 차단.</td><td><span class="badge badge-done">완료</span></td></tr>
+</table>
+
+<h3>23.3 클라이언트↔서버 역할 분리</h3>
+<table>
+<tr><th>계층</th><th>역할</th><th>신뢰 수준</th></tr>
+<tr><td>클라이언트 (JS)</td><td>UI 렌더링, 사용자 입력 수집, CF 호출 트리거</td><td>신뢰 불가 — 모든 입력을 서버에서 재검증</td></tr>
+<tr><td>Cloud Functions</td><td>게임 상태 변경, 잔액 차감, 소유권 이전, 보상 지급</td><td>신뢰 가능 — Admin SDK, 서버 환경</td></tr>
+<tr><td>Firestore 규칙</td><td>클라이언트 직접 쓰기 차단, 읽기 범위 제한</td><td>최후 방어선</td></tr>
+<tr><td>RTDB 규칙</td><td>sessions/presence Admin 전용 쓰기, 경매 상태 읽기 허용</td><td>최후 방어선</td></tr>
+</table>
+
+<h3>23.4 미비 사항 및 향후 과제</h3>
+<table>
+<tr><th>항목</th><th>설명</th><th>우선순위</th></tr>
+<tr><td>현금 충전 위변조</td><td>현금 충전 도입 시 PG사 webhook 서버 검증 필수 — 클라이언트 결제 완료 신호 신뢰 금지.</td><td>충전 도입 전 필수</td></tr>
+<tr><td>Rate Limiting</td><td>CF 호출 횟수 제한 미적용. 반복 호출 어뷰징 가능. Firebase App Check 또는 호출 간격 제한 검토.</td><td>중</td></tr>
+<tr><td>보유 한도 상한선</td><td><code>holding_limit_expansion</code> 무한 구매 가능. 계정당 최대 한도(예: 20개) 서버 검증 추가 권장.</td><td>하</td></tr>
+<tr><td>금고 슬롯 상한선</td><td><code>vault_slot</code> 무한 구매 가능. 계정당 최대 슬롯 수 서버 검증 추가 권장.</td><td>하</td></tr>
+</table>
+
+</div>
+
 <hr>
 
 <p style="font-size:12px;color:#999;text-align:center;padding:1rem 0">
-  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-18 (보상형 광고 구현 완료 · 구현 현황 최신화) · 작성자: 오목지면시그
+  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-19 (위변조 방지 대책 섹션 추가) · 작성자: 오목지면시그
 </p>
 
 </div>
