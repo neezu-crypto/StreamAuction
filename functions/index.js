@@ -1123,22 +1123,30 @@ exports.placeBid = onCall(
 
       // Firestore 트랜잭션으로 잔액 처리
       await db.runTransaction(async (transaction) => {
-        // 환불
-        if (prevBidderId && prevBidderId !== uid) {
+        const userSnap2 = await transaction.get(userRef);
+        const balance2 = userSnap2.data().balance;
+
+        // 연속 입찰(자기 자신이 최고입찰자)이면 이전 차감액을 먼저 환급 후 새 금액 차감
+        const isSelfRebid = prevBidderId === uid;
+        const effectiveBalance = isSelfRebid ? balance2 + prevBidAmount : balance2;
+
+        if (effectiveBalance < bidAmount) {
+          throw new HttpsError("failed-precondition", "잔액이 부족합니다.");
+        }
+
+        if (prevBidderId && !isSelfRebid) {
+          // 다른 유저가 최고입찰자였던 경우 → 환불
           const prevBidderRef = db.collection("users").doc(prevBidderId);
           transaction.update(prevBidderRef, {
             balance: FieldValue.increment(prevBidAmount),
           });
         }
 
-        // 새 입찰자 잔액 차감
-        const userSnap2 = await transaction.get(userRef);
-        const balance2 = userSnap2.data().balance;
-        if (balance2 < bidAmount) {
-          throw new HttpsError("failed-precondition", "잔액이 부족합니다.");
-        }
+        // 자기 연속 입찰: (이전 차감액 환급) - (새 입찰액) = 차액만 추가 차감
+        // 다른 유저 → 새 입찰액 전액 차감
+        const netDeduct = isSelfRebid ? bidAmount - prevBidAmount : bidAmount;
         transaction.update(userRef, {
-          balance: FieldValue.increment(-bidAmount),
+          balance: FieldValue.increment(-netDeduct),
         });
       });
 
