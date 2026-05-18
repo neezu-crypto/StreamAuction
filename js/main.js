@@ -1289,6 +1289,34 @@ window.focusSearch = function() {
   }
 };
 
+// ===== 모바일: 검색창 포커스 시 키보드 올라오면 자동 스크롤 =====
+(function setupMobileSearchScroll() {
+  const input = $("searchInput");
+  if (!input) return;
+
+  function scrollToInput() {
+    input.scrollIntoView({behavior: "smooth", block: "center"});
+  }
+
+  let vpHandler = null;
+
+  input.addEventListener("focus", () => {
+    if (window.innerWidth > 640) return;
+    if (window.visualViewport) {
+      vpHandler = scrollToInput;
+      window.visualViewport.addEventListener("resize", vpHandler);
+    }
+    setTimeout(scrollToInput, 150);
+  });
+
+  input.addEventListener("blur", () => {
+    if (vpHandler) {
+      window.visualViewport.removeEventListener("resize", vpHandler);
+      vpHandler = null;
+    }
+  });
+})();
+
 // ===== 버튼 핸들러 (개발 패널) =====
 window.handleGoogleLogin = async function() {
   if (auth.currentUser?.isAnonymous) {
