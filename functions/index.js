@@ -1913,12 +1913,54 @@ exports.adminGetReports = onCall(
           listingId: d.id,
           soopId: data.soopId,
           displayName: data.displayName,
+          currentPrice: data.currentPrice || 0,
           reportCount: data.reportCount || 0,
           reportReasons: data.reportReasons || {},
           isMosaicked: data.isMosaicked || false,
           ownerId: data.ownerId || null,
         };
       });
+    },
+);
+
+// ============================================
+// adminUpdateListing: 닉네임·시세 수동 수정 (관리자)
+// ============================================
+exports.adminUpdateListing = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      await requireAdmin(request);
+      const {listingId, displayName, currentPrice} = request.data;
+      if (!listingId) throw new HttpsError("invalid-argument", "listingId가 필요합니다.");
+
+      const listingRef = db.collection("listings").doc(listingId);
+      if (!(await listingRef.get()).exists) {
+        throw new HttpsError("not-found", "매물을 찾을 수 없습니다.");
+      }
+
+      const update = {};
+      if (displayName !== undefined && displayName !== null) {
+        const name = String(displayName).trim();
+        if (!name || name.length > 30) {
+          throw new HttpsError("invalid-argument", "닉네임은 1~30자여야 합니다.");
+        }
+        update.displayName = name;
+        update.normalizedNickname = name.toLowerCase().replace(/\s/g, "");
+      }
+      if (currentPrice !== undefined && currentPrice !== null) {
+        const price = Number(currentPrice);
+        if (!Number.isInteger(price) || price < 0) {
+          throw new HttpsError("invalid-argument", "시세는 0 이상 정수여야 합니다.");
+        }
+        update.currentPrice = price;
+      }
+      if (Object.keys(update).length === 0) {
+        throw new HttpsError("invalid-argument", "변경할 항목이 없습니다.");
+      }
+
+      await listingRef.update(update);
+      logger.info(`관리자 매물 수정: ${listingId} by ${request.auth.uid} — ${JSON.stringify(update)}`);
+      return {success: true, listingId, updated: update};
     },
 );
 

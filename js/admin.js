@@ -505,6 +505,7 @@ window.handleSaveConfig = async function() {
 // ===== 신고 관리 =====
 const adminGetReportsFn = httpsCallable(functions, "adminGetReports");
 const adminSetMosaicFn = httpsCallable(functions, "adminSetMosaic");
+const adminUpdateListingFn = httpsCallable(functions, "adminUpdateListing");
 
 window.loadReports = async function loadReports() {
   $("reportsContent").innerHTML = `<p class="empty-msg">로딩 중...</p>`;
@@ -538,18 +539,36 @@ function renderReports(reports) {
               .filter(([, v]) => v > 0)
               .map(([k, v]) => `${REASON_LABEL[k] || k}(${v})`)
               .join(", ") || "-";
+          const lid = r.listingId;
           return `
-            <tr id="report-row-${r.listingId}">
-              <td>${r.displayName}</td>
+            <tr id="report-row-${lid}">
+              <td>
+                <div style="display:flex;gap:4px;align-items:center">
+                  <span id="name-text-${lid}">${r.displayName}</span>
+                  <input id="name-input-${lid}" type="text" value="${r.displayName}"
+                    style="display:none;width:110px;padding:2px 6px;font-size:.82rem;background:#12151d;border:1px solid #3a3f4b;border-radius:4px;color:#e5e7eb">
+                  <button class="btn-sm" style="padding:1px 6px;font-size:.72rem;background:#1e3a5f;color:#60a5fa;border:none;border-radius:4px;cursor:pointer"
+                    onclick="toggleEditName('${lid}')">수정</button>
+                </div>
+              </td>
               <td class="mono">${r.soopId}</td>
               <td><strong style="color:#f87171">${r.reportCount}</strong></td>
               <td style="font-size:.78rem;color:#9ba3b4">${reasons}</td>
               <td class="mono" style="font-size:.75rem">${r.ownerId ? r.ownerId.substring(0, 8) + "…" : "없음"}</td>
-              <td>${r.isMosaicked ? `<span style="color:#f87171;font-weight:600">적용중</span>` : `<span style="color:#22c55e">없음</span>`}</td>
               <td>
+                <div style="display:flex;gap:4px;align-items:center">
+                  <span id="price-text-${lid}">${(r.currentPrice || 0).toLocaleString()}G</span>
+                  <input id="price-input-${lid}" type="number" value="${r.currentPrice || 0}" min="0" step="10000"
+                    style="display:none;width:100px;padding:2px 6px;font-size:.82rem;background:#12151d;border:1px solid #3a3f4b;border-radius:4px;color:#e5e7eb">
+                  <button class="btn-sm" style="padding:1px 6px;font-size:.72rem;background:#1e3a5f;color:#60a5fa;border:none;border-radius:4px;cursor:pointer"
+                    onclick="toggleEditPrice('${lid}')">수정</button>
+                </div>
+              </td>
+              <td>${r.isMosaicked ? `<span style="color:#f87171;font-weight:600">적용중</span>` : `<span style="color:#22c55e">없음</span>`}</td>
+              <td style="display:flex;gap:4px;flex-wrap:wrap">
                 ${r.isMosaicked
-                  ? `<button class="btn-sm btn-primary" onclick="handleSetMosaic('${r.listingId}', false, this)">해제</button>`
-                  : `<button class="btn-sm btn-danger" onclick="handleSetMosaic('${r.listingId}', true, this)">모자이크</button>`
+                  ? `<button class="btn-sm btn-primary" onclick="handleSetMosaic('${lid}', false, this)">해제</button>`
+                  : `<button class="btn-sm btn-danger" onclick="handleSetMosaic('${lid}', true, this)">모자이크</button>`
                 }
               </td>
             </tr>`;
@@ -572,3 +591,54 @@ window.handleSetMosaic = async function(listingId, isMosaicked, btn) {
     btn.textContent = label;
   }
 };
+
+window.toggleEditName = function(lid) {
+  const text = document.getElementById(`name-text-${lid}`);
+  const input = document.getElementById(`name-input-${lid}`);
+  if (!text || !input) return;
+  const editing = input.style.display !== "none";
+  if (editing) {
+    // 저장
+    handleUpdateListing(lid, {displayName: input.value.trim()}, text, input);
+  } else {
+    text.style.display = "none";
+    input.style.display = "";
+    input.focus();
+  }
+};
+
+window.toggleEditPrice = function(lid) {
+  const text = document.getElementById(`price-text-${lid}`);
+  const input = document.getElementById(`price-input-${lid}`);
+  if (!text || !input) return;
+  const editing = input.style.display !== "none";
+  if (editing) {
+    // 저장
+    handleUpdateListing(lid, {currentPrice: Number(input.value)}, text, input);
+  } else {
+    text.style.display = "none";
+    input.style.display = "";
+    input.focus();
+  }
+};
+
+async function handleUpdateListing(listingId, fields, textEl, inputEl) {
+  try {
+    await adminUpdateListingFn({listingId, ...fields});
+    // UI 즉시 갱신
+    if (fields.displayName !== undefined) {
+      textEl.textContent = fields.displayName;
+      inputEl.value = fields.displayName;
+    }
+    if (fields.currentPrice !== undefined) {
+      textEl.textContent = `${fields.currentPrice.toLocaleString()}G`;
+      inputEl.value = fields.currentPrice;
+    }
+    inputEl.style.display = "none";
+    textEl.style.display = "";
+  } catch (e) {
+    alert(`수정 실패: ${e.message}`);
+    inputEl.style.display = "none";
+    textEl.style.display = "";
+  }
+}
