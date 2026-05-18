@@ -451,3 +451,62 @@ a {
   .modal-buttons { flex-direction: column; }
   .modal-buttons button { width: 100%; }
 }
+
+/* ===== SOOP 인앱 브라우저 안내 오버레이 ===== */
+.inapp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #0d1117;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.inapp-card {
+  background: #12151e;
+  border: 1px solid #2a2e38;
+  border-radius: 16px;
+  padding: 36px 28px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+}
+.inapp-icon { font-size: 2.5rem; margin-bottom: 16px; }
+.inapp-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin-bottom: 16px;
+}
+.inapp-desc {
+  font-size: .88rem;
+  color: #9ca3af;
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+.inapp-url-box {
+  background: #1a1d27;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  word-break: break-all;
+}
+.inapp-url {
+  font-size: .82rem;
+  color: #60a5fa;
+  font-family: monospace;
+}
+.inapp-copy-btn {
+  width: 100%;
+  padding: 12px;
+  background: #f59e0b;
+  color: #1a0800;
+  border: none;
+  border-radius: 10px;
+  font-size: .95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.inapp-copy-btn:active { background: #d97706; }

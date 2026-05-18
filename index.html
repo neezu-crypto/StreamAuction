@@ -9,6 +9,59 @@
 </head>
 <body>
 
+<!-- SOOP 인앱 브라우저 감지 → 외부 브라우저 유도 안내 -->
+<script>
+(function() {
+  var ua = navigator.userAgent;
+  var isSoopInApp = /afreecatv|SoopApp|SOOP\/\d/i.test(ua);
+  // 일반 WebView 감지 (Android wv 태그, iOS UIWebView)
+  var isWebView = /\bwv\b/.test(ua) && /Android/i.test(ua);
+  if (!isSoopInApp && !isWebView) return;
+
+  var url = location.href;
+  document.addEventListener('DOMContentLoaded', function() {
+    var overlay = document.getElementById('inappOverlay');
+    var urlEl = document.getElementById('inappUrl');
+    if (overlay) overlay.style.display = 'flex';
+    if (urlEl) urlEl.textContent = url;
+  });
+
+  window.copyInappUrl = function() {
+    navigator.clipboard.writeText(url).then(function() {
+      var btn = document.getElementById('btnCopyInapp');
+      if (btn) { btn.textContent = '복사 완료 ✓'; setTimeout(function(){ btn.textContent = '주소 복사하기'; }, 2000); }
+    }).catch(function() {
+      var input = document.createElement('input');
+      input.value = url;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      var btn = document.getElementById('btnCopyInapp');
+      if (btn) { btn.textContent = '복사 완료 ✓'; setTimeout(function(){ btn.textContent = '주소 복사하기'; }, 2000); }
+    });
+  };
+})();
+</script>
+
+<!-- SOOP 인앱 브라우저 안내 오버레이 -->
+<div id="inappOverlay" style="display:none" class="inapp-overlay">
+  <div class="inapp-card">
+    <div class="inapp-icon">🌐</div>
+    <h2 class="inapp-title">외부 브라우저로 접속해 주세요</h2>
+    <p class="inapp-desc">
+      SOOP 앱 내에서는 구글 로그인 보안 정책으로<br>
+      정상적인 이용이 제한됩니다.<br><br>
+      아래 주소를 복사해 기본 브라우저(Chrome, Safari 등)에서<br>
+      접속해 주세요.
+    </p>
+    <div class="inapp-url-box">
+      <span id="inappUrl" class="inapp-url"></span>
+    </div>
+    <button id="btnCopyInapp" class="inapp-copy-btn" onclick="copyInappUrl()">주소 복사하기</button>
+  </div>
+</div>
+
 <!-- 헤더 -->
 <header class="header">
   <div class="header-inner">
