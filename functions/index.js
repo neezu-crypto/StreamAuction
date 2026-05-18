@@ -2610,7 +2610,7 @@ exports.claimAdReward = onCall(
       const now = Date.now();
       const config = (await db.collection("system").doc("config").get()).data() || {};
       const rewardAmount = config.adRewardAmount || 10000;
-      const dailyLimit = config.adDailyClaimLimit || 3;
+      const dailyLimit = config.adDailyClaimLimit || 5;
 
       const adRef = db.collection("ads").doc(adId);
       const userRef = db.collection("users").doc(uid);
@@ -2633,7 +2633,7 @@ exports.claimAdReward = onCall(
         const userData = userSnap.data() || {};
         const claimDate = userData.adClaimDate || "";
         const claimCount = claimDate === todayKST ? (userData.adClaimCount || 0) : 0;
-        if (claimCount >= dailyLimit) throw new HttpsError("resource-exhausted", "오늘 보상 한도(3개)에 도달했습니다");
+        if (claimCount >= dailyLimit) throw new HttpsError("resource-exhausted", "오늘 보상 한도(5개)에 도달했습니다");
 
         if (claimSnap.exists && claimSnap.data().lastClaimedDate === todayKST) {
           throw new HttpsError("already-exists", "이 광고는 오늘 이미 보상을 수령했습니다");

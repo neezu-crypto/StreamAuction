@@ -1591,7 +1591,7 @@ async function renderAdRewardSection() {
     const now = Date.now();
 
     let html = `<div class="ad-reward-header">
-      <span class="ad-today-count">오늘 보상: <strong>${todayCount} / 3</strong>개 완료</span>
+      <span class="ad-today-count">오늘 보상: <strong>${todayCount} / 5</strong>개 완료</span>
       ${isGoogle ? `<button class="btn-ad-register" onclick="openAdPurchaseModal()">+ 광고 신청</button>` : ""}
     </div>`;
 
@@ -1635,7 +1635,7 @@ window.handleAdVisit = async function(adId, soopId) {
     updateAuthUI(auth.currentUser, currentUserData);
     if (auth.currentUser) recordBalanceHistory(auth.currentUser.uid, newBalance);
     window.open(`https://www.sooplive.com/station/${soopId}`, "_blank");
-    showToast(`+10,000G 획득! (오늘 ${todayCount}/3개)`);
+    showToast(`+10,000G 획득! (오늘 ${todayCount}/5개)`);
     renderAdRewardSection();
   } catch (e) {
     if (e.code === "already-exists") {
@@ -1643,7 +1643,7 @@ window.handleAdVisit = async function(adId, soopId) {
       renderAdRewardSection();
       window.open(`https://www.sooplive.com/station/${soopId}`, "_blank");
     } else if (e.code === "functions/resource-exhausted") {
-      showToast("오늘 보상 한도(3개)에 도달했습니다.");
+      showToast("오늘 보상 한도(5개)에 도달했습니다.");
       if (btn) { btn.disabled = false; btn.textContent = "방송국 방문 →"; }
     } else {
       alert(`보상 수령 실패: ${e.message}`);
