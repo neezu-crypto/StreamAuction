@@ -1510,6 +1510,8 @@ async function requireSession(uid) {
 <tr><td>환불</td><td>불가 (경매 등록·광고 등록과 동일 정책)</td></tr>
 <tr><td>필수 동의</td><td>개인정보 수집·이용 동의 (닉네임·SOOP ID 서비스 내 표시)</td></tr>
 <tr><td>방송 링크 형식</td><td><code>https://play.sooplive.com/{soopId}</code></td></tr>
+<tr><td>프로필 이미지 URL</td><td><code>https://stimg.sooplive.com/LOGO/{soopId 앞 2글자}/{soopId}/{soopId}.jpg</code><br>예) soopId=yeonchimin → <code>.../LOGO/ye/yeonchimin/yeonchimin.jpg</code></td></tr>
+<tr><td>프로필 이미지 미리보기</td><td>SOOP ID 입력 시 클라이언트에서 이미지 URL을 즉시 조합 → 모달 내 썸네일로 표시 (이미지 로드 실패 시 기본 아이콘 대체)</td></tr>
 </table>
 
 <h3>20.2 노출 정책</h3>
@@ -1530,14 +1532,20 @@ async function requireSession(uid) {
 
 ┌── 중계방송 등록 모달 ────────────────────────┐
 │  닉네임     [________________]              │
-│  SOOP ID   [________________]              │
+│  SOOP ID   [  yeonchimin  ]                │
+│                                            │
+│  ┌──────────────────────────────────────┐  │
+│  │  [프로필 이미지 썸네일 - 60×60px]   │  │
+│  │  stimg.sooplive.com/.../yeonchimin  │  │
+│  │  → play.sooplive.com/yeonchimin    │  │
+│  └──────────────────────────────────────┘  │
+│  ※ ID 입력 즉시 이미지 자동 로드           │
+│  ※ 이미지 없으면 기본 아이콘 표시          │
+│                                            │
 │  기간       [  3  ] 시간                    │
 │                                            │
 │  총 비용: 3시간 × 100,000G = 300,000G      │
 │  내 잔액: 800,000G → 지불 후 500,000G     │
-│                                            │
-│  방송국 미리보기:                           │
-│  → play.sooplive.com/mysoopid             │
 │                                            │
 │  현재 슬롯: 1 / 3                          │
 │                                            │
@@ -1570,16 +1578,16 @@ async function requireSession(uid) {
 │  중계 중  2 / 3   [닫기│  메인 페이지 콘텐츠  │
 │                        │  (오른쪽으로 밀림)    │
 │  ┌──────────────────┐  │                       │
-│  │ 🎮 스트리머닉    │  │                       │
-│  │    soopid1       │  │                       │
-│  │    종료까지 1:32 │  │                       │
-│  │   [ 방송 보기  ] │  │                       │
+│  │[img] 스트리머닉  │  │                       │
+│  │      soopid1     │  │                       │
+│  │  종료까지 1:32   │  │                       │
+│  │  [ 방송 보기  ]  │  │                       │
 │  └──────────────────┘  │                       │
 │  ┌──────────────────┐  │                       │
-│  │ 🎮 다른닉네임   │  │                       │
-│  │    soopid2       │  │                       │
-│  │    종료까지 0:44 │  │                       │
-│  │   [ 방송 보기  ] │  │                       │
+│  │[img] 다른닉네임  │  │                       │
+│  │      soopid2     │  │                       │
+│  │  종료까지 0:44   │  │                       │
+│  │  [ 방송 보기  ]  │  │                       │
 │  └──────────────────┘  │                       │
 │                        │                       │
 │  남은 슬롯: 1개        │                       │
