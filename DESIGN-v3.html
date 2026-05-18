@@ -221,20 +221,25 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>테스트 기간 배너</td><td>메인 페이지 헤더 하단 고정 주황/노랑 그라디언트 띠 — "⚠️ 테스트 기간 운영 중 · 동시 접속 최대 30명 제한 · 현재 접속: N명". RTDB presence 실시간 구독으로 N 갱신.</td></tr>
 <tr><td>익명 유저 로그인 버튼</td><td>익명 상태에서 헤더(메인·마이페이지) 로그아웃 버튼 → 구글 로그인 버튼으로 대체. 클릭 시 익명→구글 전환 플로우 진입.</td></tr>
 <tr><td>잔액 변화 히스토리 모달</td><td>마이페이지 잔액 stat 박스 클릭 → 최근 7일 잔액 변화 모달. 탭 2개: ① 지출/획득 내역 (auctionHistory 기반 매입·판매 이벤트) ② 총 잔액 변화 (Firestore <code>users/{uid}/balanceHistory</code> 서브컬렉션 — 클라이언트에서 페이지 진입·보상 수령·건너뛰기 시 자동 기록). 날짜별 그룹 + 7일 순변화 요약.</td></tr>
+<tr><td>랭킹 페이지</td><td>ranking.html — <strong>50,000G 결제 게이트</strong> (viewRanking CF · 트랜잭션) · 탭 3개: 시세 랭킹 / 거래량 랭킹 / 거래 횟수 랭킹 · 모자이크 매물 블러 처리 · 차단 매물 숨김 · 메달(🥇🥈🥉) 표시</td></tr>
 <tr><td>기반</td><td>Firestore/RTDB 보안 규칙 (auctionRequests · balanceHistory 포함), 모바일 반응형 UI</td></tr>
 </table>
 
 <h3>🔄 부분 구현</h3>
 <table>
 <tr><th>항목</th><th>구현된 부분</th><th>미구현 부분</th></tr>
-<tr><td colspan="3" style="color:#6b7280;font-style:italic;text-align:center">현재 미구현 항목 없음</td></tr>
+<tr><td>개인정보 동의 체크박스 (§22)</td><td>보상형 광고 신청 모달(§19) · 중계방송 등록 모달(§20) 기획에 동의 체크박스 포함</td><td>실제 UI 구현 및 CF <code>consentAgreed</code> 검증 — 광고·중계 CF 구현 시 함께 적용</td></tr>
 </table>
 
-<h3>❌ 미구현</h3>
+<h3>❌ 미구현 (Phase 2)</h3>
 <table>
-<tr><th>항목</th><th>비고</th></tr>
-<tr><td>통계 관리 탭</td><td>userEvents 수집 · adminGetStats CF · 관리자 통계 탭 UI — Section 17 참고</td></tr>
-<tr><td>Phase 2+ 전체</td><td>광고 보상, Cloud Scheduler 등</td></tr>
+<tr><th>항목</th><th>관련 섹션</th><th>비고</th></tr>
+<tr><td>통계 관리 탭</td><td>§17</td><td>userEvents Firestore 수집 · logEvent CF · adminGetStats CF · 관리자 통계 탭 UI · 실시간 현황 패널</td></tr>
+<tr><td>보상형 광고 시스템</td><td>§19</td><td>purchaseAd · claimAdReward · getActiveAds CF · 보상 센터 광고 탭 UI · 광고 신청 모달</td></tr>
+<tr><td>중계방송 홍보</td><td>§20</td><td>registerRelay · getActiveRelays CF · 메인 페이지 좌측 슬라이드 패널 UI · 중계 등록 모달</td></tr>
+<tr><td>이용약관 UI</td><td>§21</td><td>서비스 내 약관 열람 페이지 또는 모달 — 기획 완료, UI 미구현</td></tr>
+<tr><td>개인정보 처리방침 UI</td><td>§22</td><td>서비스 내 처리방침 열람 페이지 또는 모달 — 기획 완료, UI 미구현</td></tr>
+<tr><td>만료 문서 자동 삭제</td><td>§19·§20</td><td>Cloud Scheduler — 만료된 ads · relayBroadcasts 문서 자동 정리</td></tr>
 </table>
 </div>
 
