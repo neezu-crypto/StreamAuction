@@ -128,6 +128,7 @@ async function checkAndFinalizeExpiredRequests() {
       ownerId: null,
       pendingRequestId: null,
       immunityUntil: null,
+      ownerTag: FieldValue.delete(),
     });
 
     // 보유자 잔액/보유 목록 업데이트 누적
@@ -233,6 +234,7 @@ async function doFinalizeAuction(current) {
         isLocked: false,
         immunityUntil: null,
         vaultedBy: null,
+        ownerTag: FieldValue.delete(),
       });
     } else {
       // 유찰: 소유권 유지
@@ -283,6 +285,7 @@ async function doFinalizeAuction(current) {
           finalPrice : existingData.highestPrice,
         lowestPrice: finalPrice < existingData.lowestPrice ?
           finalPrice : existingData.lowestPrice,
+        ownerTag: FieldValue.delete(),
       });
     }
   }
@@ -2706,5 +2709,56 @@ exports.getActiveAds = onCall(
       const todayCount = claimDate === todayKST ? (userData.adClaimCount || 0) : 0;
 
       return {ads, todayCount};
+    },
+);
+
+// ===== setOwnerTag: 소유자 표시 등록/수정/삭제 =====
+exports.setOwnerTag = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+      const uid = request.auth.uid;
+      const {listingId, tagDisplayName, tagSoopId} = request.data;
+
+      if (!listingId) throw new HttpsError("invalid-argument", "listingId가 필요합니다.");
+
+      const listingRef = db.collection("listings").doc(listingId);
+      const listingSnap = await listingRef.get();
+      if (!listingSnap.exists) throw new HttpsError("not-found", "매물을 찾을 수 없습니다.");
+      if (listingSnap.data().ownerId !== uid) {
+        throw new HttpsError("permission-denied", "보유자만 소유자 표시를 등록할 수 있습니다.");
+      }
+
+      // 삭제 요청 (tagSoopId 없으면 삭제, 무료)
+      if (!tagSoopId) {
+        await listingRef.update({ownerTag: FieldValue.delete()});
+        return {success: true};
+      }
+
+      // 입력 검증
+      const name = (tagDisplayName || "").trim();
+      const soopId = tagSoopId.trim().toLowerCase();
+      if (!name || name.length > 20) {
+        throw new HttpsError("invalid-argument", "닉네임은 1~20자여야 합니다.");
+      }
+      if (!/^[a-z0-9]+$/.test(soopId) || soopId.length < 3 || soopId.length > 20) {
+        throw new HttpsError("invalid-argument", "Soop ID는 영문/숫자 3~20자여야 합니다.");
+      }
+
+      const COST = 30000;
+      let newBalance;
+      await db.runTransaction(async (tx) => {
+        const userRef = db.collection("users").doc(uid);
+        const userSnap = await tx.get(userRef);
+        const balance = userSnap.data().balance || 0;
+        if (balance < COST) throw new HttpsError("failed-precondition", "잔액이 부족합니다.");
+        newBalance = balance - COST;
+        tx.update(userRef, {balance: FieldValue.increment(-COST)});
+        tx.update(listingRef, {
+          ownerTag: {displayName: name, soopId, registeredAt: Date.now()},
+        });
+      });
+
+      return {success: true, newBalance};
     },
 );

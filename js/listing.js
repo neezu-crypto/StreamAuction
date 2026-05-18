@@ -12,7 +12,7 @@ import {watchAuthState, logout} from "./auth.js";
 import {
   registerAuction, requestAuction, respondToAuctionRequest,
   reportListing, blockListing, viewAuctionHistory, viewListingDetail,
-  formatG, validateSoopId, validateNickname, getSoopProfileUrl,
+  formatG, validateSoopId, validateNickname, getSoopProfileUrl, setOwnerTag,
 } from "./auction.js";
 
 // ===== DOM =====
@@ -28,6 +28,7 @@ let pendingReportListingName = null;
 let pendingRegisterData = {};
 let isRegistering = false;
 let isPaid = false;  // 50,000G 상세 열람 여부
+let isOwnerTagSaving = false;
 
 // ===== CF 참조 =====
 const initializeUserFn = httpsCallable(functions, "initializeUser");
@@ -312,7 +313,50 @@ async function renderDetail() {
       <span class="listing-live-banner-text">⏳ 경매 대기 중 — 이전 경매가 끝나면 자동으로 시작됩니다</span>
     </div>` : "";
 
-  // ── 4. 액션 섹션 ──
+  // ── 4. 소유자 표시 섹션 ──
+  const ownerTag = listing.ownerTag;
+  let ownerTagHtml = "";
+  if (isOwnedByMe) {
+    if (ownerTag) {
+      const soopUrl = `https://ch.sooplive.co.kr/${escapeHtml(ownerTag.soopId)}`;
+      ownerTagHtml = `
+        <div class="listing-owner-tag-section">
+          <div class="owner-tag-row">
+            <span class="owner-tag-crown">👑</span>
+            <a class="owner-tag-link" href="${soopUrl}" target="_blank" rel="noopener noreferrer">
+              <span class="owner-tag-name">${escapeHtml(ownerTag.displayName)}</span>
+              <span class="owner-tag-soop">@${escapeHtml(ownerTag.soopId)}</span>
+              <span class="owner-tag-ext">↗</span>
+            </a>
+            <div class="owner-tag-my-actions">
+              <button class="btn-owner-tag-edit" onclick="openOwnerTagModal()">수정</button>
+              <button class="btn-owner-tag-delete" onclick="handleDeleteOwnerTag()">삭제</button>
+            </div>
+          </div>
+        </div>`;
+    } else {
+      ownerTagHtml = `
+        <div class="listing-owner-tag-section listing-owner-tag-section--empty">
+          <span class="owner-tag-prompt-text">👑 소유자 표시를 등록하면 다른 유저들이 볼 수 있어요</span>
+          <button class="btn-owner-tag-register" onclick="openOwnerTagModal()">등록 · 30,000G</button>
+        </div>`;
+    }
+  } else if (ownerTag) {
+    const soopUrl = `https://ch.sooplive.co.kr/${escapeHtml(ownerTag.soopId)}`;
+    ownerTagHtml = `
+      <div class="listing-owner-tag-section">
+        <div class="owner-tag-row">
+          <span class="owner-tag-crown">👑</span>
+          <a class="owner-tag-link" href="${soopUrl}" target="_blank" rel="noopener noreferrer">
+            <span class="owner-tag-name">${escapeHtml(ownerTag.displayName)}</span>
+            <span class="owner-tag-soop">@${escapeHtml(ownerTag.soopId)}</span>
+            <span class="owner-tag-ext">↗</span>
+          </a>
+        </div>
+      </div>`;
+  }
+
+  // ── 5. 액션 섹션 ──
   let ownerBadge = "";
   let actionBtns = "";
 
@@ -375,7 +419,7 @@ async function renderDetail() {
       ${actionBtns}
     </div>`;
 
-  // ── 5. 히스토리 행 ──
+  // ── 6. 히스토리 행 ──
   const historyHtml = `
     <div class="listing-history-section">
       <div class="history-row">
@@ -386,14 +430,14 @@ async function renderDetail() {
       </div>
     </div>`;
 
-  // ── 6. 신고/차단 ──
+  // ── 7. 신고/차단 ──
   const reportHtml = !isOwnedByMe ? `
     <div class="listing-report-section">
       <button class="btn-block-listing" onclick="handleBlockListing('${escapeHtml(listing.id)}', true)">차단</button>
       <button class="btn-report-listing" onclick="openReportModal('${escapeHtml(listing.id)}','${escapeHtml(listing.displayName)}')">신고</button>
     </div>` : "";
 
-  // ── 7. 메타 ──
+  // ── 8. 메타 ──
   const createdMs = toMillis(listing.createdAt);
   const metaHtml = createdMs ? `
     <div class="listing-meta">등록일 ${new Date(createdMs).toLocaleDateString("ko-KR")}</div>` : "";
@@ -403,6 +447,7 @@ async function renderDetail() {
       ${heroHtml}
       ${statsHtml}
       ${liveBannerHtml}
+      ${ownerTagHtml}
       ${actionsHtml}
       ${historyHtml}
       ${reportHtml}
@@ -598,6 +643,62 @@ window.handleRejectRequest = async function(requestId) {
     await refreshListing();
   } catch (e) {
     alert(`거부 실패: ${e.message}`);
+  }
+};
+
+// ===== 소유자 표시 모달 =====
+window.openOwnerTagModal = function() {
+  const modal = $("ownerTagModal");
+  if (!modal) return;
+  const tag = currentListing?.ownerTag;
+  const nameInput = $("ownerTagDisplayName");
+  const soopInput = $("ownerTagSoopId");
+  if (nameInput) nameInput.value = tag?.displayName || "";
+  if (soopInput) soopInput.value = tag?.soopId || "";
+  setText("ownerTagError", "");
+  const btn = $("ownerTagSubmitBtn");
+  if (btn) btn.textContent = tag ? "수정 · 30,000G" : "등록 · 30,000G";
+  modal.classList.add("show");
+};
+
+window.closeOwnerTagModal = function() {
+  const modal = $("ownerTagModal");
+  if (modal) modal.classList.remove("show");
+};
+
+window.handleSubmitOwnerTag = async function() {
+  if (isOwnerTagSaving) return;
+  const tagDisplayName = $("ownerTagDisplayName")?.value?.trim();
+  const tagSoopId = $("ownerTagSoopId")?.value?.trim();
+  if (!tagDisplayName) { setText("ownerTagError", "닉네임을 입력해주세요."); return; }
+  if (!tagSoopId) { setText("ownerTagError", "Soop ID를 입력해주세요."); return; }
+
+  isOwnerTagSaving = true;
+  const btn = $("ownerTagSubmitBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "처리 중..."; }
+  try {
+    const result = await setOwnerTag({listingId, tagDisplayName, tagSoopId});
+    if (currentUserData) currentUserData.balance = result.newBalance;
+    renderAuthArea();
+    closeOwnerTagModal();
+    await refreshListing();
+    showToast("소유자 표시가 등록되었습니다");
+  } catch (e) {
+    setText("ownerTagError", e.message || "등록에 실패했습니다.");
+  } finally {
+    isOwnerTagSaving = false;
+    if (btn) { btn.disabled = false; btn.textContent = "확인"; }
+  }
+};
+
+window.handleDeleteOwnerTag = async function() {
+  if (!confirm("소유자 표시를 삭제하시겠습니까?")) return;
+  try {
+    await setOwnerTag({listingId, tagDisplayName: null, tagSoopId: null});
+    await refreshListing();
+    showToast("소유자 표시가 삭제되었습니다");
+  } catch (e) {
+    alert(`삭제 실패: ${e.message}`);
   }
 };
 

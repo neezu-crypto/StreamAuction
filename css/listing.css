@@ -344,6 +344,100 @@
   color: #f87171;
 }
 
+/* ===== Owner Tag ===== */
+.listing-owner-tag-section {
+  padding: 14px 24px;
+  border-bottom: 1px solid #2a2e38;
+  background: #151820;
+}
+
+.listing-owner-tag-section--empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.owner-tag-prompt-text {
+  font-size: .85rem;
+  color: #9ba3b4;
+}
+
+.owner-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.owner-tag-crown {
+  font-size: 1rem;
+}
+
+.owner-tag-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  color: #f5d142;
+  font-weight: 600;
+  font-size: .95rem;
+  transition: opacity .15s;
+}
+.owner-tag-link:hover { opacity: .8; }
+
+.owner-tag-soop {
+  font-size: .82rem;
+  color: #9ba3b4;
+  font-weight: 400;
+}
+
+.owner-tag-ext {
+  font-size: .8rem;
+  color: #6b7280;
+}
+
+.owner-tag-my-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.btn-owner-tag-edit,
+.btn-owner-tag-delete {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: .78rem;
+  border: none;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.btn-owner-tag-edit   { background: #1e3a5f; color: #60a5fa; }
+.btn-owner-tag-delete { background: #3b1c1c; color: #f87171; }
+.btn-owner-tag-edit:hover,
+.btn-owner-tag-delete:hover { opacity: .8; }
+
+.btn-owner-tag-register {
+  padding: 5px 12px;
+  border-radius: 6px;
+  background: #f5d142;
+  color: #0f1115;
+  font-size: .82rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s;
+}
+.btn-owner-tag-register:hover { background: #ffe066; }
+
+.owner-tag-modal-desc {
+  font-size: .85rem;
+  color: #9ba3b4;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
 /* ===== Blocked card ===== */
 .listing-blocked {
   text-align: center;

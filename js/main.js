@@ -9,7 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-database.js";
 import {
   doc, getDoc, collection, query, where, getDocs,
-  addDoc, serverTimestamp, orderBy, limit,
+  addDoc, serverTimestamp, orderBy, limit, onSnapshot,
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 import {
   loginAnonymous, loginGoogle, linkAnonymousToGoogle,
@@ -363,6 +363,23 @@ function updateAuthUI(user, userData) {
   }
 }
 
+// ===== 내 보유 매물 실시간 구독 =====
+let holdingsUnsub = null;
+
+function watchMyHoldings(uid) {
+  if (holdingsUnsub) { holdingsUnsub(); holdingsUnsub = null; }
+  if (!uid) { loadMyHoldings(null); return; }
+  let prevIdsJson = null;
+  holdingsUnsub = onSnapshot(doc(db, "users", uid), (snap) => {
+    if (!snap.exists()) return;
+    const ids = snap.data().ownedListingIds || [];
+    const idsJson = JSON.stringify([...ids].sort());
+    if (idsJson === prevIdsJson) return;
+    prevIdsJson = idsJson;
+    loadMyHoldings(uid);
+  });
+}
+
 // ===== 내 보유 매물 로드 =====
 async function loadMyHoldings(uid) {
   const section = $("holdingsSection");
@@ -494,8 +511,8 @@ async function processUserLogin(user) {
       showWelcomeModal(userData);
     }
 
-    // 보유 매물 로드
-    loadMyHoldings(user.uid);
+    // 보유 매물 실시간 구독
+    watchMyHoldings(user.uid);
 
     // 보상 센터 렌더링 (모달 내부)
     renderDailyRewardSection(userData);
@@ -528,7 +545,7 @@ watchAuthState(async (user) => {
     log("로그아웃 상태, 자동 익명 로그인...");
     currentUserData = null;
     updateAuthUI(null, null);
-    loadMyHoldings(null);
+    watchMyHoldings(null);
     renderDailyRewardSection(null);
     renderTutorialSection(null);
     updateRewardBtn(null);

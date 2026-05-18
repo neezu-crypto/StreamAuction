@@ -85,6 +85,32 @@
   </div>
 </div>
 
+<!-- 소유자 표시 모달 -->
+<div class="modal-overlay" id="ownerTagModal" onclick="if(event.target===this)closeOwnerTagModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>소유자 표시</h2>
+      <button class="modal-close" onclick="closeOwnerTagModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="owner-tag-modal-desc">내 방송국 닉네임과 Soop ID를 등록하면 다른 유저들이 방송국 페이지로 이동할 수 있어요.</p>
+      <div class="form-group">
+        <label>닉네임 *</label>
+        <input type="text" id="ownerTagDisplayName" placeholder="방송국 닉네임" maxlength="20">
+      </div>
+      <div class="form-group">
+        <label>Soop ID *</label>
+        <input type="text" id="ownerTagSoopId" placeholder="영문/숫자 3~20자" maxlength="20">
+      </div>
+      <div class="field-error" id="ownerTagError"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeOwnerTagModal()">취소</button>
+      <button class="btn-primary" id="ownerTagSubmitBtn" onclick="handleSubmitOwnerTag()">등록 · 30,000G</button>
+    </div>
+  </div>
+</div>
+
 <!-- 신고 모달 -->
 <div class="modal-overlay" id="reportModal">
   <div class="modal">
