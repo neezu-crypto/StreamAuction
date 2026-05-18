@@ -145,6 +145,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
     <a class="nav-btn" href="#s19">19. 보상형 광고</a>
     <a class="nav-btn" href="#s20">20. 중계방송</a>
     <a class="nav-btn" href="#s21">21. 이용약관</a>
+    <a class="nav-btn" href="#s22">22. 개인정보 처리방침</a>
   </div>
 </nav>
 
@@ -185,6 +186,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
     <a class="toc-item" href="#s19">19. 보상형 광고</a>
     <a class="toc-item" href="#s20">20. 중계방송 홍보</a>
     <a class="toc-item" href="#s21">21. 이용약관</a>
+    <a class="toc-item" href="#s22">22. 개인정보 처리방침</a>
   </div>
 </div>
 
@@ -1816,8 +1818,121 @@ async function requireSession(uid) {
 
 <hr>
 
+<div id="s22" class="section-anchor">
+<h2>22. 개인정보 처리방침</h2>
+
+<blockquote>StreamAuction(이하 "서비스")은 「개인정보 보호법」 등 관련 법령을 준수하며, 이용자의 개인정보를 소중히 보호합니다. 본 처리방침은 서비스가 수집하는 개인정보의 항목·목적·기간 및 이용자 권리를 안내합니다.</blockquote>
+
+<h3>제1조 (수집하는 개인정보 항목 및 수집 방법)</h3>
+<table>
+<tr><th>수집 경로</th><th>수집 항목</th><th>수집 방법</th></tr>
+<tr><td>Google 소셜 로그인</td><td>Google 계정 이메일, Firebase UID</td><td>Firebase Authentication — Google OAuth 자동 수집</td></tr>
+<tr><td>서비스 이용 중 자동 생성</td><td>접속 일시, 잔액(G) 변동 내역, 경매 참여 이력</td><td>Firestore · Firebase RTDB 자동 기록</td></tr>
+<tr><td>보상형 광고 등록 (동의 후 수집)</td><td>닉네임, SOOP ID</td><td>광고 신청 모달 — 이용자 직접 입력 + 개인정보 동의 체크박스 확인 후 수집</td></tr>
+<tr><td>중계방송 등록 (동의 후 수집)</td><td>닉네임, SOOP ID</td><td>중계 등록 모달 — 이용자 직접 입력 + 개인정보 동의 체크박스 확인 후 수집</td></tr>
+</table>
+
+<h3>제2조 (개인정보 수집 및 이용 목적)</h3>
+<table>
+<tr><th>항목</th><th>이용 목적</th></tr>
+<tr><td>이메일, Firebase UID</td><td>계정 식별 및 인증, 접속 제한(30인) 게이트, 서비스 내 기능(경매·보상·상점) 제공</td></tr>
+<tr><td>접속·이용 이력</td><td>서비스 운영 통계, 어뷰징 탐지, 잔액 히스토리 관리</td></tr>
+<tr><td>닉네임, SOOP ID (광고)</td><td>보상형 광고 슬롯 내 방송국 정보 표시</td></tr>
+<tr><td>닉네임, SOOP ID (중계)</td><td>중계방송 슬롯 내 방송국 정보 표시</td></tr>
+</table>
+
+<h3>제3조 (개인정보 보유 및 이용 기간)</h3>
+<table>
+<tr><th>항목</th><th>보유 기간</th></tr>
+<tr><td>Google 계정 정보 (이메일, UID)</td><td>계정 삭제 요청 시까지 (서비스 종료 시 즉시 파기)</td></tr>
+<tr><td>잔액·이력 데이터</td><td>계정 삭제 요청 시까지</td></tr>
+<tr><td>닉네임·SOOP ID (광고)</td><td>광고 만료 후 운영자 판단 시점에 삭제 (Cloud Scheduler 연동 전까지는 수동 삭제)</td></tr>
+<tr><td>닉네임·SOOP ID (중계)</td><td>중계 만료 후 운영자 판단 시점에 삭제</td></tr>
+<tr><td>통계·로그 데이터</td><td>수집일로부터 1년 (운영 정책에 따라 변경 가능)</td></tr>
+</table>
+
+<h3>제4조 (개인정보의 제3자 제공)</h3>
+<p>서비스는 원칙적으로 이용자의 개인정보를 외부에 제공하지 않습니다. 단, 다음의 경우는 예외입니다.</p>
+<table>
+<tr><th>예외 사유</th><th>내용</th></tr>
+<tr><td>법령에 의한 경우</td><td>수사기관 요청 등 법령에 근거한 경우</td></tr>
+<tr><td>이용자 동의</td><td>이용자가 사전에 명시적으로 동의한 경우</td></tr>
+</table>
+
+<h3>제5조 (개인정보 처리 위탁)</h3>
+<table>
+<tr><th>수탁사</th><th>위탁 업무</th><th>보유 기간</th></tr>
+<tr><td>Google LLC (Firebase)</td><td>인증, 데이터베이스 저장·관리, 서버리스 함수 실행</td><td>계약 종료 시까지</td></tr>
+</table>
+<p style="font-size:.85rem;color:#9ca3af">Firebase의 개인정보 처리 방침: <code>firebase.google.com/support/privacy</code></p>
+
+<h3>제6조 (정보주체의 권리·의무 및 행사 방법)</h3>
+<table>
+<tr><th>권리</th><th>행사 방법</th></tr>
+<tr><td>열람</td><td>운영자에게 직접 연락 — 수집된 개인정보 목록 확인 가능</td></tr>
+<tr><td>정정·삭제</td><td>운영자에게 직접 연락 — 계정 삭제 또는 특정 항목 삭제 요청 처리</td></tr>
+<tr><td>처리 정지</td><td>서비스 이용 중단(로그아웃·계정 삭제)으로 처리 정지 효과 발생</td></tr>
+<tr><td>동의 철회</td><td>광고·중계 등록 시 제공한 닉네임·SOOP ID는 해당 문서 삭제 요청으로 철회 가능</td></tr>
+</table>
+
+<h3>제7조 (개인정보의 안전성 확보 조치)</h3>
+<table>
+<tr><th>조치</th><th>내용</th></tr>
+<tr><td>접근 제어</td><td>Firebase 보안 규칙으로 본인 데이터만 읽기·쓰기 허용, CF는 서비스 계정 전용</td></tr>
+<tr><td>전송 암호화</td><td>HTTPS 전 구간 암호화 (Firebase Hosting 기본 적용)</td></tr>
+<tr><td>최소 수집</td><td>닉네임·SOOP ID는 동의 받은 기능(광고·중계)에 한해서만 수집</td></tr>
+<tr><td>내부 접근 통제</td><td>Firebase Console 접근 권한은 운영자 단독 보유</td></tr>
+</table>
+
+<h3>제8조 (개인정보 보호책임자)</h3>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>책임자</td><td>오목지면시그 (서비스 운영자)</td></tr>
+<tr><td>문의</td><td>서비스 내 공지 채널 또는 SOOP 채널을 통해 연락</td></tr>
+</table>
+
+<h3>제9조 (닉네임·SOOP ID 동의 체크박스 적용 기준)</h3>
+
+<div class="info-box">
+  <div class="info-box-title">원칙</div>
+  <div class="info-box-text">
+    닉네임 또는 SOOP ID를 직접 입력받아 <strong>서비스 화면에 공개적으로 표시</strong>하는 모든 폼에는 반드시 개인정보 수집·이용 동의 체크박스를 포함해야 합니다.<br>
+    동의 체크 전까지는 확인(제출) 버튼이 비활성화되며, CF에서도 <code>consentAgreed === true</code>를 검증합니다.
+  </div>
+</div>
+
+<table>
+<tr><th>폼</th><th>수집 항목</th><th>표시 위치</th><th>동의 체크박스</th><th>CF 검증</th></tr>
+<tr><td>보상형 광고 신청 모달 (§19)</td><td>닉네임, SOOP ID</td><td>광고 슬롯 카드</td><td>필수</td><td><code>purchaseAd</code> — consentAgreed 검증</td></tr>
+<tr><td>중계방송 등록 모달 (§20)</td><td>닉네임, SOOP ID</td><td>중계 슬롯 카드</td><td>필수</td><td><code>registerRelay</code> — consentAgreed 검증</td></tr>
+</table>
+
+<p style="font-size:.85rem;color:#9ca3af">※ 향후 닉네임·SOOP ID를 공개 표시하는 신규 기능이 추가될 경우, 동일 원칙을 적용하여 동의 체크박스를 반드시 포함해야 합니다.</p>
+
+<h4>동의 체크박스 표준 문구</h4>
+<pre>[ ] 닉네임 및 SOOP ID가 서비스 화면에 공개적으로 표시되는 것에 동의합니다.
+    (수집 항목: 닉네임·SOOP ID / 목적: 서비스 내 {기능명} 표시 / 보유: 만료 후 삭제)</pre>
+
+<h4>UI 동작 규칙</h4>
+<table>
+<tr><th>상태</th><th>확인 버튼</th><th>CF 동작</th></tr>
+<tr><td>체크박스 미체크</td><td>비활성화 (disabled)</td><td>요청 자체 차단</td></tr>
+<tr><td>체크박스 체크</td><td>활성화</td><td><code>consentAgreed: true</code> 전달 → CF 정상 처리</td></tr>
+<tr><td>CF에서 consentAgreed 누락·false</td><td>—</td><td><code>CONSENT_REQUIRED</code> 에러 반환</td></tr>
+</table>
+
+<h3>제10조 (처리방침 시행일 및 변경)</h3>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>시행일</td><td>2026년 5월 18일</td></tr>
+<tr><td>변경 시</td><td>서비스 내 공지 후 7일 경과 시 적용</td></tr>
+</table>
+</div>
+
+<hr>
+
 <p style="font-size:12px;color:#999;text-align:center;padding:1rem 0">
-  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-18 (이용약관 추가) · 작성자: 오목지면시그
+  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-18 (개인정보 처리방침·동의 체크박스 정책 추가) · 작성자: 오목지면시그
 </p>
 
 </div>
