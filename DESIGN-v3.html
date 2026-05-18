@@ -147,6 +147,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
     <a class="nav-btn" href="#s21">21. 이용약관</a>
     <a class="nav-btn" href="#s22">22. 개인정보 처리방침</a>
     <a class="nav-btn" href="#s23">23. 위변조 방지</a>
+    <a class="nav-btn" href="#s24">24. 모바일 대응</a>
   </div>
 </nav>
 
@@ -189,6 +190,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
     <a class="toc-item" href="#s21">21. 이용약관</a>
     <a class="toc-item" href="#s22">22. 개인정보 처리방침</a>
     <a class="toc-item" href="#s23">23. 위변조 방지 대책</a>
+    <a class="toc-item" href="#s24">24. 모바일 대응</a>
   </div>
 </div>
 
@@ -2198,10 +2200,142 @@ async function requireSession(uid) {
 
 </div>
 
+<div id="s24" class="section-anchor">
+<h2>24. 모바일 대응</h2>
+
+<h3>24.1 원칙</h3>
+<ul>
+  <li><strong>단일 브레이크포인트:</strong> <code>max-width: 640px</code> 하나만 사용. 중간 브레이크포인트(태블릿 전용 규칙 등) 없음.</li>
+  <li><strong>레이아웃 우선:</strong> 모바일에서 레이아웃 깨짐·스크롤 오버플로 방지를 최우선 목표로 삼음. 시각 디자인 디테일은 데스크톱 기준.</li>
+  <li><strong>터치 타겟:</strong> 버튼·링크 최소 높이 44px 권장. 입찰 버튼 등 주요 액션은 <code>width: 100%</code>로 전체 너비 확보.</li>
+  <li><strong>뷰포트 메타:</strong> 전 페이지 <code>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;</code> 적용.</li>
+  <li><strong>폰트 스케일:</strong> <code>font-size: 15px</code> 베이스. 모바일에서 h1·h2 px 축소, 그 외 em 기반 상대 단위 사용.</li>
+</ul>
+
+<h3>24.2 페이지별 대응 현황</h3>
+<table>
+<tr><th>페이지</th><th>CSS 파일</th><th>모바일 대응 항목</th><th>상태</th></tr>
+<tr>
+  <td>공통 (헤더·모달)</td>
+  <td><code>common.css</code></td>
+  <td>
+    · 헤더 내부 패딩 16px로 축소<br>
+    · 로고 폰트 1.25rem<br>
+    · 모달 하단 최대 85vh, 내부 패딩 24px<br>
+    · 모달 버튼 수직 스택 (<code>flex-direction: column</code>)<br>
+    · 개발 패널 버튼 수직 스택
+  </td>
+  <td><span class="badge badge-done">구현 완료</span></td>
+</tr>
+<tr>
+  <td>메인 페이지 (index.html)</td>
+  <td><code>auction.css</code></td>
+  <td>
+    · 경매 가격 그리드 1×2 → 2열<br>
+    · 검색 결과 통계 카드 2열, 마지막 아이템 전체 너비<br>
+    · 입찰 행 (<code>bid-row</code>) 수직 스택<br>
+    · 입찰 버튼 (<code>bid-btn</code>) <code>width: 100%</code><br>
+    · 퀵 입찰 버튼 그룹 중앙 정렬<br>
+    · 튜토리얼 하단 버튼 수직 스택
+  </td>
+  <td><span class="badge badge-done">구현 완료</span></td>
+</tr>
+<tr>
+  <td>매물 상세 (listing.html)</td>
+  <td><code>listing.css</code></td>
+  <td>
+    · 히어로 프로필 이미지 60px<br>
+    · 히어로 닉네임 1.15rem<br>
+    · 스탯 카드 6칸 → 2열 그리드<br>
+    · 짝수 열 오른쪽 보더 제거, 3번째 열부터 위쪽 보더로 구분선 재정렬<br>
+    · 액션·히스토리·신고·메타·라이브 배너 섹션 패딩 축소
+  </td>
+  <td><span class="badge badge-done">구현 완료</span></td>
+</tr>
+<tr>
+  <td>마이페이지 (my.html)</td>
+  <td><code>my.css</code></td>
+  <td>
+    · 프로필 카드 패딩 20px<br>
+    · 통계 행 (<code>my-stats-row</code>) 전체 너비, 양쪽 분산 정렬<br>
+    · 통계 박스 flex 균등 분할<br>
+    · 보유 매물 카드 패딩 14px 16px<br>
+    · 출석 행 수직 스택 (<code>flex-direction: column</code>)
+  </td>
+  <td><span class="badge badge-done">구현 완료</span></td>
+</tr>
+<tr>
+  <td>상점 (shop.html)</td>
+  <td><code>common.css</code> 상속</td>
+  <td>공통 스타일 상속. 별도 미디어 쿼리 없음 — 그리드 <code>auto-fit</code>으로 자동 단열.</td>
+  <td><span class="badge badge-done">구현 완료</span></td>
+</tr>
+<tr>
+  <td>랭킹 (ranking.html)</td>
+  <td><code>common.css</code> 상속</td>
+  <td>공통 스타일 상속. 테이블 가로 스크롤(<code>overflow-x: auto</code>) 래퍼 필요.</td>
+  <td><span class="badge badge-todo">개선 필요</span></td>
+</tr>
+<tr>
+  <td>약관·개인정보 (terms/privacy)</td>
+  <td>인라인 스타일</td>
+  <td><code>max-width: 760px</code> + <code>padding: 2rem 1rem</code>으로 모바일 대응. 별도 미디어 쿼리 없음.</td>
+  <td><span class="badge badge-done">구현 완료</span></td>
+</tr>
+</table>
+
+<h3>24.3 공통 반응형 패턴 정리</h3>
+<table>
+<tr><th>패턴</th><th>구현 방식</th><th>적용 위치</th></tr>
+<tr><td>그리드 단열화</td><td><code>grid-template-columns: 1fr</code> 또는 <code>repeat(2, 1fr)</code></td><td>경매 가격, 검색 통계, 스탯 카드, 페이즈 카드</td></tr>
+<tr><td>버튼 전체 너비</td><td><code>width: 100%</code></td><td>입찰 버튼, 모달 버튼, 개발 패널 버튼</td></tr>
+<tr><td>수직 스택</td><td><code>flex-direction: column</code></td><td>입찰 행, 모달 버튼, 출석 행, 튜토리얼 하단</td></tr>
+<tr><td>패딩 축소</td><td>좌우 패딩 16–20px으로 통일</td><td>헤더, 메인, 카드, 섹션</td></tr>
+<tr><td>폰트 축소</td><td>h1 22px, h2 18px (기획서 내부 기준)</td><td>타이틀 계층</td></tr>
+<tr><td>가로 스크롤 허용</td><td><code>overflow-x: auto</code></td><td>sticky nav, 긴 테이블 래퍼 (랭킹 개선 필요)</td></tr>
+</table>
+
+<h3>24.4 미대응 항목 및 개선 계획</h3>
+<table>
+<tr><th>항목</th><th>설명</th><th>우선순위</th><th>Phase</th></tr>
+<tr>
+  <td>랭킹 테이블 가로 스크롤</td>
+  <td>랭킹 3탭 테이블이 좁은 화면에서 가로 넘침. <code>&lt;div style="overflow-x:auto"&gt;</code> 래퍼 추가 필요.</td>
+  <td>높음</td>
+  <td><span class="badge badge-new">즉시 개선 가능</span></td>
+</tr>
+<tr>
+  <td>바텀 네비게이션 바</td>
+  <td>모바일에서 메인·상점·마이페이지·랭킹 이동을 위한 고정 하단 탭 바 도입 검토. 현재는 페이지 상단 <code>.page-nav</code> 링크로 대체 중.</td>
+  <td>중</td>
+  <td><span class="badge badge-phase">Phase 2</span></td>
+</tr>
+<tr>
+  <td>PWA (Web App Manifest)</td>
+  <td><code>manifest.json</code> + <code>service-worker.js</code> 추가 시 홈 화면 추가 및 오프라인 캐시 지원. 실시간 경매 특성상 오프라인 범위 제한적.</td>
+  <td>중</td>
+  <td><span class="badge badge-phase">Phase 2</span></td>
+</tr>
+<tr>
+  <td>스와이프 제스처</td>
+  <td>입찰 기록, 탭 전환 등에 터치 스와이프 적용. Pointer Events API 사용 예정.</td>
+  <td>낮음</td>
+  <td><span class="badge badge-phase">Phase 3</span></td>
+</tr>
+<tr>
+  <td>안드로이드 소프트 키보드 대응</td>
+  <td>모달 내 입력 필드 포커스 시 뷰포트 resize 이슈. <code>visualViewport</code> API로 모달 위치 보정 검토.</td>
+  <td>낮음</td>
+  <td><span class="badge badge-phase">Phase 3</span></td>
+</tr>
+</table>
+
+</div>
+
 <hr>
 
 <p style="font-size:12px;color:#999;text-align:center;padding:1rem 0">
-  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-19 (위변조 방지 대책 섹션 추가) · 작성자: 오목지면시그
+  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-19 (모바일 대응 섹션 추가) · 작성자: 오목지면시그
 </p>
 
 </div>
