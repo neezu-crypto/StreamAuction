@@ -143,6 +143,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
     <a class="nav-btn" href="#s17">17. 통계 관리</a>
     <a class="nav-btn" href="#s18">18. 테스트 기간</a>
     <a class="nav-btn" href="#s19">19. 보상형 광고</a>
+    <a class="nav-btn" href="#s20">20. 중계방송</a>
   </div>
 </nav>
 
@@ -179,6 +180,9 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
     <a class="toc-item" href="#s15">15. 상점 페이지</a>
     <a class="toc-item" href="#s16">16. 랭킹 페이지</a>
     <a class="toc-item" href="#s17">17. 통계 관리 탭</a>
+    <a class="toc-item" href="#s18">18. 테스트 기간</a>
+    <a class="toc-item" href="#s19">19. 보상형 광고</a>
+    <a class="toc-item" href="#s20">20. 중계방송 홍보</a>
   </div>
 </div>
 
@@ -1481,8 +1485,207 @@ async function requireSession(uid) {
 
 <hr>
 
+<div id="s20" class="section-anchor">
+<h2>20. 중계방송 홍보 <span class="badge badge-phase">Phase 2</span></h2>
+
+<blockquote>StreamAuction을 <strong>실시간으로 중계하는 스트리머</strong>가 닉네임·SOOP ID·방송 시간을 입력해 자신의 방송국을 홍보할 수 있는 기능. 동시 중계 슬롯은 최대 3개로 제한한다.</blockquote>
+
+<div class="info-box">
+  <div class="info-box-title">핵심 구조</div>
+  <div class="info-box-text">
+    중계 스트리머 : G를 내고 자신의 SOOP 방송국을 중계방송 슬롯에 등록 → 메인/보상 센터에 노출<br>
+    시청자 : 중계방송 슬롯 클릭 → 새 탭에서 스트리머의 방송국 페이지 이동
+  </div>
+</div>
+
+<h3>20.1 중계방송 등록 정책</h3>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>신청 자격</td><td>Google 계정 전용 (익명 유저 불가)</td></tr>
+<tr><td>등록 단가</td><td><strong>100,000G / 시간</strong></td></tr>
+<tr><td>최소 기간</td><td>1시간</td></tr>
+<tr><td>최대 기간</td><td>미정 (초기 24시간 상한 예정)</td></tr>
+<tr><td>자동 단가 계산</td><td>기간(시간) × 100,000G — 신청 모달 내 실시간 표시</td></tr>
+<tr><td>동시 슬롯 제한</td><td><strong>최대 3개</strong> — 3개 이상 활성 시 신규 등록 불가 (CF에서 차단)</td></tr>
+<tr><td>환불</td><td>불가 (경매 등록·광고 등록과 동일 정책)</td></tr>
+<tr><td>필수 동의</td><td>개인정보 수집·이용 동의 (닉네임·SOOP ID 서비스 내 표시)</td></tr>
+<tr><td>광고 URL 형식</td><td><code>https://www.sooplive.com/station/{soopId}</code></td></tr>
+</table>
+
+<h3>20.2 노출 정책</h3>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>노출 위치</td><td>보상 센터 모달 → "중계방송" 탭 (별도 탭) · 메인 페이지 상단 배너 (슬롯 1개 이상 활성 시)</td></tr>
+<tr><td>노출 순서</td><td>등록 시각 오름차순 (먼저 등록한 방송 우선)</td></tr>
+<tr><td>만료 처리</td><td>만료된 슬롯은 자동으로 목록에서 제거 (CF 조회 시 <code>expiresAt &gt; now</code> 필터)</td></tr>
+<tr><td>클릭 동작</td><td>카드 클릭 → 새 탭에서 <code>sooplive.com/station/{soopId}</code> 오픈 (별도 보상 없음)</td></tr>
+<tr><td>슬롯 표시</td><td>현재 활성 슬롯 수 표시: <code>중계 중 N/3</code></td></tr>
+</table>
+
+<h3>20.3 등록 플로우</h3>
+<pre>보상 센터 모달 → "중계방송" 탭 → "중계 등록하기" 버튼 클릭
+
+┌── 중계방송 등록 모달 ────────────────────────┐
+│  닉네임     [________________]              │
+│  SOOP ID   [________________]              │
+│  기간       [  3  ] 시간                    │
+│                                            │
+│  총 비용: 3시간 × 100,000G = 300,000G      │
+│  내 잔액: 800,000G → 지불 후 500,000G     │
+│                                            │
+│  방송국 미리보기:                           │
+│  → sooplive.com/station/mysoopid          │
+│                                            │
+│  현재 슬롯: 1 / 3                          │
+│                                            │
+│  [✓] 닉네임·SOOP ID를 서비스에 공개하는 데  │
+│      동의합니다.                            │
+│                                            │
+│                    [ 취소 ]  [ 등록 확인 ]  │
+└────────────────────────────────────────────┘</pre>
+
+<h3>20.4 중계방송 탭 UI</h3>
+<pre>보상 센터 모달 → "중계방송" 탭
+
+┌── 중계방송 탭 ──────────────────────────────┐
+│  현재 중계 중  2 / 3                       │
+│                                            │
+│  ┌─────────────────────────────────────┐  │
+│  │ 🎮 스트리머닉 · soopid1            │  │
+│  │    중계 종료까지 1시간 32분         │  │
+│  │                        [ 방송 보기 ] │  │
+│  └─────────────────────────────────────┘  │
+│  ┌─────────────────────────────────────┐  │
+│  │ 🎮 다른닉네임 · soopid2            │  │
+│  │    중계 종료까지 0시간 44분         │  │
+│  │                        [ 방송 보기 ] │  │
+│  └─────────────────────────────────────┘  │
+│                                            │
+│  남은 슬롯: 1개                            │
+│  [ + 내 중계방송 등록하기 ]                 │
+└────────────────────────────────────────────┘
+
+※ 슬롯 3개 모두 사용 중이면 "등록하기" 버튼 비활성화
+   + "현재 슬롯이 모두 사용 중입니다." 안내 문구 표시</pre>
+
+<h3>20.5 Firestore 스키마</h3>
+<pre>relayBroadcasts/{broadcastId}
+├── uid          string   // 등록자 Firebase UID
+├── displayName  string   // 입력한 닉네임
+├── soopId       string   // 입력한 SOOP ID
+├── durationHours number  // 등록 시간 (정수)
+├── costG        number   // 차감된 G (durationHours × 100,000)
+├── createdAt    number   // 등록 timestamp (ms)
+├── expiresAt    number   // createdAt + durationHours × 3,600,000
+└── consentAgreed boolean // 개인정보 동의 여부</pre>
+
+<h3>20.6 Cloud Functions</h3>
+<table>
+<tr><th>함수명</th><th>역할</th><th>핵심 검증</th></tr>
+<tr><td><code>registerRelay</code></td><td>슬롯 등록 및 G 차감</td><td>Google 계정 · consentAgreed · 잔액 충분 · 활성 슬롯 &lt; 3 · durationHours ≥ 1</td></tr>
+<tr><td><code>getActiveRelays</code></td><td>활성 중계 목록 반환</td><td><code>expiresAt &gt; Date.now()</code> 필터 · 최대 3건</td></tr>
+</table>
+
+<h3>20.7 registerRelay CF 처리 흐름</h3>
+<pre>1. 인증 확인 (Google 계정)
+2. consentAgreed === true 확인
+3. displayName, soopId 형식 검증 (빈 문자열 불가)
+4. durationHours 정수 · 1 이상 확인
+5. Firestore 트랜잭션:
+   a. relayBroadcasts 컬렉션에서 expiresAt > now 인 문서 count
+   b. count >= 3 이면 SLOTS_FULL 에러 반환
+   c. users/{uid} 잔액 확인 (balance >= costG)
+   d. 잔액 부족 시 INSUFFICIENT_BALANCE 에러 반환
+   e. users/{uid}.balance -= costG
+   f. relayBroadcasts/{newId} 문서 생성
+6. 성공 응답 반환</pre>
+
+<h3>20.8 어뷰징 방어</h3>
+<table>
+<tr><th>어뷰징 시나리오</th><th>방어 방법</th></tr>
+<tr><td>슬롯 초과 등록</td><td>CF 트랜잭션 내에서 원자적으로 활성 슬롯 수 확인 — 동시 요청도 차단</td></tr>
+<tr><td>가짜 soopId 등록</td><td>실제 방송국 URL 오픈 시 sooplive.com이 직접 판별 — 서비스는 URL 생성만 담당</td></tr>
+<tr><td>잔액 부족 후 등록 시도</td><td>CF 트랜잭션에서 잔액 검증 — 클라이언트 조작 불가</td></tr>
+<tr><td>익명 유저 등록</td><td>CF에서 <code>auth.token.firebase.sign_in_provider !== "anonymous"</code> 확인</td></tr>
+</table>
+
+<h3>20.9 통계 이벤트</h3>
+<table>
+<tr><th>이벤트</th><th>발생 시점</th><th>파라미터</th></tr>
+<tr><td><code>relay_register</code></td><td>registerRelay CF 성공</td><td><code>{durationHours, costG, soopId}</code></td></tr>
+<tr><td><code>relay_view</code></td><td>중계방송 탭 "방송 보기" 클릭</td><td><code>{broadcastId, soopId}</code></td></tr>
+</table>
+
+<h3>20.10 개인정보 수집 동의 항목</h3>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>수집 항목</td><td>닉네임, SOOP ID</td></tr>
+<tr><td>수집 목적</td><td>중계방송 슬롯 내 방송국 정보 표시</td></tr>
+<tr><td>보유 기간</td><td>중계 만료 후 즉시 비노출 · 문서 보존 기간 별도 수립</td></tr>
+<tr><td>동의 거부 시</td><td>중계 등록 불가 (CF에서 consentAgreed 필드 검증)</td></tr>
+</table>
+
+<h3>20.11 구현 단계</h3>
+<div class="timeline">
+  <div class="timeline-item">
+    <div class="timeline-dot dot-todo">1</div>
+    <div>
+      <div class="timeline-title">Firestore 스키마 및 보안 규칙</div>
+      <div class="timeline-desc"><code>relayBroadcasts</code> 컬렉션 생성 · public read 규칙 · write는 CF 전용 (서비스 어카운트만)</div>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-dot dot-todo">2</div>
+    <div>
+      <div class="timeline-title">registerRelay CF 구현</div>
+      <div class="timeline-desc">Google 계정 검증 · 동의 여부 · 슬롯 카운트 트랜잭션 · 잔액 차감 · relayBroadcasts 문서 생성. expiresAt = createdAt + durationHours × 3,600,000ms.</div>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-dot dot-todo">3</div>
+    <div>
+      <div class="timeline-title">getActiveRelays CF 구현</div>
+      <div class="timeline-desc">expiresAt &gt; Date.now() 필터 · createdAt 오름차순 정렬 · 최대 3건 반환.</div>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-dot dot-todo">4</div>
+    <div>
+      <div class="timeline-title">보상 센터 — 중계방송 탭 UI</div>
+      <div class="timeline-desc">활성 슬롯 카드 목록 · 슬롯 수 표시 (N/3) · "방송 보기" 클릭 → 새 탭 오픈 · 슬롯 여유 있으면 "등록하기" 버튼 활성.</div>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-dot dot-todo">5</div>
+    <div>
+      <div class="timeline-title">중계 등록 모달 UI</div>
+      <div class="timeline-desc">닉네임·SOOP ID 입력 · 기간(시간) 입력 → 비용 실시간 계산 · 방송국 URL 미리보기 · 개인정보 동의 체크박스 · 확인 버튼 → registerRelay CF.</div>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-dot dot-todo">6</div>
+    <div>
+      <div class="timeline-title">system/config 연동</div>
+      <div class="timeline-desc"><code>relayPricePerHour</code>(100,000) · <code>relayMaxSlots</code>(3) · <code>relayMaxHours</code>(24) 를 config에 추가 — 재배포 없이 조정 가능.</div>
+    </div>
+  </div>
+</div>
+
+<h3>20.12 미결 사항</h3>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>중계 신고</td><td>부적절한 중계방송 등록 신고 기능 — 운영자가 Firebase Console에서 삭제</td></tr>
+<tr><td>최대 등록 시간</td><td>24시간 상한 검토 중 — 게임 스트리밍 평균 방송 시간 고려</td></tr>
+<tr><td>만료 알림</td><td>만료 임박 시 등록자에게 알림 — Phase 3 (푸시 알림 연동 후)</td></tr>
+<tr><td>데이터 삭제 정책</td><td>만료된 relayBroadcasts 문서 자동 삭제 시점 미정 (Cloud Scheduler Phase 2)</td></tr>
+<tr><td>메인 페이지 노출</td><td>슬롯 활성 시 메인 상단 배너/사이드바 표시 여부 — 운영 후 검토</td></tr>
+</table>
+</div>
+
+<hr>
+
 <p style="font-size:12px;color:#999;text-align:center;padding:1rem 0">
-  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-18 (보상형 광고 — 자체 G 기반 방송국 홍보 시스템 기획) · 작성자: 오목지면시그
+  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-18 (중계방송 홍보 슬롯 기획 추가) · 작성자: 오목지면시그
 </p>
 
 </div>
