@@ -1590,16 +1590,17 @@ async function renderAdRewardSection() {
     const {ads, todayCount} = res.data;
     ads.sort((a, b) => a.expiresAt - b.expiresAt);
     const now = Date.now();
+    const activeAds = ads.filter(ad => ad.expiresAt > now);
 
     let html = `<div class="ad-reward-header">
       <span class="ad-today-count">오늘 보상: <strong>${todayCount} / 5</strong>개 완료</span>
       ${isGoogle ? `<button class="btn-ad-register" onclick="openAdPurchaseModal()">+ 광고 신청</button>` : ""}
     </div>`;
 
-    if (ads.length === 0) {
+    if (activeAds.length === 0) {
       html += `<div class="ad-empty">현재 진행 중인 광고가 없습니다.<br>${isGoogle ? "광고를 직접 신청해보세요!" : ""}</div>`;
     } else {
-      ads.forEach((ad) => {
+      activeAds.forEach((ad) => {
         const imgSrc = `https://stimg.sooplive.co.kr/LOGO/${ad.soopId.slice(0, 2)}/${ad.soopId}/${ad.soopId}.jpg`;
         const remaining = msToRemaining(ad.expiresAt - now);
         const claimed = ad.claimedToday;
