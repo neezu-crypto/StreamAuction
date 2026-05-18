@@ -1588,6 +1588,7 @@ async function renderAdRewardSection() {
   try {
     const res = await getActiveAdsFn();
     const {ads, todayCount} = res.data;
+    ads.sort((a, b) => a.expiresAt - b.expiresAt);
     const now = Date.now();
 
     let html = `<div class="ad-reward-header">
