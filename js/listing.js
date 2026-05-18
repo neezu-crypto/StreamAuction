@@ -656,8 +656,10 @@ window.openOwnerTagModal = function() {
   if (nameInput) nameInput.value = tag?.displayName || "";
   if (soopInput) soopInput.value = tag?.soopId || "";
   setText("ownerTagError", "");
+  const consentCb = $("ownerTagConsent");
+  if (consentCb) consentCb.checked = false;
   const btn = $("ownerTagSubmitBtn");
-  if (btn) btn.textContent = tag ? "수정 · 30,000G" : "등록 · 30,000G";
+  if (btn) { btn.textContent = tag ? "수정 · 30,000G" : "등록 · 30,000G"; btn.disabled = true; }
   modal.classList.add("show");
 };
 
@@ -670,6 +672,7 @@ window.handleSubmitOwnerTag = async function() {
   if (isOwnerTagSaving) return;
   const tagDisplayName = $("ownerTagDisplayName")?.value?.trim();
   const tagSoopId = $("ownerTagSoopId")?.value?.trim();
+  if (!$("ownerTagConsent")?.checked) { setText("ownerTagError", "개인정보 수집·이용에 동의해주세요."); return; }
   if (!tagDisplayName) { setText("ownerTagError", "닉네임을 입력해주세요."); return; }
   if (!tagSoopId) { setText("ownerTagError", "Soop ID를 입력해주세요."); return; }
 

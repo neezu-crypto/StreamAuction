@@ -33,6 +33,10 @@
 
 <footer class="footer">
   <p>&copy; 2026 StreamAuction. MVP Build.</p>
+  <p style="margin-top:6px;font-size:.8rem">
+    <a href="terms.html" style="color:#6b7280;text-decoration:none;margin-right:12px">이용약관</a>
+    <a href="privacy.html" style="color:#6b7280;text-decoration:none">개인정보 처리방침</a>
+  </p>
 </footer>
 
 <!-- 경매 등록 모달 -->
@@ -102,11 +106,15 @@
         <label>Soop ID *</label>
         <input type="text" id="ownerTagSoopId" placeholder="영문/숫자 3~20자" maxlength="20">
       </div>
+      <label class="consent-check-label" style="display:flex;gap:10px;align-items:flex-start;font-size:.83rem;color:#9ba3b4;margin-top:4px;cursor:pointer">
+        <input type="checkbox" id="ownerTagConsent" style="margin-top:2px;flex-shrink:0" onchange="document.getElementById('ownerTagSubmitBtn').disabled=!this.checked">
+        <span>닉네임 및 SOOP ID가 매물 상세 페이지에 공개적으로 표시되는 것에 동의합니다.</span>
+      </label>
       <div class="field-error" id="ownerTagError"></div>
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeOwnerTagModal()">취소</button>
-      <button class="btn-primary" id="ownerTagSubmitBtn" onclick="handleSubmitOwnerTag()">등록 · 30,000G</button>
+      <button class="btn-primary" id="ownerTagSubmitBtn" onclick="handleSubmitOwnerTag()" disabled>등록 · 30,000G</button>
     </div>
   </div>
 </div>

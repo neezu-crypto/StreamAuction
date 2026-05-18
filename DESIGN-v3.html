@@ -193,7 +193,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 </div>
 
 <div id="s0" class="section-anchor">
-<h2>구현 현황 요약 <span class="badge badge-new">2026-05-18 기준 (보상형 광고 구현 완료)</span></h2>
+<h2>구현 현황 요약 <span class="badge badge-new">2026-05-19 기준 (소유자 표시 구현 완료)</span></h2>
 
 <h3>✅ 구현 완료</h3>
 <table>
@@ -208,7 +208,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>익명 제한</td><td>경매 등록 후 1시간 재등록 쿨다운 (구글 면제)</td></tr>
 <tr><td>메인 UI</td><td>실시간 경매 표시(RTDB), 대기열, 입찰 기록, 스트리머 검색, 내 보유 매물 패널 (보류 요청 승인/거부 포함), 쿨다운 카운트다운 + "대기시간 건너뛰기 (50,000G)" 버튼</td></tr>
 <tr><td>경매 쿨다운 / 건너뛰기</td><td>경매 종료 후 10분 쿨다운 (RTDB status:"cooldown" + cooldownUntil) → 다음 경매 자동 시작. skipCooldown CF — 로그인 유저가 50,000G 지불해 즉시 건너뛰기. RTDB 트랜잭션으로 중복 실행 방지.</td></tr>
-<tr><td>상점 페이지</td><td>shop.html + purchaseShopItem CF — 6종 아이템 (강제청산 기간 연장권·면역 연장권·보유 한도+1·대기열 우선권 패스·상세 열람 패스·히스토리 패스). 강제청산 기간 연장권은 경매 신청 전 사전 구매 가능 (listings.reservedExtensionHours 저장 → requestAuction 시 자동 적용).</td></tr>
+<tr><td>상점 페이지</td><td>shop.html + purchaseShopItem CF — 7종 아이템 (강제청산 기간 연장권·면역 연장권·금고 슬롯·보유 한도+1·대기열 우선권 패스·상세 열람 패스·히스토리 패스). 강제청산 기간 연장권은 경매 신청 전 사전 구매 가능 (listings.reservedExtensionHours 저장 → requestAuction 시 자동 적용).</td></tr>
 <tr><td>검색 UI</td><td>보유자 있는 매물 → "경매 요청 보내기" 버튼 · 요청 접수됨 뱃지 · 면역 기간 표시</td></tr>
 <tr><td>경매 수수료 5%</td><td>유형 B·C 낙찰 시 판매자에게 낙찰가 × 95% 지급 (유형 A는 판매자 없어 해당 없음)</td></tr>
 <tr><td>튜토리얼 보상 (전체)</td><td>첫 낙찰 30,000G · 첫 경매 등록 10,000G · 첫 손절 5,000G · 첫 강제청산 10,000G — 서버에서 자동 지급, 토스트 알림</td></tr>
@@ -217,14 +217,17 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>금고 슬롯</td><td>상점에서 1,500,000G에 영구 구매 (구글 전용) → 마이페이지 금고 패널에서 보유 매물 보관/인출. 보관 중 강제청산 면제. 소유권 이전 시 자동 초기화. setVaultListing CF + checkAndFinalizeExpiredRequests 면제 로직.</td></tr>
 <tr><td>신고/차단 시스템</td><td>reportListing (Google 계정 전용 · 중복 방지 · 10회 누적 자동 모자이크) · blockListing · 검색 결과 / 상세 페이지 차단/신고 UI · 모자이크 블러 · adminGetReports · adminSetMosaic</td></tr>
 <tr><td>경매 히스토리 열람 BM</td><td>viewAuctionHistory CF (50,000G 차감 · 트랜잭션) · 검색 결과 내 "히스토리 열람" 버튼 · 상세 페이지 내 열람 버튼 · 히스토리 모달 (날짜/유형/시작가/최종가/입찰 수/결과 테이블)</td></tr>
-<tr><td>매물 상세 페이지 BM</td><td>listing.html?id={listingId} — <strong>50,000G 결제 게이트</strong> (viewListingDetail CF · 트랜잭션) · 미결제 시 프로필+이름 미리보기만 노출 · 결제 후 6개 스탯(현재 시세/역대 최고가·최저가/총 거래량/거래 횟수/마지막 거래) + 보유 현황별 액션 버튼(등록/요청/손절/승인·거부) + 히스토리 열람 + 신고/차단 표시 · 경매 등록 등 내부 액션 후에도 isPaid 유지 · 검색 결과 카드에 "상세 페이지 50,000G" 뱃지 링크 추가</td></tr>
+<tr><td>매물 상세 페이지 BM</td><td>listing.html?id={listingId} — <strong>50,000G 결제 게이트</strong> (viewListingDetail CF · 트랜잭션) · 미결제 시 프로필+이름 미리보기만 노출 · 결제 후 6개 스탯(현재 시세/역대 최고가·최저가/총 거래량/거래 횟수/마지막 거래) + <strong>소유자 표시 섹션</strong> + 보유 현황별 액션 버튼(등록/요청/손절/승인·거부) + 히스토리 열람 + 신고/차단 표시 · 경매 등록 등 내부 액션 후에도 isPaid 유지 · 검색 결과 카드에 "상세 페이지 50,000G" 뱃지 링크 추가</td></tr>
 <tr><td>출석 보상 시스템</td><td>claimDailyReward CF (KST 기준 하루 1회 · 연속 스트릭 · 7/30일 보너스 · Google 전용) · 보상 센터 모달 내 출석 카드 (스트릭 표시 · 진행바 · 즉시 잔액 반영 · 미수령 시 헤더 버튼 점 표시) · 관리자 유저 상세 출석 정보 표시 · 시스템 설정 출석 보상값 편집</td></tr>
 <tr><td>서버사이드 접속 제한</td><td>RTDB <code>sessions/$uid</code> (admin SDK 전용 쓰기) + <code>initializeUser</code> 진입 시 세션 수 검사 (최대 30명) + <code>requireSession()</code> 게이트 (placeBid · registerAuction · requestAuction) + <code>endSession</code> CF (로그아웃 시 슬롯 즉시 반환) + 스테일 세션 자동 정리 (presence 교차 검증). 클라이언트 위변조로 우회 불가.</td></tr>
 <tr><td>테스트 기간 배너</td><td>메인 페이지 헤더 하단 고정 주황/노랑 그라디언트 띠 — "⚠️ 테스트 기간 운영 중 · 동시 접속 최대 30명 제한 · 현재 접속: N명". RTDB presence 실시간 구독으로 N 갱신.</td></tr>
 <tr><td>익명 유저 로그인 버튼</td><td>익명 상태에서 헤더(메인·마이페이지) 로그아웃 버튼 → 구글 로그인 버튼으로 대체. 클릭 시 익명→구글 전환 플로우 진입.</td></tr>
 <tr><td>잔액 변화 히스토리 모달</td><td>마이페이지 잔액 stat 박스 클릭 → 최근 7일 잔액 변화 모달. 탭 2개: ① 지출/획득 내역 (auctionHistory 기반 매입·판매 이벤트) ② 총 잔액 변화 (Firestore <code>users/{uid}/balanceHistory</code> 서브컬렉션 — 클라이언트에서 페이지 진입·보상 수령·건너뛰기 시 자동 기록). 날짜별 그룹 + 7일 순변화 요약.</td></tr>
 <tr><td>랭킹 페이지</td><td>ranking.html — <strong>50,000G 결제 게이트</strong> (viewRanking CF · 트랜잭션) · 탭 3개: 시세 랭킹 / 거래량 랭킹 / 거래 횟수 랭킹 · 모자이크 매물 블러 처리 · 차단 매물 숨김 · 메달(🥇🥈🥉) 표시</td></tr>
+<tr><td>소유자 표시 (ownerTag)</td><td>setOwnerTag CF (보유자 검증 · 30,000G 트랜잭션 차감 · 삭제 무료) · listing.js 상세 페이지 내 ownerTag 섹션 렌더링 — 보유자: 등록(30,000G)/수정/삭제 버튼 · 타 유저: 닉네임·@soopId + ch.sooplive.co.kr/{soopId} 방송국 링크 · 소유권 이전(낙찰·강제청산) 시 ownerTag 자동 초기화 · 개인정보 동의 체크박스 포함</td></tr>
+<tr><td>내 보유 매물 실시간 갱신</td><td>main.js — watchMyHoldings(uid): Firestore onSnapshot으로 users/{uid}.ownedListingIds 변화 감시 → 변경 시 loadMyHoldings 자동 호출. 경매 완료 시 기존 보유자·신규 보유자 패널 즉시 갱신.</td></tr>
 <tr><td>보상형 광고 시스템</td><td>purchaseAd CF (Google 계정 · consentAgreed · soopId 검증 · 잔액 트랜잭션 · 최대 7일) · claimAdReward CF (만료 확인 · 자기 광고 차단 · KST 일일 3개 한도 · 광고별 중복 차단 · +5,000G) · getActiveAds CF (활성 광고 목록 + claimedToday 반환) · 보상 센터 탭 UI (출석·광고 탭 분리) · 광고 카드 (프로필 이미지 · 남은 시간 · 수령 상태) · 광고 신청 모달 (SOOP ID 입력 시 이미지 미리보기 · 비용 실시간 계산 · 개인정보 동의) · Firestore 규칙 (ads public read · adClaims 본인 read)</td></tr>
+<tr><td>이용약관·개인정보 처리방침 페이지</td><td>terms.html · privacy.html — 독립 열람 페이지. 모든 페이지 footer에 링크 추가.</td></tr>
 <tr><td>기반</td><td>Firestore/RTDB 보안 규칙 (auctionRequests · balanceHistory · ads · adClaims 포함), 모바일 반응형 UI</td></tr>
 </table>
 
@@ -239,8 +242,6 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><th>항목</th><th>관련 섹션</th><th>비고</th></tr>
 <tr><td>통계 관리 탭</td><td>§17</td><td>userEvents Firestore 수집 · logEvent CF · adminGetStats CF · 관리자 통계 탭 UI · 실시간 현황 패널 · 유저 자산 랭킹(adminGetUserAssets CF)</td></tr>
 <tr><td>중계방송 홍보</td><td>§20</td><td>registerRelay · getActiveRelays CF · 메인 페이지 좌측 슬라이드 패널 UI · 중계 등록 모달</td></tr>
-<tr><td>이용약관 UI</td><td>§21</td><td>서비스 내 약관 열람 페이지 또는 모달 — 기획 완료, UI 미구현</td></tr>
-<tr><td>개인정보 처리방침 UI</td><td>§22</td><td>서비스 내 처리방침 열람 페이지 또는 모달 — 기획 완료, UI 미구현</td></tr>
 <tr><td>만료 문서 자동 삭제</td><td>§19·§20</td><td>Cloud Scheduler — 만료된 ads · relayBroadcasts 문서 자동 정리</td></tr>
 </table>
 </div>
@@ -1894,6 +1895,16 @@ async function requireSession(uid) {
 <tr><td>서비스 책임</td><td>매물 정보는 유저가 직접 등록하며, 서비스 운영자는 등록 정보의 정확성을 보증하지 않습니다.</td></tr>
 </table>
 
+<h3>제5조의2 (소유자 표시)</h3>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>기능 개요</td><td>보유 매물의 상세 페이지에 자신의 닉네임·SOOP ID를 공개 표시하는 선택적 기능입니다. (30,000G)</td></tr>
+<tr><td>공개 범위</td><td>상세 페이지를 열람한 모든 유저에게 닉네임·SOOP ID 및 방송국 링크가 공개됩니다.</td></tr>
+<tr><td>자동 초기화</td><td>소유권 이전(낙찰·강제청산) 시 소유자 표시는 자동으로 삭제되며, 이에 대한 환불은 없습니다.</td></tr>
+<tr><td>삭제</td><td>보유자는 언제든지 무료로 소유자 표시를 삭제할 수 있습니다.</td></tr>
+<tr><td>동의</td><td>등록 시 개인정보 수집·이용 동의 체크박스를 확인해야 합니다.</td></tr>
+</table>
+
 <h3>제6조 (금지 행위)</h3>
 <p>다음 행위는 서비스 이용을 제한하거나 계정을 영구 정지할 수 있습니다.</p>
 <table>
@@ -1937,7 +1948,7 @@ async function requireSession(uid) {
 <tr><td>효력 발생</td><td>본 약관은 서비스 접속 시점부터 효력이 발생합니다.</td></tr>
 <tr><td>개정</td><td>약관 개정 시 서비스 내 공지를 통해 안내하며, 공지 후 7일이 경과하면 개정 약관이 적용됩니다.</td></tr>
 <tr><td>준거법</td><td>본 약관은 대한민국 법률에 따라 해석됩니다.</td></tr>
-<tr><td>시행일</td><td>2026년 5월 18일</td></tr>
+<tr><td>시행일</td><td>2026년 5월 19일</td></tr>
 </table>
 </div>
 
@@ -1956,6 +1967,7 @@ async function requireSession(uid) {
 <tr><td>경매 등록 (동의 후 수집)</td><td>스트리머 닉네임, SOOP ID</td><td>경매 등록 모달 — 검색 후 이용자 직접 입력 + 개인정보 동의 체크박스 확인 후 <code>listings</code> 컬렉션에 저장</td></tr>
 <tr><td>보상형 광고 등록 (동의 후 수집)</td><td>닉네임, SOOP ID</td><td>광고 신청 모달 — 이용자 직접 입력 + 개인정보 동의 체크박스 확인 후 수집</td></tr>
 <tr><td>중계방송 등록 (동의 후 수집)</td><td>닉네임, SOOP ID</td><td>중계 등록 모달 — 이용자 직접 입력 + 개인정보 동의 체크박스 확인 후 수집</td></tr>
+<tr><td>소유자 표시 등록 (동의 후 수집)</td><td>닉네임, SOOP ID</td><td>매물 상세 페이지 소유자 표시 모달 — 이용자 직접 입력 + 개인정보 동의 체크박스 확인 후 수집. 소유권 이전 시 자동 삭제.</td></tr>
 </table>
 
 <h3>제2조 (개인정보 수집 및 이용 목적)</h3>
@@ -1966,6 +1978,7 @@ async function requireSession(uid) {
 <tr><td>닉네임, SOOP ID (경매 등록)</td><td>경매 매물로 등록 및 서비스 전체 화면에 공개 표시 (검색·랭킹·경매 현황 등)</td></tr>
 <tr><td>닉네임, SOOP ID (광고)</td><td>보상형 광고 슬롯 내 방송국 정보 표시</td></tr>
 <tr><td>닉네임, SOOP ID (중계)</td><td>중계방송 슬롯 내 방송국 정보 표시</td></tr>
+<tr><td>닉네임, SOOP ID (소유자 표시)</td><td>매물 상세 페이지 소유자 표시 섹션에 공개 — 방송국 링크 제공</td></tr>
 </table>
 
 <h3>제3조 (개인정보 보유 및 이용 기간)</h3>
@@ -1975,6 +1988,7 @@ async function requireSession(uid) {
 <tr><td>잔액·이력 데이터</td><td>계정 삭제 요청 시까지</td></tr>
 <tr><td>닉네임·SOOP ID (광고)</td><td>광고 만료 후 운영자 판단 시점에 삭제 (Cloud Scheduler 연동 전까지는 수동 삭제)</td></tr>
 <tr><td>닉네임·SOOP ID (중계)</td><td>중계 만료 후 운영자 판단 시점에 삭제</td></tr>
+<tr><td>닉네임·SOOP ID (소유자 표시)</td><td>소유권 이전(낙찰·강제청산) 시 자동 삭제. 보유자 직접 삭제 시 즉시 파기.</td></tr>
 <tr><td>통계·로그 데이터</td><td>수집일로부터 1년 (운영 정책에 따라 변경 가능)</td></tr>
 </table>
 
@@ -2033,6 +2047,7 @@ async function requireSession(uid) {
 <tr><td>경매 등록 모달 (§7)</td><td>스트리머 닉네임, SOOP ID</td><td>검색·경매 현황·랭킹 등 서비스 전체</td><td>필수</td><td><code>registerAuction</code> — consentAgreed 검증</td></tr>
 <tr><td>보상형 광고 신청 모달 (§19)</td><td>닉네임, SOOP ID</td><td>광고 슬롯 카드</td><td>필수</td><td><code>purchaseAd</code> — consentAgreed 검증</td></tr>
 <tr><td>중계방송 등록 모달 (§20)</td><td>닉네임, SOOP ID</td><td>중계 슬롯 카드</td><td>필수</td><td><code>registerRelay</code> — consentAgreed 검증</td></tr>
+<tr><td>소유자 표시 모달 (§5의2)</td><td>닉네임, SOOP ID</td><td>매물 상세 페이지</td><td>필수</td><td><code>setOwnerTag</code> — 클라이언트 동의 후 호출 (CF 검증 없음, 클라이언트 강제)</td></tr>
 </table>
 
 <p style="font-size:.85rem;color:#9ca3af">※ 향후 닉네임·SOOP ID를 공개 표시하는 신규 기능이 추가될 경우, 동일 원칙을 적용하여 동의 체크박스를 반드시 포함해야 합니다.</p>
@@ -2052,7 +2067,7 @@ async function requireSession(uid) {
 <h3>제10조 (처리방침 시행일 및 변경)</h3>
 <table>
 <tr><th>항목</th><th>내용</th></tr>
-<tr><td>시행일</td><td>2026년 5월 18일</td></tr>
+<tr><td>시행일</td><td>2026년 5월 19일</td></tr>
 <tr><td>변경 시</td><td>서비스 내 공지 후 7일 경과 시 적용</td></tr>
 </table>
 </div>
