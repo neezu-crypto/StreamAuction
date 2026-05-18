@@ -922,7 +922,7 @@ RTDB auction/current (쿨다운 상태)
 <h3>17.1 목적 및 설계 원칙</h3>
 <table>
 <tr><th>항목</th><th>내용</th></tr>
-<tr><td>목적</td><td>유저 행동 데이터를 수집·집계해 제품 의사결정 근거 확보 (DAU, 리텐션, BM 매출, 기능 사용률)</td></tr>
+<tr><td>목적</td><td>유저 행동 데이터를 수집·집계해 제품 의사결정 근거 확보 (DAU, 리텐션, BM 매출, 기능 사용률, 화폐 수지)</td></tr>
 <tr><td>수집 위치</td><td><strong>서버 우선</strong> — 기존 CF 내부에서 이벤트 기록. 페이지 접속 등 서버 미경유 이벤트는 전용 <code>logEvent</code> CF 호출</td></tr>
 <tr><td>저장소</td><td>Firestore <code>userEvents</code> 컬렉션 (문서 1건 = 이벤트 1건)</td></tr>
 <tr><td>집계 방식</td><td>MVP: <code>adminGetStats</code> CF가 직접 쿼리. Phase 2: Cloud Scheduler로 일별 사전집계 (<code>statsDaily/{YYYY-MM-DD}</code>)</td></tr>
@@ -947,6 +947,8 @@ RTDB auction/current (쿨다운 상태)
 <tr><th>이벤트 키</th><th>기록 위치</th><th>params</th><th>설명</th></tr>
 <tr><td><code>page_view</code></td><td>logEvent CF</td><td><code>{page: 'main'|'listing'|'shop'|'my'|'ranking'|'admin'}</code></td><td>페이지 진입. 세션당 페이지별 1회 (sessionStorage 중복 방지)</td></tr>
 <tr><td><code>session_start</code></td><td>logEvent CF</td><td><code>{referrer: string|null}</code></td><td>탭/브라우저 최초 진입 시 1회</td></tr>
+<tr><td><code>session_end</code></td><td>endSession CF</td><td><code>{}</code></td><td>정상 로그아웃으로 세션 슬롯 반환. 탭 강제 종료는 기록되지 않음 (presence로 추적)</td></tr>
+<tr><td><code>access_gate_hit</code></td><td>initializeUser CF</td><td><code>{}</code></td><td>30명 접속 한도 초과로 입장 거부. 빈도가 잦으면 한도 상향 검토 신호</td></tr>
 </table>
 
 <h4>카테고리 2 — 인증</h4>
@@ -959,27 +961,28 @@ RTDB auction/current (쿨다운 상태)
 <h4>카테고리 3 — 경매 활동</h4>
 <table>
 <tr><th>이벤트 키</th><th>기록 위치</th><th>params</th><th>설명</th></tr>
-<tr><td><code>auction_register</code></td><td>registerAuction CF</td><td><code>{type: 'new'|'holder'|'selloff', startPrice, listingId, soopId}</code></td><td>경매 등록 (대기열 진입)</td></tr>
+<tr><td><code>auction_register</code></td><td>registerAuction CF</td><td><code>{type: 'new'|'holder'|'selloff', startPrice, listingId, isPriority: boolean}</code></td><td>경매 등록 (대기열 진입). isPriority로 우선권 패스 사용 여부 추적</td></tr>
 <tr><td><code>auction_bid</code></td><td>placeBid CF</td><td><code>{amount, auctionId, listingId}</code></td><td>입찰</td></tr>
 <tr><td><code>auction_win</code></td><td>finalizeAuction CF</td><td><code>{finalPrice, auctionId, listingId, type}</code></td><td>낙찰 (낙찰자 기준)</td></tr>
 <tr><td><code>auction_no_sale</code></td><td>finalizeAuction CF</td><td><code>{startPrice, auctionId, listingId, type}</code></td><td>유찰 (등록자 기준)</td></tr>
 <tr><td><code>skip_cooldown</code></td><td>skipCooldown CF</td><td><code>{cost: 50000}</code></td><td>쿨다운 건너뛰기 50,000G 결제</td></tr>
 <tr><td><code>auction_request</code></td><td>requestAuction CF</td><td><code>{listingId, soopId}</code></td><td>보유자에게 경매 신청 (유형 B/C)</td></tr>
 <tr><td><code>auction_request_respond</code></td><td>respondToAuctionRequest CF</td><td><code>{listingId, accepted: boolean}</code></td><td>신청 승인/거부</td></tr>
+<tr><td><code>force_liquidation</code></td><td>checkAndFinalizeExpiredRequests 헬퍼</td><td><code>{listingId, refundAmount: number}</code></td><td>24시간 미회신 강제청산 발동. 빈도가 잦으면 회신 독촉 기능 도입 신호</td></tr>
 </table>
 
 <h4>카테고리 4 — BM 유료 기능 (G 결제)</h4>
 <table>
 <tr><th>이벤트 키</th><th>기록 위치</th><th>params</th><th>설명</th></tr>
-<tr><td><code>listing_detail_view</code></td><td>viewListingDetail CF</td><td><code>{listingId, cost: 50000}</code></td><td>매물 상세 페이지 50,000G 결제</td></tr>
-<tr><td><code>history_view</code></td><td>viewAuctionHistory CF</td><td><code>{listingId, cost: 50000}</code></td><td>히스토리 열람 50,000G 결제</td></tr>
+<tr><td><code>listing_detail_view</code></td><td>viewListingDetail CF</td><td><code>{listingId, cost: 50000, passUsed: boolean}</code></td><td>매물 상세 페이지 열람. 패스 사용 시 cost=0</td></tr>
+<tr><td><code>history_view</code></td><td>viewAuctionHistory CF</td><td><code>{listingId, cost: 50000, passUsed: boolean}</code></td><td>히스토리 열람. 패스 사용 시 cost=0</td></tr>
 <tr><td><code>ranking_view</code></td><td>viewRanking CF</td><td><code>{cost: 50000}</code></td><td>랭킹 페이지 50,000G 결제</td></tr>
 </table>
 
 <h4>카테고리 5 — 상점 구매</h4>
 <table>
 <tr><th>이벤트 키</th><th>기록 위치</th><th>params</th><th>설명</th></tr>
-<tr><td><code>shop_purchase</code></td><td>purchaseShopItem CF</td><td><code>{itemKey, price, quantity}</code></td><td>상점 아이템 구매</td></tr>
+<tr><td><code>shop_purchase</code></td><td>purchaseShopItem CF</td><td><code>{itemId, price}</code></td><td>상점 아이템 구매. itemId별로 아이템 수요 분해 가능</td></tr>
 </table>
 
 <h4>카테고리 6 — 보상 수령</h4>
@@ -997,6 +1000,13 @@ RTDB auction/current (쿨다운 상태)
 <tr><td><code>listing_blocked</code></td><td>blockListing CF</td><td><code>{listingId}</code></td><td>매물 차단</td></tr>
 </table>
 
+<h4>카테고리 8 — 보상형 광고 (Phase 2)</h4>
+<table>
+<tr><th>이벤트 키</th><th>기록 위치</th><th>params</th><th>설명</th></tr>
+<tr><td><code>ad_purchase</code></td><td>purchaseAd CF</td><td><code>{adId, soopId, durationDays, totalCost}</code></td><td>광고주가 방송국 홍보 광고 등록. totalCost = durationDays × 200,000G</td></tr>
+<tr><td><code>ad_reward_claim</code></td><td>claimAdReward CF</td><td><code>{adId, soopId, amount: 10000}</code></td><td>시청자가 방송국 방문 후 보상 수령. soopId로 광고별 인기도 측정 가능</td></tr>
+</table>
+
 <h3>17.3 Firestore 데이터 구조</h3>
 <pre>// Collection: userEvents
 // Document ID: auto-generated
@@ -1006,21 +1016,25 @@ RTDB auction/current (쿨다운 상태)
   event: "auction_bid",
   params: { amount: 120000, auctionId: "xxx", listingId: "yyy" },
   ts: Timestamp,
-  date: "2026-05-17"   // KST 날짜 문자열 — 집계 필터용
+  date: "2026-05-18"   // KST 날짜 문자열 — 집계 필터용
 }
 
 // Collection: statsDaily (Phase 2 — 사전집계)
-// Document ID: "2026-05-17"
+// Document ID: "2026-05-18"
 {
-  date: "2026-05-17",
+  date: "2026-05-18",
   dau: 128,
   newUsers: 14,
   googleUsers: 62,
   auctionCount: 33,
   bidCount: 214,
   winCount: 18,
-  totalBmRevenue: 3850000,   // 유료 기능 소비 G 합계
-  shopRevenue: 1200000,       // 상점 구매 G 합계
+  forceLiquidationCount: 2,
+  accessGateHits: 5,
+  totalBmRevenue: 3850000,
+  shopRevenue: 1200000,
+  adPurchaseRevenue: 600000,    // 광고 등록비 회수 합계
+  adRewardPayout: 300000,       // 광고 보상 지급 합계
   eventCounts: { page_view: 312, search: 88, ... },
   updatedAt: Timestamp
 }</pre>
@@ -1037,92 +1051,120 @@ RTDB auction/current (쿨다운 상태)
 <table>
 <tr><th>함수명</th><th>호출 주체</th><th>설명</th></tr>
 <tr><td><code>logEvent</code></td><td>클라이언트 (onCall)</td><td>페이지 접속·검색 등 CF 미경유 이벤트 기록. 이벤트 키 화이트리스트 검증 후 userEvents에 write. rate-limit: 유저당 분당 10회</td></tr>
-<tr><td><code>adminGetStats</code></td><td>관리자 페이지 (onCall)</td><td>기간(today/7d/30d) 파라미터 수신 → userEvents 집계 쿼리 → KPI + 이벤트별 카운트 반환</td></tr>
+<tr><td><code>adminGetStats</code></td><td>관리자 페이지 (onCall)</td><td>기간(today/7d/30d) 파라미터 수신 → userEvents 집계 쿼리 + RTDB 실시간 현황 조회 → KPI + 이벤트별 카운트 + 실시간 현황 반환</td></tr>
 </table>
 
-<p><strong>기존 CF에 이벤트 기록 추가:</strong> <code>registerAuction</code>, <code>placeBid</code>, <code>finalizeAuction</code>, <code>viewRanking</code>, <code>viewListingDetail</code>, <code>viewAuctionHistory</code>, <code>purchaseShopItem</code>, <code>skipCooldown</code>, <code>claimDailyReward</code>, <code>initializeUser</code>, <code>convertAnonymousToGoogle</code> — 각 CF 처리 성공 후 <code>db.collection('userEvents').add({...})</code> 추가 (메인 로직 실패 영향 없도록 <code>try-catch</code> 분리)</p>
+<p><strong>이벤트 기록 추가 대상 CF 전체:</strong><br>
+<code>registerAuction</code> · <code>placeBid</code> · <code>finalizeAuction</code> · <code>viewRanking</code> · <code>viewListingDetail</code> · <code>viewAuctionHistory</code> · <code>purchaseShopItem</code> · <code>skipCooldown</code> · <code>claimDailyReward</code> · <code>initializeUser</code> · <code>convertAnonymousToGoogle</code> · <code>requestAuction</code> · <code>respondToAuctionRequest</code> · <code>reportListing</code> · <code>blockListing</code> · <code>endSession</code> · <code>purchaseAd</code> · <code>claimAdReward</code> · checkAndFinalizeExpiredRequests 헬퍼<br>
+각 CF 처리 성공 후 <code>db.collection('userEvents').add({...})</code> 추가 (메인 로직 실패 영향 없도록 <code>try-catch</code> 분리)</p>
 
 <h3>17.6 관리자 통계 탭 UI 구성</h3>
 
-<h4>기간 선택 버튼</h4>
+<h4>① 실시간 현황 패널 (최상단 — RTDB 직접 조회)</h4>
+<table>
+<tr><th>항목</th><th>데이터 출처</th><th>의미</th></tr>
+<tr><td>현재 접속자 수</td><td>RTDB <code>presence</code> 노드 카운트</td><td>실제 온라인 중인 유저 수</td></tr>
+<tr><td>현재 세션 수</td><td>RTDB <code>sessions</code> 노드 카운트</td><td>슬롯 점유 수 (최대 30)</td></tr>
+<tr><td>경매 상태</td><td>RTDB <code>auction/current.status</code></td><td>active / cooldown / idle</td></tr>
+<tr><td>대기열 수</td><td>RTDB <code>auction/queue</code> 카운트</td><td>현재 대기 중인 경매 수 (최대 5)</td></tr>
+<tr><td>활성 광고 수</td><td>Firestore <code>ads</code> — expiresAt &gt; now 카운트</td><td>현재 노출 중인 광고 슬롯 수</td></tr>
+</table>
+
+<h4>② 기간 선택 버튼 (userEvents 기반)</h4>
 <table>
 <tr><th>옵션</th><th>쿼리 범위</th></tr>
 <tr><td>오늘</td><td>date == KST 오늘</td></tr>
-<tr><td>최근 7일</td><td>date >= 7일 전</td></tr>
-<tr><td>최근 30일</td><td>date >= 30일 전</td></tr>
+<tr><td>최근 7일</td><td>date &gt;= 7일 전</td></tr>
+<tr><td>최근 30일</td><td>date &gt;= 30일 전</td></tr>
 </table>
 
-<h4>KPI 카드 (상단 요약)</h4>
+<h4>③ KPI 카드 (상단 요약)</h4>
 <table>
 <tr><th>카드</th><th>집계 방법</th></tr>
 <tr><td>활성 유저 (DAU/WAU/MAU)</td><td>기간 내 <code>uid</code> distinct count</td></tr>
 <tr><td>신규 유저</td><td>event == <code>user_signup</code> count</td></tr>
-<tr><td>구글 전환</td><td>event == <code>google_convert</code> count</td></tr>
-<tr><td>총 경매 수</td><td>event == <code>auction_register</code> count</td></tr>
+<tr><td>구글 전환율</td><td>google_convert / user_signup × 100%</td></tr>
+<tr><td>총 경매 수</td><td>event == <code>auction_register</code> count (유형별 분해)</td></tr>
 <tr><td>총 입찰 수</td><td>event == <code>auction_bid</code> count</td></tr>
 <tr><td>낙찰률</td><td>auction_win / auction_register × 100%</td></tr>
-<tr><td>BM 총 수익 (G)</td><td>listing_detail_view + history_view + ranking_view + skip_cooldown params.cost 합계</td></tr>
-<tr><td>상점 수익 (G)</td><td>event == <code>shop_purchase</code> params.price 합계</td></tr>
+<tr><td>강제청산 발생</td><td>event == <code>force_liquidation</code> count</td></tr>
+<tr><td>접속 제한 도달</td><td>event == <code>access_gate_hit</code> count — 잦으면 한도 상향 신호</td></tr>
+<tr><td>BM 총 수익 (G)</td><td>listing_detail_view + history_view + ranking_view + skip_cooldown params.cost 합계 (패스 사용분 제외)</td></tr>
+<tr><td>상점 수익 (G)</td><td>shop_purchase params.price 합계 (itemId별 분해)</td></tr>
+<tr><td>광고 등록 수익 (G)</td><td>ad_purchase params.totalCost 합계</td></tr>
+<tr><td>광고 보상 지급 (G)</td><td>ad_reward_claim × 10,000G × count</td></tr>
 <tr><td>보상 지급 총액 (G)</td><td>daily_reward + tutorial_reward params.amount 합계</td></tr>
 </table>
 
-<h4>이벤트별 상세 테이블</h4>
+<h4>④ 이벤트별 상세 테이블</h4>
 <table>
 <tr><th>카테고리</th><th>이벤트</th><th>표시 항목</th></tr>
-<tr><td>접속</td><td>page_view, session_start</td><td>페이지별 방문 수 분해</td></tr>
-<tr><td>경매</td><td>auction_register, auction_bid, auction_win, auction_no_sale</td><td>유형별(A/B/C) 분해 포함</td></tr>
-<tr><td>BM</td><td>listing_detail_view, history_view, ranking_view, skip_cooldown</td><td>건수 + 소비 G 합계</td></tr>
+<tr><td>접속</td><td>page_view, session_start, session_end, access_gate_hit</td><td>페이지별 방문 수 분해 · 접속 제한 도달 빈도</td></tr>
+<tr><td>인증</td><td>user_signup, google_convert</td><td>신규 유저 · 전환율</td></tr>
+<tr><td>경매</td><td>auction_register, auction_bid, auction_win, auction_no_sale, force_liquidation</td><td>유형별(A/B/C) 분해 · 강제청산 건수 · 우선권 패스 사용률</td></tr>
+<tr><td>BM</td><td>listing_detail_view, history_view, ranking_view, skip_cooldown</td><td>건수 + 소비 G · 패스 사용 비율</td></tr>
 <tr><td>상점</td><td>shop_purchase</td><td>아이템별 구매 건수 + G 합계</td></tr>
-<tr><td>보상</td><td>daily_reward, tutorial_reward</td><td>지급 건수 + G 합계</td></tr>
-<tr><td>탐색</td><td>search, listing_reported, listing_blocked</td><td>검색 성공률 포함</td></tr>
+<tr><td>보상</td><td>daily_reward, tutorial_reward</td><td>지급 건수 + G 합계 · 밀스톤 달성 비율</td></tr>
+<tr><td>탐색</td><td>search, listing_reported, listing_blocked</td><td>검색 성공률 · 신고·차단 건수</td></tr>
+<tr><td>광고</td><td>ad_purchase, ad_reward_claim</td><td>광고 등록 건수 · soopId별 클릭 수 · 총 등록비(회수) · 총 보상(발행)</td></tr>
 </table>
 
-<h4>화폐 흐름 요약 (G 수지)</h4>
+<h4>⑤ 화폐 흐름 요약 (G 수지)</h4>
 <table>
 <tr><th>항목</th><th>방향</th><th>계산 근거</th></tr>
-<tr><td>BM 기능 소비</td><td>회수 (deflation)</td><td>listing_detail_view + history_view + ranking_view + skip_cooldown 합계</td></tr>
+<tr><td>BM 기능 소비</td><td>회수 (deflation)</td><td>listing_detail_view + history_view + ranking_view + skip_cooldown params.cost 합계 (패스 사용 제외)</td></tr>
 <tr><td>상점 아이템 소비</td><td>회수</td><td>shop_purchase params.price 합계</td></tr>
-<tr><td>경매 등록비 소비</td><td>회수</td><td>auction_register × 50,000G (단, 타인 낙찰 시 환급 차감 필요)</td></tr>
+<tr><td>경매 등록비 소비</td><td>회수</td><td>auction_register × 50,000G (타인 낙찰 시 환급분은 별도 차감 필요)</td></tr>
+<tr><td>광고 등록비 소비</td><td>회수</td><td>ad_purchase params.totalCost 합계</td></tr>
 <tr><td>출석 보상 지급</td><td>발행 (inflation)</td><td>daily_reward params.amount 합계</td></tr>
 <tr><td>튜토리얼 보상 지급</td><td>발행</td><td>tutorial_reward params.amount 합계</td></tr>
-<tr><td>순 화폐량 변동</td><td>-</td><td>발행 합계 − 회수 합계</td></tr>
+<tr><td>광고 보상 지급</td><td>발행</td><td>ad_reward_claim count × 10,000G</td></tr>
+<tr><td>강제청산 환급 지급</td><td>발행</td><td>force_liquidation params.refundAmount 합계</td></tr>
+<tr><td><strong>순 화폐량 변동</strong></td><td>-</td><td>발행 합계 − 회수 합계</td></tr>
 </table>
 
-<h3>17.7 구현 단계 (Phase 1 — MVP)</h3>
+<h3>17.7 구현 단계</h3>
 <div class="timeline">
   <div class="timeline-item">
     <div class="timeline-dot dot-todo">1</div>
     <div>
       <div class="timeline-title">기존 CF에 이벤트 기록 추가</div>
-      <div class="timeline-desc">registerAuction · placeBid · finalizeAuction · purchaseShopItem · viewRanking · viewListingDetail · viewAuctionHistory · skipCooldown · claimDailyReward · initializeUser · convertAnonymousToGoogle 에 <code>db.collection('userEvents').add()</code> 추가</div>
+      <div class="timeline-desc">registerAuction(isPriority 추가) · placeBid · finalizeAuction · purchaseShopItem · viewRanking · viewListingDetail(passUsed 추가) · viewAuctionHistory(passUsed 추가) · skipCooldown · claimDailyReward · initializeUser(access_gate_hit 포함) · convertAnonymousToGoogle · requestAuction · respondToAuctionRequest · reportListing · blockListing · endSession · checkAndFinalizeExpiredRequests(force_liquidation)</div>
     </div>
   </div>
   <div class="timeline-item">
     <div class="timeline-dot dot-todo">2</div>
     <div>
-      <div class="timeline-title">logEvent CF 구현</div>
-      <div class="timeline-desc">클라이언트 → CF 경유 기록. 허용 이벤트 화이트리스트: page_view, session_start, search, listing_blocked, listing_reported. rate-limit 적용</div>
+      <div class="timeline-title">Phase 2 CF 이벤트 기록 추가</div>
+      <div class="timeline-desc">purchaseAd(ad_purchase) · claimAdReward(ad_reward_claim) — Phase 2 광고 기능 구현 시 함께 추가</div>
     </div>
   </div>
   <div class="timeline-item">
     <div class="timeline-dot dot-todo">3</div>
     <div>
-      <div class="timeline-title">Firestore 인덱스 추가</div>
-      <div class="timeline-desc">date+ts, event+ts, uid+ts 복합 인덱스 — firestore.indexes.json</div>
+      <div class="timeline-title">logEvent CF 구현</div>
+      <div class="timeline-desc">허용 이벤트 화이트리스트: page_view · session_start · search · listing_blocked · listing_reported. rate-limit: 유저당 분당 10회</div>
     </div>
   </div>
   <div class="timeline-item">
     <div class="timeline-dot dot-todo">4</div>
     <div>
-      <div class="timeline-title">adminGetStats CF 구현</div>
-      <div class="timeline-desc">기간 파라미터 → date 범위 쿼리 → 카테고리별 집계 → KPI + eventCounts + revenueByItem 반환</div>
+      <div class="timeline-title">Firestore 인덱스 추가</div>
+      <div class="timeline-desc">date+ts · event+ts · uid+ts 복합 인덱스 — firestore.indexes.json</div>
     </div>
   </div>
   <div class="timeline-item">
     <div class="timeline-dot dot-todo">5</div>
     <div>
+      <div class="timeline-title">adminGetStats CF 구현</div>
+      <div class="timeline-desc">기간 파라미터 → date 범위 쿼리 → KPI + 카테고리별 집계 + RTDB 실시간 현황(presence·sessions·queue·ads) 병렬 조회 → 통합 반환</div>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-dot dot-todo">6</div>
+    <div>
       <div class="timeline-title">관리자 통계 탭 UI 구축</div>
-      <div class="timeline-desc">admin.html에 "통계" 탭 추가 · 기간 버튼 · KPI 카드 · 이벤트 테이블 · G 수지 요약</div>
+      <div class="timeline-desc">admin.html에 "통계" 탭 추가 · 실시간 현황 패널(최상단) · 기간 버튼 · KPI 카드 · 이벤트 카테고리별 상세 테이블 · G 수지 요약</div>
     </div>
   </div>
 </div>
@@ -1138,6 +1180,8 @@ RTDB auction/current (쿨다운 상태)
 <tr><th>항목</th><th>미수집 이유</th></tr>
 <tr><td>검색한 soopId 값</td><td>개인정보 우려 — 검색 횟수만 수집</td></tr>
 <tr><td>입찰 상세 금액 (전체)</td><td>auctionHistory에 이미 집계됨 — 중복 방지</td></tr>
+<tr><td>강제청산 환급 상세 금액</td><td>force_liquidation params.refundAmount로 충분, 개별 listings 기록은 중복</td></tr>
+<tr><td>광고 클릭 시 실제 체류 시간</td><td>sooplive.com 외부 도메인 — 측정 불가</td></tr>
 <tr><td>페이지 스크롤·클릭 위치</td><td>MVP 범위 초과 — Phase 3</td></tr>
 <tr><td>기기·브라우저 정보</td><td>MVP 범위 초과</td></tr>
 </table>
