@@ -222,7 +222,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>익명 유저 로그인 버튼</td><td>익명 상태에서 헤더(메인·마이페이지) 로그아웃 버튼 → 구글 로그인 버튼으로 대체. 클릭 시 익명→구글 전환 플로우 진입.</td></tr>
 <tr><td>잔액 변화 히스토리 모달</td><td>마이페이지 잔액 stat 박스 클릭 → 최근 7일 잔액 변화 모달. 탭 2개: ① 지출/획득 내역 (auctionHistory 기반 매입·판매 이벤트) ② 총 잔액 변화 (Firestore <code>users/{uid}/balanceHistory</code> 서브컬렉션 — 클라이언트에서 페이지 진입·보상 수령·건너뛰기 시 자동 기록). 날짜별 그룹 + 7일 순변화 요약.</td></tr>
 <tr><td>랭킹 페이지</td><td>ranking.html — <strong>50,000G 결제 게이트</strong> (viewRanking CF · 트랜잭션) · 탭 3개: 시세 랭킹 / 거래량 랭킹 / 거래 횟수 랭킹 · 모자이크 매물 블러 처리 · 차단 매물 숨김 · 메달(🥇🥈🥉) 표시</td></tr>
-<tr><td>보상형 광고 시스템</td><td>purchaseAd CF (Google 계정 · consentAgreed · soopId 검증 · 잔액 트랜잭션 · 최대 7일) · claimAdReward CF (만료 확인 · 자기 광고 차단 · KST 일일 5개 한도 · 광고별 중복 차단 · +10,000G) · getActiveAds CF (활성 광고 목록 + claimedToday 반환) · 보상 센터 탭 UI (출석·광고 탭 분리) · 광고 카드 (프로필 이미지 · 남은 시간 · 수령 상태) · 광고 신청 모달 (SOOP ID 입력 시 이미지 미리보기 · 비용 실시간 계산 · 개인정보 동의) · Firestore 규칙 (ads public read · adClaims 본인 read)</td></tr>
+<tr><td>보상형 광고 시스템</td><td>purchaseAd CF (Google 계정 · consentAgreed · soopId 검증 · 잔액 트랜잭션 · 최대 7일) · claimAdReward CF (만료 확인 · 자기 광고 차단 · KST 일일 3개 한도 · 광고별 중복 차단 · +5,000G) · getActiveAds CF (활성 광고 목록 + claimedToday 반환) · 보상 센터 탭 UI (출석·광고 탭 분리) · 광고 카드 (프로필 이미지 · 남은 시간 · 수령 상태) · 광고 신청 모달 (SOOP ID 입력 시 이미지 미리보기 · 비용 실시간 계산 · 개인정보 동의) · Firestore 규칙 (ads public read · adClaims 본인 read)</td></tr>
 <tr><td>기반</td><td>Firestore/RTDB 보안 규칙 (auctionRequests · balanceHistory · ads · adClaims 포함), 모바일 반응형 UI</td></tr>
 </table>
 
@@ -560,7 +560,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <tr><td>출석 3일+</td><td>10,000G/일</td></tr>
 <tr><td>출석 7일 특별</td><td>30,000G</td></tr>
 <tr><td>출석 30일 특별</td><td>100,000G</td></tr>
-<tr><td>광고 시청 (일 5회 한도)</td><td>10,000G/회</td></tr>
+<tr><td>광고 시청 (일 3회 한도)</td><td>5,000G/회</td></tr>
 <tr><td>첫 경매 등록 (1회)</td><td>10,000G</td></tr>
 <tr><td>첫 낙찰 (1회)</td><td>30,000G</td></tr>
 <tr><td>첫 손절 경매 (1회)</td><td>5,000G</td></tr>
@@ -1117,7 +1117,7 @@ RTDB auction/current (쿨다운 상태)
 <tr><td>BM 총 수익 (G)</td><td>listing_detail_view + history_view + ranking_view + skip_cooldown params.cost 합계 (패스 사용분 제외)</td></tr>
 <tr><td>상점 수익 (G)</td><td>shop_purchase params.price 합계 (itemId별 분해)</td></tr>
 <tr><td>광고 등록 수익 (G)</td><td>ad_purchase params.totalCost 합계</td></tr>
-<tr><td>광고 보상 지급 (G)</td><td>ad_reward_claim × 10,000G × count</td></tr>
+<tr><td>광고 보상 지급 (G)</td><td>ad_reward_claim × 5,000G × count</td></tr>
 <tr><td>보상 지급 총액 (G)</td><td>daily_reward + tutorial_reward params.amount 합계</td></tr>
 </table>
 
@@ -1159,7 +1159,7 @@ RTDB auction/current (쿨다운 상태)
 <tr><td>광고 등록비 소비</td><td>회수</td><td>ad_purchase params.totalCost 합계</td></tr>
 <tr><td>출석 보상 지급</td><td>발행 (inflation)</td><td>daily_reward params.amount 합계</td></tr>
 <tr><td>튜토리얼 보상 지급</td><td>발행</td><td>tutorial_reward params.amount 합계</td></tr>
-<tr><td>광고 보상 지급</td><td>발행</td><td>ad_reward_claim count × 10,000G</td></tr>
+<tr><td>광고 보상 지급</td><td>발행</td><td>ad_reward_claim count × 5,000G</td></tr>
 <tr><td>강제청산 환급 지급</td><td>발행</td><td>force_liquidation params.refundAmount 합계</td></tr>
 <tr><td><strong>순 화폐량 변동</strong></td><td>-</td><td>발행 합계 − 회수 합계</td></tr>
 </table>
@@ -1305,9 +1305,9 @@ async function requireSession(uid) {
 <tr><th>항목</th><th>내용</th></tr>
 <tr><td>시청 자격</td><td>로그인 유저 전체 (익명 포함)</td></tr>
 <tr><td>방법</td><td>보상 센터 → 광고 보상 탭 → 광고 카드 클릭 → 새 탭에서 방송국 페이지 열림</td></tr>
-<tr><td>1회 보상</td><td><strong>10,000G</strong> (방송국 페이지 1개당)</td></tr>
+<tr><td>1회 보상</td><td><strong>5,000G</strong> (방송국 페이지 1개당)</td></tr>
 <tr><td>보상 조건</td><td>광고 카드 클릭 시 <code>claimAdReward</code> CF 호출 성공 시 지급 (새 탭은 별개로 열림)</td></tr>
-<tr><td>1인 일일 한도</td><td><strong>5개 광고</strong> (최대 50,000G/일, KST 자정 초기화)</td></tr>
+<tr><td>1인 일일 한도</td><td><strong>3개 광고</strong> (최대 15,000G/일, KST 자정 초기화)</td></tr>
 <tr><td>동일 광고 중복 보상</td><td>동일 광고 페이지는 하루 1회만 보상 (익일 재수령 가능)</td></tr>
 </table>
 
@@ -1338,10 +1338,10 @@ async function requireSession(uid) {
 <pre>보상 센터 모달 → "광고 보상" 탭
 
 ┌── 광고 보상 탭 ──────────────────────────────┐
-│  오늘 보상 수령: 1 / 5 개 완료               │
+│  오늘 보상 수령: 1 / 3 개 완료               │
 │                                             │
 │  📺 [yuhatty] SOOP 방송국                  │
-│      클릭하면 +10,000G                      │
+│      클릭하면 +5,000G                       │
 │      남은 시간: 18시간 22분                 │
 │      [방송국 방문하기 →]  ← 미수령 상태     │
 │                                             │
@@ -1350,7 +1350,7 @@ async function requireSession(uid) {
 │      [방송국 방문하기 →]  ← 수령 후 상태   │
 │                                             │
 │  📺 [streamer3] SOOP 방송국                │
-│      클릭하면 +10,000G                      │
+│      클릭하면 +5,000G                       │
 │      [방송국 방문하기 →]                    │
 │                                             │
 │  (광고 없음 상태: "현재 진행 중인 광고가     │
@@ -1359,7 +1359,7 @@ async function requireSession(uid) {
 
 버튼 클릭 시:
 1. claimAdReward CF 호출 (adId 전달)
-2. CF 검증 통과 → +10,000G 지급
+2. CF 검증 통과 → +5,000G 지급
 3. 새 탭: sooplive.com/station/{soopId} 열림
 4. 카드 상태 → "오늘 보상 수령 완료 ✅"</pre>
 
@@ -1428,18 +1428,18 @@ async function requireSession(uid) {
 <table>
 <tr><th>구분</th><th>방향</th><th>계산</th></tr>
 <tr><td>광고 등록비 (광고주 지출)</td><td>회수 (deflation)</td><td>광고주 수 × 기간 × 200,000G</td></tr>
-<tr><td>광고 보상 지급 (시청자 수령)</td><td>발행 (inflation)</td><td>DAU × 평균 수령 광고 수 × 10,000G</td></tr>
+<tr><td>광고 보상 지급 (시청자 수령)</td><td>발행 (inflation)</td><td>DAU × 평균 수령 광고 수 × 5,000G</td></tr>
 </table>
 
 <div class="info-box">
   <div class="info-box-title">수지 균형 시나리오 예시</div>
   <div class="info-box-text">
     광고주 1명이 1일 광고 등록 (200,000G 회수)<br>
-    DAU 30명이 각 1개 광고 클릭 시 (300,000G 발행)<br>
-    → 순 발행 +100,000G / 일<br><br>
+    DAU 30명이 각 1개 광고 클릭 시 (150,000G 발행)<br>
+    → 순 회수 +50,000G / 일<br><br>
     광고주 2명이 1일 등록 (400,000G 회수)<br>
-    DAU 30명 × 평균 2개 클릭 (600,000G 발행)<br>
-    → 순 발행 +200,000G / 일<br><br>
+    DAU 30명 × 평균 2개 클릭 (300,000G 발행)<br>
+    → 순 회수 +100,000G / 일<br><br>
     <strong>광고주 수가 시청자 수보다 적으면 순발행 발생. 광고주 유인책(노출 효과)이 수요를 결정함.</strong>
   </div>
 </div>
@@ -1483,7 +1483,7 @@ async function requireSession(uid) {
     <div class="timeline-dot dot-todo">3</div>
     <div>
       <div class="timeline-title">claimAdReward CF 구현</div>
-      <div class="timeline-desc">광고 유효성 · 광고주 자기 수령 차단 · KST 날짜 초기화 · 일일 5개 한도 · adClaims 서브컬렉션 기록 · 잔액 트랜잭션.</div>
+      <div class="timeline-desc">광고 유효성 · 광고주 자기 수령 차단 · KST 날짜 초기화 · 일일 3개 한도 · adClaims 서브컬렉션 기록 · 잔액 트랜잭션.</div>
     </div>
   </div>
   <div class="timeline-item">

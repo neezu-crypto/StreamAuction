@@ -1593,7 +1593,7 @@ async function renderAdRewardSection() {
     const activeAds = ads.filter(ad => ad.expiresAt > now);
 
     let html = `<div class="ad-reward-header">
-      <span class="ad-today-count">오늘 보상: <strong>${todayCount} / 5</strong>개 완료</span>
+      <span class="ad-today-count">오늘 보상: <strong>${todayCount} / 3</strong>개 완료</span>
       ${isGoogle ? `<button class="btn-ad-register" onclick="openAdPurchaseModal()">+ 광고 신청</button>` : ""}
     </div>`;
 
@@ -1637,7 +1637,7 @@ window.handleAdVisit = async function(adId, soopId) {
     updateAuthUI(auth.currentUser, currentUserData);
     if (auth.currentUser) recordBalanceHistory(auth.currentUser.uid, newBalance);
     window.open(`https://www.sooplive.com/station/${soopId}`, "_blank");
-    showToast(`+10,000G 획득! (오늘 ${todayCount}/5개)`);
+    showToast(`+5,000G 획득! (오늘 ${todayCount}/3개)`);
     renderAdRewardSection();
   } catch (e) {
     if (e.code === "already-exists") {
