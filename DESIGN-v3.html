@@ -201,8 +201,8 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>인증</td><td>익명/구글 로그인, 익명→구글 전환 (자산 승계 + 보너스), 신규 유저 환영 모달</td></tr>
 <tr><td>경매 핵심</td><td>등록 → 대기열(최대 5개) → 5분 경매 → 낙찰/유찰 자동 정산 → <strong>10분 쿨다운</strong> → 다음 경매 자동 시작</td></tr>
 <tr><td>경매 유형 A</td><td>신규/보유자 없는 매물 경매 — 등록비 50,000G 차감 · 타 유저 낙찰 시 환급 · 유찰 시 등록자 자동 낙찰</td></tr>
-<tr><td>경매 유형 B</td><td>보유자 승인 경매 — 요청(requestAuction) · 승인/거부(respondToAuctionRequest) · 낙찰 시 판매자 95% 정산 · <strong>유찰 시 신청자 잔액 충분하면 시작가에 자동 낙찰 (판매자 95% 정산) · 잔액 부족 시 소유 유지 + 24h 면역</strong> · 24h 미회신 시 강제청산(보유자 시세 100% 환급 + 무보유 전환)</td></tr>
-<tr><td>경매 유형 C</td><td>손절 경매 — 보유자 직접 등록(type:"selloff") · 매물 isLocked 설정 · 낙찰 시 판매자 95% 정산 · 유찰 시 소유 유지 (면역 없음) · 내 보유 매물 패널 / 검색 결과에서 등록 가능</td></tr>
+<tr><td>경매 유형 B</td><td>보유자 승인 경매 — 요청(requestAuction) · 승인/거부(respondToAuctionRequest) · 낙찰 시 판매자 100% 정산 · <strong>유찰 시 신청자 잔액 충분하면 시작가에 자동 낙찰 (판매자 100% 정산) · 잔액 부족 시 소유 유지 + 24h 면역</strong> · 24h 미회신 시 강제청산(보유자 시세 100% 환급 + 무보유 전환)</td></tr>
+<tr><td>경매 유형 C</td><td>손절 경매 — 보유자 직접 등록(type:"selloff") · 매물 isLocked 설정 · 낙찰 시 판매자 100% 정산 · 유찰 시 소유 유지 (면역 없음) · 내 보유 매물 패널 / 검색 결과에서 등록 가능</td></tr>
 <tr><td>입찰</td><td>에스크로 방식 (즉시 차감, 갱신 시 환불), 스나이핑 방지 15초 연장</td></tr>
 <tr><td>보호 규칙</td><td>자기 매물 입찰 차단, 보유 한도 초과 차단, 계정 정지(isBanned) 체크</td></tr>
 <tr><td>익명 제한</td><td>경매 등록 후 1시간 재등록 쿨다운 (구글 면제)</td></tr>
@@ -210,7 +210,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>경매 쿨다운 / 건너뛰기</td><td>경매 종료 후 10분 쿨다운 (RTDB status:"cooldown" + cooldownUntil) → 다음 경매 자동 시작. skipCooldown CF — 로그인 유저가 50,000G 지불해 즉시 건너뛰기. RTDB 트랜잭션으로 중복 실행 방지.</td></tr>
 <tr><td>상점 페이지</td><td>shop.html + purchaseShopItem CF — 7종 아이템 (강제청산 기간 연장권·면역 연장권·금고 슬롯·보유 한도+1·대기열 우선권 패스·상세 열람 패스·히스토리 패스). 강제청산 기간 연장권은 경매 신청 전 사전 구매 가능 (listings.reservedExtensionHours 저장 → requestAuction 시 자동 적용).</td></tr>
 <tr><td>검색 UI</td><td>보유자 있는 매물 → "경매 요청 보내기" 버튼 · 요청 접수됨 뱃지 · 면역 기간 표시</td></tr>
-<tr><td>경매 수수료 5%</td><td>유형 B·C 낙찰 시 판매자에게 낙찰가 × 95% 지급 (유형 A는 판매자 없어 해당 없음)</td></tr>
+<tr><td>경매 수수료</td><td>수수료 없음 — 낙찰가 100% 판매자에게 지급. 기타 소각원(상점·열람 과금 등)으로 경제 균형 유지.</td></tr>
 <tr><td>튜토리얼 보상 (전체)</td><td>첫 낙찰 30,000G · 첫 경매 등록 10,000G · 첫 손절 5,000G · 첫 강제청산 10,000G — 서버에서 자동 지급, 토스트 알림</td></tr>
 <tr><td>튜토리얼 UI</td><td>헤더 "🎁 보상" 버튼 → 보상 센터 모달 — 단계별 1개씩 표시 (완료 단계는 칩으로 압축), 진행 배지, 전체 완료 카드</td></tr>
 <tr><td>관리자 페이지 (admin.html)</td><td>5개 탭: 대시보드(통계·경매·기록) / 경매 제어(강제종료·대기열 비우기) / 유저 관리(조회·잔액조정·정지·최근경매활동20건) / 시스템 설정(config 편집) / 신고 관리(모자이크 해제 포함) — <code>system/admin.adminUids</code>로 접근 제어</td></tr>
@@ -267,7 +267,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>동시 거래</td><td>제한 없음</td><td>서버 전체 1개만</td></tr>
 <tr><td>손절</td><td>시스템 즉시 매입 80%</td><td>경매로 판매</td></tr>
 <tr><td>시세 결정</td><td>마지막 거래가</td><td>낙찰가</td></tr>
-<tr><td>수수료</td><td>10% (판매자)</td><td>5% (판매자)</td></tr>
+<tr><td>수수료</td><td>10% (판매자)</td><td>없음</td></tr>
 <tr><td>강제청산</td><td>시세 환급</td><td>무보유 처리 + 시세 100% 환급</td></tr>
 </table>
 </div>
@@ -362,8 +362,8 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 3-C. 24시간 미회신 → 강제청산 (보유자 시세 100% 환급 + 무보유 전환)
 
 낙찰 처리:
-4-A. 낙찰 (입찰자 존재) → 낙찰자에게 매물 이전, 유저A에게 낙찰가 × 95% 즉시 지급
-4-B. 유찰 + 유저B 잔액 충분 → 유저B가 시작가에 자동 낙찰, 유저A에게 시작가 × 95% 지급
+4-A. 낙찰 (입찰자 존재) → 낙찰자에게 매물 이전, 유저A에게 낙찰가 100% 즉시 지급
+4-B. 유찰 + 유저B 잔액 충분 → 유저B가 시작가에 자동 낙찰, 유저A에게 시작가 100% 지급
 4-C. 유찰 + 유저B 잔액 부족 → 유저A 소유 유지 + 해당 매물 24시간 면역 설정</pre>
 
 <h4>유형 C — 손절 경매 <span class="badge badge-done">구현 완료</span></h4>
@@ -371,7 +371,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
    → 검색 결과 또는 내 보유 매물 패널의 "손절 등록" 버튼
    → 매물 isLocked: true 설정
 2. 5분 경매 진행 (모든 유저 입찰 가능)
-3-A. 낙찰 → 낙찰자에게 매물 이전, 보유자에게 낙찰가 × 95% 즉시 지급
+3-A. 낙찰 → 낙찰자에게 매물 이전, 보유자에게 낙찰가 100% 즉시 지급
 3-B. 유찰 → 경매 취소 (보유 유지, 시세 변동 없음, 면역 기간 없음)</pre>
 
 <h3>4.2 경매 진행 규칙</h3>
@@ -382,7 +382,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <div class="stat"><div class="stat-label">경매 간 쿨다운</div><div class="stat-value">10분</div></div>
 <div class="stat"><div class="stat-label">스나이핑 방지</div><div class="stat-value">15초 연장</div></div>
 <div class="stat"><div class="stat-label">연장 횟수</div><div class="stat-value">무제한</div></div>
-<div class="stat"><div class="stat-label">경매 수수료</div><div class="stat-value">5% <span class="badge badge-done" style="font-size:10px">적용됨</span></div></div>
+<div class="stat"><div class="stat-label">경매 수수료</div><div class="stat-value">없음</div></div>
 </div>
 
 <h3>4.3 입찰 규칙</h3>
@@ -401,8 +401,8 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <table>
 <tr><th>경매 유형</th><th>낙찰금 처리</th><th>시세 갱신</th></tr>
 <tr><td>신규 매물</td><td>100% 시스템 회수 (판매자 없음)</td><td>낙찰가 = 새 시세</td></tr>
-<tr><td>보유자 승인 / 손절 — 낙찰</td><td>보유자에게 낙찰가 × 95%</td><td>낙찰가 = 새 시세</td></tr>
-<tr><td>보유자 승인 — 유찰 + 신청자 잔액 충분</td><td>신청자가 시작가 지불 → 보유자에게 시작가 × 95%</td><td>시작가 = 새 시세</td></tr>
+<tr><td>보유자 승인 / 손절 — 낙찰</td><td>보유자에게 낙찰가 100%</td><td>낙찰가 = 새 시세</td></tr>
+<tr><td>보유자 승인 — 유찰 + 신청자 잔액 충분</td><td>신청자가 시작가 지불 → 보유자에게 시작가 100%</td><td>시작가 = 새 시세</td></tr>
 <tr><td>보유자 승인 — 유찰 + 신청자 잔액 부족</td><td>없음 (소유 유지 + 24h 면역)</td><td>변동 없음</td></tr>
 <tr><td>손절 유찰</td><td>없음</td><td>변동 없음</td></tr>
 </table>
@@ -651,7 +651,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <tr><td>금고 슬롯</td><td>1,500,000G (영구)</td><td><span class="badge badge-done">구현</span></td></tr>
 <tr><td>패스권 3종</td><td>각 300,000G / 30일</td><td><span class="badge badge-done">구현</span></td></tr>
 <tr><td>보상형 광고 등록비</td><td>200,000G / 일 × 기간</td><td><span class="badge badge-done">구현</span></td></tr>
-<tr><td>경매 수수료</td><td>-</td><td><span class="badge badge-todo">미구현</span></td></tr>
+<tr><td>경매 수수료</td><td>제거 (수수료 없음)</td><td><span class="badge badge-todo">미적용</span></td></tr>
 </table>
 
 <h3>11.6 유저 간 G 이동 (zero-sum, 발행·소각 아님)</h3>
@@ -669,7 +669,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
     <strong>발행:</strong> 100명 × 960,000G = 96,000,000G / 월<br>
     <strong>소각 추산:</strong> 상세 열람 300건 × 50,000G + 패스권 20개 × 300,000G + 연장권·기타 = 약 25,000,000~40,000,000G / 월<br>
     <strong>순 발행:</strong> 약 56,000,000~71,000,000G / 월 → 장기적으로 G 희소성 감소 위험<br>
-    <strong>대응 방향:</strong> 현금 충전 도입 시 광고·출석 보상 재조정 필요. 경매 수수료(소각) 구현 시 균형 개선.
+    <strong>대응 방향:</strong> 현금 충전 도입 시 광고·출석 보상 재조정 필요. 거래 활성화 우선 단계이므로 경매 수수료는 미적용 — 서비스 규모 확대 시 재검토.
   </div>
 </div>
 
@@ -790,7 +790,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <div class="checklist-item"><input type="checkbox" checked> <span>보유자 승인/거절 정상 작동 (유형 B) — 경매 요청·승인·거부·24h 만료 구현</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>유형 B 유찰 시 신청자 자동 낙찰 — 잔액 충분하면 시작가에 자동 성사, 부족하면 소유 유지 + 면역</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>미회신 강제청산 작동 — 24h 미회신 시 시세 100% 환급 + 무보유 전환</span></div>
-<div class="checklist-item"><input type="checkbox" checked> <span>경매 수수료 5% 적용 — 유형 B·C 낙찰 시 판매자 95% 정산 (자동 낙찰 포함, 유형 A는 해당 없음)</span></div>
+<div class="checklist-item"><input type="checkbox"> <span>경매 수수료 — 거래 활성화 우선으로 미적용. 서비스 규모 확대 시 재검토 예정.</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>보유 한도 초과 시 입찰 차단</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>자기 매물 입찰 차단</span></div>
 <div class="checklist-item"><input type="checkbox" checked> <span>스나이핑 방지 (15초 연장) 작동</span></div>

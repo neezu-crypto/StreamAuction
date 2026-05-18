@@ -1077,7 +1077,7 @@ window.openRegisterModal = function(soopId = "", displayName = "", isSelloff = f
   if (noticeEl) {
     if (isSelloff) {
       noticeEl.innerHTML = `
-        <li>낙찰 시 낙찰가의 <strong>95%</strong>가 즉시 지급됩니다 (수수료 5%)</li>
+        <li>낙찰 시 낙찰가의 <strong>100%</strong>가 즉시 지급됩니다</li>
         <li>유찰 시 경매가 취소되고 <strong>매물은 그대로 유지</strong>됩니다</li>
         <li>등록 후 취소는 불가합니다</li>`;
     } else {

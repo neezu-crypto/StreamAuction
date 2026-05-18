@@ -23,7 +23,6 @@ setGlobalOptions({
 const AUCTION_DURATION_MS = 5 * 60 * 1000;
 const SNIPE_WINDOW_MS = 15 * 1000;
 const SNIPE_EXTENSION_MS = 15 * 1000;
-const FEE_RATE = 0.05;
 const COOLDOWN_MS = 10 * 60 * 1000;
 
 
@@ -303,14 +302,13 @@ async function doFinalizeAuction(current) {
   // 3. 잔액 처리
   if (isHolder) {
     if (effectiveIsWon && sellerId) {
-      const sellerPayout = Math.floor(finalPrice * (1 - FEE_RATE));
       const sellerRef = db.collection("users").doc(sellerId);
       batch.update(sellerRef, {
-        balance: FieldValue.increment(sellerPayout),
+        balance: FieldValue.increment(finalPrice),
         ownedListingIds: FieldValue.arrayRemove(listingId),
         ownedCount: FieldValue.increment(-1),
       });
-      logger.info(`판매자 정산: uid=${sellerId}, amount=${sellerPayout}`);
+      logger.info(`판매자 정산: uid=${sellerId}, amount=${finalPrice}`);
 
       // Type B 자동 낙찰(유찰 → 신청자 구매): 신청자 잔액 차감
       if (holderAutoWin && registeredBy) {
