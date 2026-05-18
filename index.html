@@ -316,9 +316,65 @@
       <h2>보상 센터</h2>
       <button class="modal-close" onclick="closeRewardModal()">✕</button>
     </div>
+    <div class="reward-tabs">
+      <button class="reward-tab-btn active" onclick="switchRewardTab('daily')">출석·튜토리얼</button>
+      <button class="reward-tab-btn" onclick="switchRewardTab('ad')">📺 광고 보상</button>
+    </div>
     <div class="modal-body">
-      <section id="dailyRewardSection"></section>
-      <section id="tutorialSection"></section>
+      <div id="rewardTabDaily">
+        <section id="dailyRewardSection"></section>
+        <section id="tutorialSection"></section>
+      </div>
+      <div id="rewardTabAd" style="display:none">
+        <section id="adRewardSection"></section>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 광고 신청 모달 -->
+<div class="modal-overlay" id="adPurchaseModal" onclick="if(event.target===this)closeAdPurchaseModal()">
+  <div class="modal modal-ad-purchase">
+    <div class="modal-header">
+      <h2>광고 등록</h2>
+      <button class="modal-close" onclick="closeAdPurchaseModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="ad-purchase-form">
+        <div class="form-group">
+          <label>닉네임</label>
+          <input type="text" id="adDisplayName" placeholder="스트리머 닉네임" maxlength="50">
+        </div>
+        <div class="form-group">
+          <label>SOOP ID</label>
+          <input type="text" id="adSoopId" placeholder="soopid" maxlength="20">
+        </div>
+        <div id="adProfilePreview" class="ad-profile-preview" style="display:none">
+          <img id="adProfileImg" src="" alt="프로필">
+          <div class="ad-profile-info">
+            <span id="adProfileName"></span>
+            <span id="adProfileUrl" class="ad-profile-url"></span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>기간 (일)</label>
+          <input type="number" id="adDurationDays" min="1" max="7" value="1">
+          <span class="form-hint">최대 7일 · 24시간 단위</span>
+        </div>
+        <div class="ad-cost-preview">
+          <span id="adCostPreview">총 비용: 200,000G</span>
+          <span id="adBalancePreview"></span>
+        </div>
+        <label class="consent-label">
+          <input type="checkbox" id="adConsentCheck">
+          닉네임·SOOP ID가 서비스 화면에 공개적으로 표시되는 것에 동의합니다.
+        </label>
+        <p id="adPurchaseError" class="form-error" style="display:none"></p>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="closeAdPurchaseModal()">취소</button>
+          <button class="btn-primary" id="btnAdPurchaseConfirm" onclick="handleAdPurchase()" disabled>광고 등록</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>

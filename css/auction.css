@@ -1714,6 +1714,160 @@
 .outcome-won  { color: #34d399; font-weight: 700; }
 .outcome-failed { color: #f87171; }
 
+/* ===== 보상 센터 탭 ===== */
+.reward-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 20px;
+  border-bottom: 1px solid #2a2e38;
+  background: #12151e;
+}
+.reward-tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #6b7280;
+  font-size: .88rem;
+  font-weight: 600;
+  padding: 10px 12px;
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color .15s, border-color .15s;
+}
+.reward-tab-btn.active { color: #f59e0b; border-bottom-color: #f59e0b; }
+
+/* ===== 광고 보상 탭 ===== */
+.ad-reward-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.ad-today-count { font-size: .82rem; color: #9ca3af; }
+.ad-today-count strong { color: #f59e0b; }
+.btn-ad-register {
+  font-size: .78rem;
+  padding: 5px 12px;
+  background: #1f2937;
+  border: 1px solid #374151;
+  color: #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.btn-ad-register:hover { background: #374151; }
+.ad-empty {
+  text-align: center;
+  padding: 32px 0;
+  color: #6b7280;
+  font-size: .88rem;
+  line-height: 1.6;
+}
+.ad-card {
+  background: #1a1d27;
+  border: 1px solid #2a2e38;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ad-card.claimed { opacity: .55; }
+.ad-card-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #2a2e38;
+  flex-shrink: 0;
+}
+.ad-card-body { flex: 1; min-width: 0; }
+.ad-card-name { font-weight: 700; font-size: .9rem; color: #e2e8f0; margin-bottom: 2px; }
+.ad-card-id { font-size: .78rem; color: #6b7280; }
+.ad-card-expires { font-size: .75rem; color: #4b5563; margin-top: 3px; }
+.ad-card-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.ad-card-reward { font-size: .78rem; font-weight: 700; color: #4ade80; }
+.ad-card-reward.claimed-text { color: #6b7280; font-weight: 400; }
+.btn-ad-visit {
+  white-space: nowrap;
+  font-size: .8rem;
+  padding: 5px 12px;
+  background: #f59e0b;
+  color: #1a0800;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.btn-ad-visit:hover { background: #fbbf24; }
+.btn-ad-visit:disabled { background: #2a2e38; color: #4b5563; cursor: default; }
+.ad-card.own-ad { border-left: 3px solid #6366f1; }
+.ad-own-badge {
+  font-size: .7rem;
+  background: rgba(99,102,241,.15);
+  color: #818cf8;
+  border: 1px solid rgba(99,102,241,.3);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-left: 6px;
+}
+
+/* ===== 광고 신청 모달 ===== */
+.modal-ad-purchase { max-width: 400px; }
+.ad-purchase-form .form-group { margin-bottom: 14px; }
+.ad-purchase-form label { display: block; font-size: .82rem; color: #9ca3af; margin-bottom: 5px; }
+.ad-purchase-form input[type="text"],
+.ad-purchase-form input[type="number"] {
+  width: 100%;
+  box-sizing: border-box;
+  background: #1a1d27;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  color: #e2e8f0;
+  padding: 8px 12px;
+  font-size: .9rem;
+}
+.form-hint { font-size: .75rem; color: #6b7280; margin-left: 8px; }
+.ad-profile-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #1a1d27;
+  border: 1px solid #2a2e38;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+.ad-profile-preview img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; background: #2a2e38; }
+.ad-profile-info { display: flex; flex-direction: column; gap: 2px; }
+.ad-profile-info span { font-size: .85rem; color: #e2e8f0; }
+.ad-profile-url { font-size: .75rem !important; color: #6b7280 !important; }
+.ad-cost-preview {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #1a1d27;
+  border: 1px solid #2a2e38;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: .88rem;
+}
+#adCostPreview { color: #f59e0b; font-weight: 700; }
+#adBalancePreview { color: #6b7280; font-size: .8rem; }
+.consent-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: .8rem;
+  color: #9ca3af;
+  line-height: 1.5;
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+.consent-label input { margin-top: 2px; flex-shrink: 0; }
+.form-error { color: #f87171; font-size: .82rem; margin-bottom: 10px; }
+
 /* ===== 반응형 ===== */
 @media (max-width: 640px) {
   .main { padding: 16px; }

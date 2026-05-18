@@ -61,6 +61,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ads: 누구나 읽기 (활성 광고 목록 표시), 쓰기는 Cloud Functions만
+    match /ads/{adId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // users/{uid}/adClaims: 본인만 읽기, 쓰기는 Cloud Functions만
+    match /users/{userId}/adClaims/{adId} {
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
