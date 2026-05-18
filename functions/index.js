@@ -2168,13 +2168,13 @@ const SHOP_ITEMS = {
   },
   immunity_extension: {
     name: "면역 연장권",
-    price: 50000,
+    price: 100000,
     category: "protection",
     needsTarget: true,
   },
   holding_limit_expansion: {
     name: "보유 한도 +1",
-    price: 300000,
+    price: 1000000,
     category: "trade",
     googleOnly: true,
   },
@@ -2198,7 +2198,7 @@ const SHOP_ITEMS = {
   },
   vault_slot: {
     name: "금고 슬롯",
-    price: 500000,
+    price: 1500000,
     category: "protection",
     googleOnly: true,
   },
@@ -2294,15 +2294,26 @@ exports.purchaseShopItem = onCall(
         update.vaultSlots = FieldValue.increment(1);
       }
 
-      if (item.passField) {
-        const now = Date.now();
-        const current = user[item.passField] || 0;
-        update[item.passField] = Math.max(current, now) + PASS_DURATION_MS;
-      }
-
-      await userRef.update(update);
+      let finalBalance;
+      await db.runTransaction(async (tx) => {
+        const freshSnap = await tx.get(userRef);
+        const fresh = freshSnap.data();
+        if ((fresh.balance || 0) < item.price) {
+          throw new HttpsError(
+              "failed-precondition",
+              `잔액이 부족합니다. (필요: ${item.price.toLocaleString()}G, 보유: ${(fresh.balance || 0).toLocaleString()}G)`,
+          );
+        }
+        if (item.passField) {
+          const now = Date.now();
+          const current = fresh[item.passField] || 0;
+          update[item.passField] = Math.max(current, now) + PASS_DURATION_MS;
+        }
+        finalBalance = fresh.balance - item.price;
+        tx.update(userRef, update);
+      });
       logger.info(`상점 구매: uid=${uid}, itemId=${itemId}, price=${item.price}G`);
-      return {success: true, newBalance: user.balance - item.price};
+      return {success: true, newBalance: finalBalance};
     },
 );
 

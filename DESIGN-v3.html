@@ -212,7 +212,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>튜토리얼 보상 (전체)</td><td>첫 낙찰 30,000G · 첫 경매 등록 10,000G · 첫 손절 5,000G · 첫 강제청산 10,000G — 서버에서 자동 지급, 토스트 알림</td></tr>
 <tr><td>튜토리얼 UI</td><td>헤더 "🎁 보상" 버튼 → 보상 센터 모달 — 단계별 1개씩 표시 (완료 단계는 칩으로 압축), 진행 배지, 전체 완료 카드</td></tr>
 <tr><td>관리자 페이지 (admin.html)</td><td>5개 탭: 대시보드(통계·경매·기록) / 경매 제어(강제종료·대기열 비우기) / 유저 관리(조회·잔액조정·정지·최근경매활동20건) / 시스템 설정(config 편집) / 신고 관리(모자이크 해제 포함) — <code>system/admin.adminUids</code>로 접근 제어</td></tr>
-<tr><td>금고 슬롯</td><td>상점에서 500,000G에 영구 구매 (구글 전용) → 마이페이지 금고 패널에서 보유 매물 보관/인출. 보관 중 강제청산 면제. 소유권 이전 시 자동 초기화. setVaultListing CF + checkAndFinalizeExpiredRequests 면제 로직.</td></tr>
+<tr><td>금고 슬롯</td><td>상점에서 1,500,000G에 영구 구매 (구글 전용) → 마이페이지 금고 패널에서 보유 매물 보관/인출. 보관 중 강제청산 면제. 소유권 이전 시 자동 초기화. setVaultListing CF + checkAndFinalizeExpiredRequests 면제 로직.</td></tr>
 <tr><td>신고/차단 시스템</td><td>reportListing (Google 계정 전용 · 중복 방지 · 10회 누적 자동 모자이크) · blockListing · 검색 결과 / 상세 페이지 차단/신고 UI · 모자이크 블러 · adminGetReports · adminSetMosaic</td></tr>
 <tr><td>경매 히스토리 열람 BM</td><td>viewAuctionHistory CF (50,000G 차감 · 트랜잭션) · 검색 결과 내 "히스토리 열람" 버튼 · 상세 페이지 내 열람 버튼 · 히스토리 모달 (날짜/유형/시작가/최종가/입찰 수/결과 테이블)</td></tr>
 <tr><td>매물 상세 페이지 BM</td><td>listing.html?id={listingId} — <strong>50,000G 결제 게이트</strong> (viewListingDetail CF · 트랜잭션) · 미결제 시 프로필+이름 미리보기만 노출 · 결제 후 6개 스탯(현재 시세/역대 최고가·최저가/총 거래량/거래 횟수/마지막 거래) + 보유 현황별 액션 버튼(등록/요청/손절/승인·거부) + 히스토리 열람 + 신고/차단 표시 · 경매 등록 등 내부 액션 후에도 isPaid 유지 · 검색 결과 카드에 "상세 페이지 50,000G" 뱃지 링크 추가</td></tr>
@@ -502,7 +502,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <table>
 <tr><th>아이템</th><th>효과</th><th>상태</th></tr>
 <tr><td>강제청산 기간 연장권</td><td>보유 매물의 강제청산 회신 기한을 24시간씩 연장 (80,000G / 24h, 중복 사용 가능). <strong>경매 신청 전 사전 구매 가능</strong> — listings.reservedExtensionHours에 24h씩 누적 저장, requestAuction 시 expiresAt에 자동 반영 후 필드 삭제.</td><td><span class="badge badge-done">구현</span></td></tr>
-<tr><td>금고</td><td>계정에 금고 슬롯 1칸 영구 추가 — 슬롯에 보유 매물 1개를 보관하면 강제청산 완전 면제. 손절 시 슬롯이 비워지며 다른 매물에 재사용 가능. 슬롯은 계정에 귀속 (양도 불가). <strong>구글 전용 500,000G.</strong></td><td><span class="badge badge-done">구현 완료</span></td></tr>
+<tr><td>금고</td><td>계정에 금고 슬롯 1칸 영구 추가 — 슬롯에 보유 매물 1개를 보관하면 강제청산 완전 면제. 손절 시 슬롯이 비워지며 다른 매물에 재사용 가능. 슬롯은 계정에 귀속 (양도 불가). <strong>구글 전용 1,500,000G.</strong></td><td><span class="badge badge-done">구현 완료</span></td></tr>
 </table>
 </div>
 
@@ -578,7 +578,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <tr><td>쿨다운 건너뛰기</td><td>50,000G</td></tr>
 <tr><td>강제청산 기간 연장권</td><td>80,000G / 24h</td></tr>
 <tr><td>면역 연장권</td><td>80,000G / 24h</td></tr>
-<tr><td>보유 한도 +1</td><td>300,000G</td></tr>
+<tr><td>보유 한도 +1</td><td>1,000,000G</td></tr>
 <tr><td>패스권 3종 (대기열 우선권·상세 열람·히스토리)</td><td>각 300,000G / 30일</td></tr>
 <tr><td>강제청산 시세 환급</td><td>0% 회수 (보유자에게 100%)</td></tr>
 </table>
@@ -593,7 +593,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <tr><td>경매 간 쿨다운 건너뛰기</td><td>쿨다운 중 50,000G 지불 → 즉시 다음 경매 시작 (skipCooldown CF)</td><td><span class="badge badge-done">MVP</span></td></tr>
 <tr><td>랭킹 페이지 열람</td><td>구글 로그인 유저 전용. 페이지 진입 시 50,000G 차감 → 시세·거래횟수·역대최고가 3탭 제공 (viewRanking CF)</td><td><span class="badge badge-done">MVP</span></td></tr>
 <tr><td>강제청산 기간 연장권</td><td>보유 매물 강제청산 회신 기한 24h씩 연장 (80,000G / 24h) — 사전 구매 가능, requestAuction 시 자동 적용</td><td><span class="badge badge-done">MVP</span></td></tr>
-<tr><td>면역 연장권 / 보유 한도 확장 / 패스 3종</td><td>면역 연장 80,000G · 한도+1 300,000G · 대기열·상세·히스토리 패스 각 300,000G/30일 — shop.html 상점</td><td><span class="badge badge-done">MVP</span></td></tr>
+<tr><td>면역 연장권 / 보유 한도 확장 / 패스 3종</td><td>면역 연장 100,000G · 한도+1 1,000,000G · 금고 슬롯 1,500,000G · 대기열·상세·히스토리 패스 각 300,000G/30일 — shop.html 상점</td><td><span class="badge badge-done">MVP</span></td></tr>
 <tr><td>금고</td><td>금고 슬롯 1칸 영구 구매 — 매물 1개 보관 시 강제청산 완전 면제, 손절 후 슬롯 재사용 가능. 구글 전용.</td><td><span class="badge badge-done">구현 완료</span></td></tr>
 <tr><td>광고</td><td>배너, 영상 광고 (보상형)</td><td><span class="badge badge-phase">Phase 2</span></td></tr>
 <tr><td>스킨/칭호/프로필 테두리</td><td>코스메틱 아이템 — 상점에서 G로 구매</td><td><span class="badge badge-phase">Phase 3</span></td></tr>
@@ -770,20 +770,20 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 </tr>
 <tr>
   <td>금고</td>
-  <td>500,000G</td>
+  <td>1,500,000G</td>
   <td>계정에 금고 슬롯 1칸 영구 추가. 슬롯에 보유 매물 1개를 보관하면 강제청산 완전 면제. 손절하면 슬롯이 비워지며 다른 매물에 재사용 가능. 슬롯은 계정에 귀속 (양도 불가). 구글 전용. setVaultListing CF — 슬롯 수 초과 검증. 강제청산 처리 시 vaultedBy === ownerId 이면 건너뜀. 소유권 이전 시 vaultedBy 자동 초기화.</td>
   <td><span class="badge badge-done">구현</span></td>
 </tr>
 <tr>
   <td>면역 연장권</td>
-  <td>50,000G</td>
+  <td>100,000G</td>
   <td>유찰 후 면역 기간 24h → 48h 연장. 대상 매물 보유자만 사용 가능.</td>
   <td><span class="badge badge-done">구현</span></td>
 </tr>
 <tr>
   <td rowspan="2">거래</td>
   <td>보유 한도 +1</td>
-  <td>300,000G</td>
+  <td>1,000,000G</td>
   <td>계정 보유 매물 한도 1칸 영구 확장 (최대 한도 별도 정책). Google 계정 전용.</td>
   <td><span class="badge badge-done">구현</span></td>
 </tr>
@@ -837,7 +837,9 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
      * 강제청산 기간 연장권: 모든 내 보유 매물 표시 (요청 없는 매물 선택 시 예약, 있는 매물 선택 시 즉시 적용)
      * 면역 연장권: 면역 기간 중인 매물만 표시
    - 잔액 부족 시 버튼 비활성화 + 부족 금액 안내
-5. 확인 → purchaseShopItem CF 호출 (Firestore 트랜잭션)
+5. 확인 → purchaseShopItem CF 호출 (전 아이템 Firestore 트랜잭션)
+   - 가격은 서버 SHOP_ITEMS에서 결정 — 클라이언트 가격 조작 불가
+   - 잔액 재확인을 트랜잭션 내부에서 수행 (TOCTOU 방어)
    - 잔액 차감 / 패스형은 users.{passField} 만료 timestamp 갱신 / 연장권은 listing 또는 request 직접 갱신
 6. 성공 토스트 + 잔액 즉시 갱신
 7. 효과 적용 시점: 즉시 적용형(패스, 면역 연장) vs 자동 적용형(강제청산 연장권 예약)</pre>
