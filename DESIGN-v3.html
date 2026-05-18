@@ -1076,6 +1076,7 @@ RTDB auction/current (쿨다운 상태)
 <tr><th>함수명</th><th>호출 주체</th><th>설명</th></tr>
 <tr><td><code>logEvent</code></td><td>클라이언트 (onCall)</td><td>페이지 접속·검색 등 CF 미경유 이벤트 기록. 이벤트 키 화이트리스트 검증 후 userEvents에 write. rate-limit: 유저당 분당 10회</td></tr>
 <tr><td><code>adminGetStats</code></td><td>관리자 페이지 (onCall)</td><td>기간(today/7d/30d) 파라미터 수신 → userEvents 집계 쿼리 + RTDB 실시간 현황 조회 → KPI + 이벤트별 카운트 + 실시간 현황 반환</td></tr>
+<tr><td><code>adminGetUserAssets</code></td><td>관리자 페이지 (onCall)</td><td>adminUids 검증 → users 컬렉션 balance 내림차순 조회(50건) + listings ownedBy 그룹 합산 → 잔액·보유 시세·총 자산 랭킹 반환</td></tr>
 </table>
 
 <p><strong>이벤트 기록 추가 대상 CF 전체:</strong><br>
@@ -1133,7 +1134,23 @@ RTDB auction/current (쿨다운 상태)
 <tr><td>광고</td><td>ad_purchase, ad_reward_claim</td><td>광고 등록 건수 · soopId별 클릭 수 · 총 등록비(회수) · 총 보상(발행)</td></tr>
 </table>
 
-<h4>⑤ 화폐 흐름 요약 (G 수지)</h4>
+<h4>⑤ 유저 자산 랭킹</h4>
+<p>운영자가 G 편중·고래 유저·매물 독점 여부를 파악하기 위한 패널. <code>adminGetStats</code> CF 또는 별도 <code>adminGetUserAssets</code> CF가 Firestore를 직접 조회해 반환한다.</p>
+<table>
+<tr><th>탭</th><th>정렬 기준</th><th>표시 항목</th><th>Firestore 쿼리</th></tr>
+<tr><td>잔액 랭킹</td><td>users.balance 내림차순</td><td>순위 · UID/이메일 · 잔액(G) · 보유 매물 수</td><td><code>users</code> orderBy("balance","desc") limit(50)</td></tr>
+<tr><td>보유 시세 합계 랭킹</td><td>유저별 보유 매물 currentPrice 합계 내림차순</td><td>순위 · UID/이메일 · 보유 매물 수 · 시세 합계(G)</td><td><code>listings</code> where ownedBy != null → uid별 그룹 합산</td></tr>
+<tr><td>총 자산 랭킹</td><td>잔액 + 보유 시세 합계 내림차순</td><td>순위 · UID/이메일 · 잔액 · 시세 합계 · 총 자산(G)</td><td>위 두 쿼리 결과 병합 후 서버에서 정렬</td></tr>
+</table>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>표시 한도</td><td>상위 50위 (페이지네이션 없음 — MVP)</td></tr>
+<tr><td>갱신</td><td>버튼 클릭 시 온디맨드 조회 (자동 구독 없음 — Firestore 비용 절감)</td></tr>
+<tr><td>관리자 활용</td><td>특정 유저 잔액 과다 → 어뷰징 의심 시 관리자 유저 탭에서 직접 조회·조정</td></tr>
+<tr><td>보안</td><td>adminUids 검증 포함 — 관리자 전용 CF(Admin SDK)만 <code>users</code> 전체 조회 허용</td></tr>
+</table>
+
+<h4>⑥ 화폐 흐름 요약 (G 수지)</h4>
 <table>
 <tr><th>항목</th><th>방향</th><th>계산 근거</th></tr>
 <tr><td>BM 기능 소비</td><td>회수 (deflation)</td><td>listing_detail_view + history_view + ranking_view + skip_cooldown params.cost 합계 (패스 사용 제외)</td></tr>
@@ -1188,7 +1205,7 @@ RTDB auction/current (쿨다운 상태)
     <div class="timeline-dot dot-todo">6</div>
     <div>
       <div class="timeline-title">관리자 통계 탭 UI 구축</div>
-      <div class="timeline-desc">admin.html에 "통계" 탭 추가 · 실시간 현황 패널(최상단) · 기간 버튼 · KPI 카드 · 이벤트 카테고리별 상세 테이블 · G 수지 요약</div>
+      <div class="timeline-desc">admin.html에 "통계" 탭 추가 · 실시간 현황 패널(최상단) · 기간 버튼 · KPI 카드 · 이벤트 카테고리별 상세 테이블 · G 수지 요약 · 유저 자산 랭킹 패널(잔액·보유 시세·총 자산 탭, adminGetUserAssets CF 호출)</div>
     </div>
   </div>
 </div>
