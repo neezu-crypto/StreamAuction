@@ -46,17 +46,28 @@ let pendingReportListingName = null;
 let isAccessGated = false;
 let presenceUid = null;
 let presenceConnectedUnsub = null;
+let presenceVersion = 0;
 
 function showAccessGateModal() {
   $("accessGateModal")?.classList.add("show");
 }
 
-function setupPresence(uid) {
-  if (presenceUid === uid) return;
+function clearPresence() {
   if (presenceUid) dbRemove(dbRef(rtdb, `presence/${presenceUid}`));
   if (presenceConnectedUnsub) presenceConnectedUnsub();
+  presenceUid = null;
+  presenceConnectedUnsub = null;
+  presenceVersion++;
+}
+
+function setupPresence(uid) {
+  if (presenceUid === uid) return;
+  clearPresence();
   presenceUid = uid;
+  presenceVersion++;
+  const myVersion = presenceVersion;
   presenceConnectedUnsub = dbOnValue(dbRef(rtdb, ".info/connected"), (snap) => {
+    if (myVersion !== presenceVersion) return; // stale 콜백 무시
     if (snap.val() !== true) return;
     const presRef = dbRef(rtdb, `presence/${uid}`);
     onDisconnect(presRef).remove();
@@ -451,6 +462,12 @@ async function processUserLogin(user) {
   try {
     log(`유저 초기화: ${user.uid.substring(0, 8)}...`);
     updateAuthUI(user, null);
+
+    // initializeUserFn의 stale session 정리가 정확히 동작하도록
+    // CF 호출 전에 이전 유저 presence를 먼저 제거
+    if (presenceUid && presenceUid !== user.uid) {
+      clearPresence();
+    }
 
     let result;
     try {
@@ -1273,15 +1290,7 @@ window.handleLogout = async function() {
     unsubscribeAuction();
     // 서버 세션 제거 — 슬롯을 즉시 반환해 다른 유저가 접속 가능하도록
     try { await endSessionFn(); } catch (_) {}
-    // presence도 즉시 제거 (onDisconnect 대기 없이)
-    if (presenceUid) {
-      dbRemove(dbRef(rtdb, `presence/${presenceUid}`));
-      presenceUid = null;
-    }
-    if (presenceConnectedUnsub) {
-      presenceConnectedUnsub();
-      presenceConnectedUnsub = null;
-    }
+    clearPresence();
     await logout();
     log("로그아웃 완료");
   } catch (e) {

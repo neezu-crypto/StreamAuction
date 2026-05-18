@@ -5,6 +5,7 @@
 import {
   signInAnonymously,
   signInWithPopup,
+  signInWithCredential,
   signOut,
   onAuthStateChanged,
   GoogleAuthProvider,
@@ -75,12 +76,18 @@ export async function linkAnonymousToGoogle() {
         error.code === "auth/email-already-in-use" ||
         error.code === "auth/account-exists-with-different-credential") {
 
-      console.log("이미 사용 중인 Google 계정 → 단순 로그인으로 전환");
+      console.log("이미 사용 중인 Google 계정 → 기존 credential로 로그인");
 
-      // 익명 데이터는 폐기하고 기존 Google 계정으로 로그인
-      // (이것도 어뷰징 방지: 익명 자산을 다른 계정에 합치지 않음)
+      // 첫 번째 팝업에서 이미 받은 credential을 재사용 — 팝업 두 번 뜨는 버그 방지
+      const credential = GoogleAuthProvider.credentialFromError(error);
+      if (credential) {
+        const result = await signInWithCredential(auth, credential);
+        console.log("기존 Google 계정으로 로그인:", result.user.uid);
+        return { status: "switched", user: result.user };
+      }
+      // credential 추출 실패 시 fallback (드문 케이스)
       const result = await signInWithPopup(auth, googleProvider);
-      console.log("기존 Google 계정으로 로그인:", result.user.uid);
+      console.log("기존 Google 계정으로 로그인 (fallback):", result.user.uid);
       return { status: "switched", user: result.user };
     }
 
