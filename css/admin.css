@@ -446,18 +446,7 @@
   background: #1e2231;
 }
 
-/* 모달 */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, .65);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-  padding: 20px;
-}
-
+/* 경매 상세 모달 박스 */
 .modal-box {
   background: #1a1d24;
   border: 1px solid #2a2e38;

@@ -652,16 +652,16 @@ function showAuctionDetail(idx) {
       <div class="info-row"><dt>시작 시각</dt><dd>${formatDate(h.startedAt)}</dd></div>
       <div class="info-row"><dt>종료 시각</dt><dd>${formatDate(h.endedAt)}</dd></div>
     </dl>`;
-  $('auctionDetailModal').style.display = 'flex';
+  $('auctionDetailModal').classList.add('show');
 }
 
 window.closeAuctionDetail = function(e) {
   if (e && e.target !== $('auctionDetailModal')) return;
-  $('auctionDetailModal').style.display = 'none';
+  $('auctionDetailModal').classList.remove('show');
 };
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') $('auctionDetailModal').style.display = 'none';
+  if (e.key === 'Escape') $('auctionDetailModal').classList.remove('show');
 });
 
 async function handleUpdateListing(listingId, fields, textEl, inputEl) {
