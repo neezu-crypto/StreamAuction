@@ -25,6 +25,7 @@ import {
   formatG, formatTimeRemaining,
   validateSoopId, validateNickname,
   getSoopProfileUrl, loadInitialState,
+  placeBannerAd, getBannerAd,
 } from "./auction.js";
 
 // ===== DOM 참조 =====
@@ -41,6 +42,10 @@ let isSearching = false;
 let pendingRegisterData = null;
 let pendingReportListingId = null;
 let pendingReportListingName = null;
+
+// ===== 배너 광고 =====
+let currentHistoryBanner = null;
+let isBannerAdSaving = false;
 
 // ===== 접속자 집계 / 접속 제한 =====
 let isAccessGated = false;
@@ -575,6 +580,9 @@ async function processUserLogin(user) {
 
     // 초기 경매 상태 로드 (만료 경매 정산 트리거 포함)
     loadInitialState().catch((e) => log(`초기 상태 로드 실패: ${e.message}`, true));
+
+    // 히스토리 배너 광고 로드
+    getBannerAd("history").then((r) => { currentHistoryBanner = r?.ad ?? null; }).catch(() => {});
   } catch (e) {
     log(`초기화 실패: ${e.message}`, true);
   } finally {
@@ -1563,8 +1571,10 @@ window.handleViewHistory = async function(listingId, displayName) {
     if (currentUserData) currentUserData.balance = result.newBalance;
     updateAuthUI(auth.currentUser, currentUserData);
 
+    const historyBannerHtml = `<div class="history-banner-ad">${renderHistoryBannerAd()}</div>`;
+
     if (!result.history || result.history.length === 0) {
-      body.innerHTML = `<p class="history-empty">경매 기록이 없습니다.</p>`;
+      body.innerHTML = `<p class="history-empty">경매 기록이 없습니다.</p>${historyBannerHtml}`;
       return;
     }
 
@@ -1593,10 +1603,143 @@ window.handleViewHistory = async function(listingId, displayName) {
           </thead>
           <tbody>${rows}</tbody>
         </table>
-      </div>`;
+      </div>
+      ${historyBannerHtml}`;
   } catch (e) {
     body.innerHTML = `<p class="history-error">${escapeHtml(e.message)}</p>`;
     log(`히스토리 열람 실패: ${e.message}`, true);
+  }
+};
+
+function renderHistoryBannerAd() {
+  const banner = currentHistoryBanner;
+  const isGoogle = currentUserData?.authType === "google";
+  const canBid = isGoogle && currentUserData;
+  const isProtected = banner && banner.protectedUntil > Date.now();
+
+  if (banner) {
+    const soopUrl = `https://ch.sooplive.co.kr/${escapeHtml(banner.soopId)}`;
+    const bidBtnAttr = (!canBid || isProtected) ? "disabled" : "";
+    const bidBtnLabel = isProtected ? "광고 신청 (보호 중)" : "광고 신청";
+    return `
+      <div class="banner-ad-label">AD</div>
+      <a class="banner-ad-link" href="${soopUrl}" target="_blank" rel="noopener noreferrer">
+        <img class="banner-ad-img" src="${escapeHtml(banner.imageUrl)}"
+          alt="${escapeHtml(banner.displayName)}"
+          onerror="this.style.display='none'">
+        <div class="banner-ad-footer">
+          <span class="banner-ad-info">
+            <strong>${escapeHtml(banner.displayName)}</strong>
+            &nbsp;@${escapeHtml(banner.soopId)}
+          </span>
+          <button class="banner-ad-bid-btn" ${bidBtnAttr}
+            onclick="event.preventDefault();openBannerAdModal()">
+            ${bidBtnLabel}
+          </button>
+        </div>
+      </a>`;
+  }
+
+  return `
+    <div class="banner-ad-label">AD</div>
+    <div class="banner-ad-empty">
+      <span class="banner-ad-empty-text">광고 슬롯이 비어 있습니다</span>
+      ${canBid ? `<button class="banner-ad-empty-btn" onclick="openBannerAdModal()">광고 신청 · 최소 10,000G</button>` : ""}
+    </div>`;
+}
+
+window.openBannerAdModal = function() {
+  if (!currentUserData) { alert("로그인이 필요합니다."); return; }
+  if (currentUserData.authType === "anonymous") { alert("Google 계정 전용 기능입니다."); return; }
+  const banner = currentHistoryBanner;
+  const infoEl = $("bannerAdCurrentInfo");
+  if (infoEl) {
+    if (banner) {
+      const isProtected = banner.protectedUntil > Date.now();
+      const remainH = isProtected ? Math.ceil((banner.protectedUntil - Date.now()) / (1000 * 60 * 60)) : 0;
+      infoEl.innerHTML = `
+        <dl class="banner-current-info">
+          <dt>현재 광고주</dt>
+          <dd>${escapeHtml(banner.displayName)} @${escapeHtml(banner.soopId)}</dd>
+          <dt>현재 입찰가</dt>
+          <dd>${formatG(banner.bidAmount)}${isProtected ? ` · 보호 기간 ${remainH}시간 남음` : ""}</dd>
+        </dl>`;
+    } else {
+      infoEl.innerHTML = "";
+    }
+  }
+  const fields = ["bannerDisplayName", "bannerSoopId", "bannerImageUrl"];
+  fields.forEach((id) => { const el = $(id); if (el) el.value = ""; });
+  $("bannerBidAmount").value = banner ? banner.bidAmount + 1000 : 10000;
+  $("bannerConsentCheck").checked = false;
+  $("bannerSubmitBtn").disabled = true;
+  $("bannerAdError").textContent = "";
+  ["bannerDisplayNameError", "bannerSoopIdError", "bannerImageUrlError", "bannerBidAmountError"]
+      .forEach((id) => { const el = $(id); if (el) el.textContent = ""; });
+  const previewImg = $("bannerPreviewImg");
+  const previewPh = $("bannerPreviewPlaceholder");
+  if (previewImg) { previewImg.style.display = "none"; previewImg.src = ""; }
+  if (previewPh) previewPh.style.display = "";
+  $("bannerAdModal")?.classList.add("show");
+};
+
+window.closeBannerAdModal = function() {
+  $("bannerAdModal")?.classList.remove("show");
+};
+
+window.previewBannerImage = function() {
+  const url = $("bannerImageUrl")?.value?.trim();
+  const previewImg = $("bannerPreviewImg");
+  const previewPh = $("bannerPreviewPlaceholder");
+  if (!previewImg || !previewPh) return;
+  const valid = /^https:\/\/stimg\.sooplive\.com\/NORMAL_BBS\/.+\.(png|jpg|jpeg|gif)$/i.test(url);
+  if (valid) {
+    previewImg.src = url;
+    previewImg.style.display = "block";
+    previewPh.style.display = "none";
+    previewImg.onerror = () => { previewImg.style.display = "none"; previewPh.style.display = ""; };
+  } else {
+    previewImg.style.display = "none"; previewImg.src = ""; previewPh.style.display = "";
+  }
+};
+
+window.handlePlaceBannerAd = async function() {
+  if (isBannerAdSaving) return;
+  const btn = $("bannerSubmitBtn");
+  const errEl = $("bannerAdError");
+
+  const displayName = $("bannerDisplayName")?.value?.trim();
+  const soopId = $("bannerSoopId")?.value?.trim();
+  const imageUrl = $("bannerImageUrl")?.value?.trim();
+  const bidAmount = parseInt($("bannerBidAmount")?.value, 10);
+
+  let hasError = false;
+  if (!displayName) { const e = $("bannerDisplayNameError"); if (e) e.textContent = "닉네임을 입력해주세요"; hasError = true; }
+  if (!soopId || !/^[a-zA-Z0-9]{1,20}$/.test(soopId)) { const e = $("bannerSoopIdError"); if (e) e.textContent = "영문·숫자 1~20자"; hasError = true; }
+  if (!/^https:\/\/stimg\.sooplive\.com\/NORMAL_BBS\/.+\.(png|jpg|jpeg|gif)$/i.test(imageUrl)) {
+    const e = $("bannerImageUrlError"); if (e) e.textContent = "허용된 이미지 링크 형식이 아닙니다"; hasError = true;
+  }
+  if (!bidAmount || bidAmount < 10000) { const e = $("bannerBidAmountError"); if (e) e.textContent = "최소 10,000G"; hasError = true; }
+  if (hasError) return;
+
+  isBannerAdSaving = true;
+  btn.disabled = true;
+  btn.textContent = "처리 중...";
+  errEl.textContent = "";
+
+  try {
+    const result = await placeBannerAd({slot: "history", displayName, soopId, imageUrl, bidAmount});
+    if (currentUserData) currentUserData.balance = result.newBalance;
+    updateAuthUI(auth.currentUser, currentUserData);
+    currentHistoryBanner = {displayName, soopId, imageUrl, bidAmount, protectedUntil: Date.now() + 24 * 60 * 60 * 1000};
+    closeBannerAdModal();
+    log("배너 광고 등록 완료");
+  } catch (e) {
+    errEl.textContent = e.message || "광고 등록에 실패했습니다.";
+    btn.textContent = "광고 신청";
+    btn.disabled = !$("bannerConsentCheck")?.checked;
+  } finally {
+    isBannerAdSaving = false;
   }
 };
 

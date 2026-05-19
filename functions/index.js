@@ -2762,6 +2762,99 @@ exports.getActiveAds = onCall(
     },
 );
 
+// ===== placeBannerAd: 배너 광고 입찰 =====
+exports.placeBannerAd = onCall(
+    async (request) => {
+      if (!request.auth) throw new HttpsError("unauthenticated", "로그인 필요");
+      const uid = request.auth.uid;
+      if (request.auth.token.firebase?.sign_in_provider === "anonymous") {
+        throw new HttpsError("permission-denied", "Google 계정 전용");
+      }
+
+      const {slot, displayName, soopId, imageUrl, bidAmount} = request.data;
+
+      if (!["listing", "history"].includes(slot)) {
+        throw new HttpsError("invalid-argument", "slot은 listing 또는 history여야 합니다");
+      }
+      if (!displayName || typeof displayName !== "string" || displayName.trim().length === 0 || displayName.trim().length > 20) {
+        throw new HttpsError("invalid-argument", "닉네임을 1~20자로 입력해주세요");
+      }
+      if (!soopId || !/^[a-zA-Z0-9]{1,20}$/.test(soopId)) {
+        throw new HttpsError("invalid-argument", "SOOP ID는 영문·숫자 1~20자입니다");
+      }
+      if (!imageUrl || !/^https:\/\/stimg\.sooplive\.com\/NORMAL_BBS\/.+\.(png|jpg|jpeg|gif)$/i.test(imageUrl)) {
+        throw new HttpsError("invalid-argument", "이미지는 stimg.sooplive.com/NORMAL_BBS/ 경로의 .png/.jpg/.jpeg/.gif 링크만 가능합니다");
+      }
+      if (!Number.isInteger(bidAmount) || bidAmount < 10000) {
+        throw new HttpsError("invalid-argument", "최소 입찰 금액은 10,000G입니다");
+      }
+
+      const docId = `${slot}-banner`;
+      const adRef = db.collection("ads").doc(docId);
+      const userRef = db.collection("users").doc(uid);
+      const now = Date.now();
+      const protectedUntil = now + 24 * 60 * 60 * 1000;
+
+      const result = await db.runTransaction(async (tx) => {
+        const [adSnap, userSnap] = await Promise.all([tx.get(adRef), tx.get(userRef)]);
+
+        if (!userSnap.exists) throw new HttpsError("not-found", "유저 정보 없음");
+        const balance = userSnap.data().balance || 0;
+
+        if (adSnap.exists) {
+          const existing = adSnap.data();
+          if (existing.protectedUntil > now) {
+            const remainingH = Math.ceil((existing.protectedUntil - now) / (1000 * 60 * 60));
+            throw new HttpsError("failed-precondition", `현재 광고는 1일 보호 기간 중입니다 (${remainingH}시간 남음)`);
+          }
+          if (bidAmount <= existing.bidAmount) {
+            throw new HttpsError("failed-precondition",
+                `현재 입찰가(${existing.bidAmount.toLocaleString()}G)보다 높은 금액을 입력해주세요`);
+          }
+        }
+
+        if (balance < bidAmount) throw new HttpsError("failed-precondition", "잔액이 부족합니다");
+
+        tx.update(userRef, {balance: balance - bidAmount});
+        tx.set(adRef, {
+          advertiserId: uid,
+          displayName: displayName.trim(),
+          soopId: soopId.toLowerCase(),
+          imageUrl,
+          bidAmount,
+          placedAt: FieldValue.serverTimestamp(),
+          protectedUntil,
+        });
+
+        return {newBalance: balance - bidAmount};
+      });
+
+      return {success: true, ...result};
+    },
+);
+
+// ===== getBannerAd: 슬롯별 현재 배너 광고 조회 (미인증도 가능) =====
+exports.getBannerAd = onCall(
+    async (request) => {
+      const {slot} = request.data || {};
+      if (!["listing", "history"].includes(slot)) {
+        throw new HttpsError("invalid-argument", "slot은 listing 또는 history여야 합니다");
+      }
+      const snap = await db.collection("ads").doc(`${slot}-banner`).get();
+      if (!snap.exists) return {ad: null};
+      const d = snap.data();
+      return {
+        ad: {
+          displayName: d.displayName,
+          soopId: d.soopId,
+          imageUrl: d.imageUrl,
+          bidAmount: d.bidAmount,
+          protectedUntil: d.protectedUntil,
+        },
+      };
+    },
+);
+
 // ===== setOwnerTag: 소유자 표시 등록/수정/삭제 =====
 exports.setOwnerTag = onCall(
     {region: "asia-northeast3"},

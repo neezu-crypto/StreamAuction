@@ -34,6 +34,8 @@ const updateUserNicknameFn = httpsCallable(functions, "updateUserNickname");
 const purchaseShopItemFn = httpsCallable(functions, "purchaseShopItem");
 const skipCooldownFn = httpsCallable(functions, "skipCooldown");
 const setOwnerTagFn = httpsCallable(functions, "setOwnerTag");
+const placeBannerAdFn = httpsCallable(functions, "placeBannerAd");
+const getBannerAdFn = httpsCallable(functions, "getBannerAd");
 
 // ===== 실시간 구독 시작 =====
 export function subscribeAuction({
@@ -262,5 +264,15 @@ export async function skipCooldown() {
 // ===== 소유자 표시 등록/수정/삭제 =====
 export async function setOwnerTag({listingId, tagDisplayName, tagSoopId}) {
   const result = await setOwnerTagFn({listingId, tagDisplayName: tagDisplayName || null, tagSoopId: tagSoopId || null});
+  return result.data;
+}
+
+export async function placeBannerAd({slot, displayName, soopId, imageUrl, bidAmount}) {
+  const result = await placeBannerAdFn({slot, displayName, soopId, imageUrl, bidAmount});
+  return result.data;
+}
+
+export async function getBannerAd(slot) {
+  const result = await getBannerAdFn({slot});
   return result.data;
 }

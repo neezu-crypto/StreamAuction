@@ -1868,6 +1868,173 @@
 .consent-label input { margin-top: 2px; flex-shrink: 0; }
 .form-error { color: #f87171; font-size: .82rem; margin-bottom: 10px; }
 
+/* ===== 배너 광고 ===== */
+.banner-ad-wrap {
+  margin-top: 24px;
+}
+
+.banner-ad-label {
+  font-size: .72rem;
+  color: #4b5563;
+  text-align: right;
+  margin-bottom: 4px;
+  letter-spacing: .04em;
+}
+
+.banner-ad-link {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #2a2e38;
+  text-decoration: none;
+  transition: opacity .15s;
+}
+
+.banner-ad-link:hover { opacity: .9; }
+
+.banner-ad-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 720 / 150;
+  object-fit: cover;
+  background: #1a1d24;
+}
+
+.banner-ad-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #12151c;
+  border-top: 1px solid #2a2e38;
+}
+
+.banner-ad-info {
+  font-size: .78rem;
+  color: #9ba3b4;
+}
+
+.banner-ad-info strong {
+  color: #e2e8f0;
+}
+
+.banner-ad-bid-btn {
+  font-size: .75rem;
+  color: #f5d142;
+  background: none;
+  border: 1px solid #f5d14240;
+  border-radius: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: background .12s;
+}
+
+.banner-ad-bid-btn:hover {
+  background: #f5d14215;
+}
+
+.banner-ad-empty {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  aspect-ratio: 720 / 150;
+  background: #12151c;
+  border: 1px dashed #2a2e38;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.banner-ad-empty-text {
+  font-size: .85rem;
+  color: #4b5563;
+}
+
+.banner-ad-empty-btn {
+  font-size: .8rem;
+  color: #f5d142;
+  background: none;
+  border: 1px solid #f5d14240;
+  border-radius: 6px;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: background .12s;
+}
+
+.banner-ad-empty-btn:hover {
+  background: #f5d14215;
+}
+
+/* 배너 광고 신청 모달 */
+.banner-modal-desc {
+  font-size: .83rem;
+  color: #9ba3b4;
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+
+.banner-preview-wrap {
+  width: 100%;
+  aspect-ratio: 720 / 150;
+  background: #0f1115;
+  border: 1px solid #2a2e38;
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 8px 0 4px;
+}
+
+.banner-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: none;
+}
+
+.banner-preview-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .8rem;
+  color: #4b5563;
+}
+
+.banner-current-info {
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: .83rem;
+}
+
+.banner-current-info dt {
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.banner-current-info dd {
+  color: #e2e8f0;
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.banner-current-info dd:last-child { margin-bottom: 0; }
+
+/* 히스토리 모달 하단 배너 */
+.history-banner-ad {
+  margin-top: 20px;
+  border-top: 1px solid #2a2e38;
+  padding-top: 16px;
+}
+
 /* ===== 반응형 ===== */
 @media (max-width: 640px) {
   .main { padding: 16px; }

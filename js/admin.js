@@ -22,6 +22,7 @@ const adminAdjustBalanceFn = httpsCallable(functions, 'adminAdjustBalance');
 const adminGetConfigFn = httpsCallable(functions, 'adminGetConfig');
 const adminSetConfigFn = httpsCallable(functions, 'adminSetConfig');
 const adminGetUserActivityFn = httpsCallable(functions, 'adminGetUserActivity');
+const getBannerAdFn = httpsCallable(functions, 'getBannerAd');
 
 // ===== 상태 =====
 let selectedUser = null;
@@ -85,7 +86,7 @@ onAuthStateChanged(auth, async (user) => {
 
 async function tryLoadAdmin() {
   try {
-    const result = await adminGetDashboardFn();
+    const [result] = await Promise.all([adminGetDashboardFn(), loadBannerAdStatus()]);
     show('screenAdmin');
     renderDashboard(result.data);
   } catch (e) {
@@ -162,12 +163,49 @@ function renderDashboard(data) {
 
 window.refreshDashboard = async function() {
   try {
-    const result = await adminGetDashboardFn();
-    renderDashboard(result.data);
+    const [dashResult] = await Promise.all([
+      adminGetDashboardFn(),
+      loadBannerAdStatus(),
+    ]);
+    renderDashboard(dashResult.data);
   } catch (e) {
     alert(`오류: ${e.message}`);
   }
 };
+
+async function loadBannerAdStatus() {
+  const el = $('dashBannerAds');
+  if (!el) return;
+  try {
+    const [lb, hb] = await Promise.all([
+      getBannerAdFn({slot: 'listing'}).then((r) => r.data?.ad),
+      getBannerAdFn({slot: 'history'}).then((r) => r.data?.ad),
+    ]);
+
+    const renderRow = (label, ad) => {
+      if (!ad) return `<tr><td>${label}</td><td colspan="3" style="color:#4b5563">비어 있음</td></tr>`;
+      const isProtected = ad.protectedUntil > Date.now();
+      const remainH = isProtected ? Math.ceil((ad.protectedUntil - Date.now()) / (1000 * 60 * 60)) : 0;
+      return `<tr>
+        <td>${label}</td>
+        <td>${ad.displayName} @${ad.soopId}</td>
+        <td>${formatG(ad.bidAmount)}</td>
+        <td>${isProtected ? `보호 ${remainH}h` : '덮어쓰기 가능'}</td>
+      </tr>`;
+    };
+
+    el.innerHTML = `
+      <table class="admin-table">
+        <thead><tr><th>슬롯</th><th>광고주</th><th>입찰가</th><th>상태</th></tr></thead>
+        <tbody>
+          ${renderRow('매물 상세', lb)}
+          ${renderRow('히스토리', hb)}
+        </tbody>
+      </table>`;
+  } catch (e) {
+    el.innerHTML = `<p class="msg-error">${e.message}</p>`;
+  }
+}
 
 function buildCurrentAuctionHtml(current) {
   if (!current || current.status !== 'active') {

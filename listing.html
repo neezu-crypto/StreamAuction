@@ -166,6 +166,61 @@
   </div>
 </div>
 
+<!-- 배너 광고 신청 모달 -->
+<div class="modal-overlay" id="bannerAdModal" onclick="if(event.target===this)closeBannerAdModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>배너 광고 신청</h2>
+      <button class="modal-close" onclick="closeBannerAdModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="bannerAdCurrentInfo"></div>
+      <p class="banner-modal-desc">
+        매물 상세 하단에 배너 광고를 게재합니다.<br>
+        최소 1일 보장 후 더 높은 입찰가로 덮어쓰기 가능합니다.
+      </p>
+      <div class="form-group">
+        <label>닉네임 *</label>
+        <input type="text" id="bannerDisplayName" placeholder="표시될 닉네임 (1~20자)" maxlength="20">
+        <div class="field-error" id="bannerDisplayNameError"></div>
+      </div>
+      <div class="form-group">
+        <label>SOOP ID *</label>
+        <input type="text" id="bannerSoopId" placeholder="영문·숫자 1~20자">
+        <div class="field-error" id="bannerSoopIdError"></div>
+      </div>
+      <div class="form-group">
+        <label>배너 이미지 링크 *</label>
+        <input type="url" id="bannerImageUrl" placeholder="https://stimg.sooplive.com/NORMAL_BBS/..." oninput="previewBannerImage('listing')">
+        <div class="field-error" id="bannerImageUrlError"></div>
+        <div class="banner-preview-wrap">
+          <img class="banner-preview-img" id="bannerPreviewImg" alt="미리보기">
+          <div class="banner-preview-placeholder" id="bannerPreviewPlaceholder">720 × 150 미리보기</div>
+        </div>
+        <div class="field-hint" style="font-size:.75rem;color:#6b7280">stimg.sooplive.com/NORMAL_BBS/ 링크만 가능 · .png/.jpg/.jpeg/.gif</div>
+      </div>
+      <div class="form-group">
+        <label>입찰 금액 *</label>
+        <div class="price-input-row">
+          <input type="number" id="bannerBidAmount" value="10000" min="10000" step="1000">
+          <span class="price-unit">G</span>
+        </div>
+        <div class="field-hint">최소 10,000G · 현재 광고보다 높아야 함</div>
+        <div class="field-error" id="bannerBidAmountError"></div>
+      </div>
+      <label class="consent-check-label" style="display:flex;gap:10px;align-items:flex-start;font-size:.83rem;color:#9ba3b4;margin-top:4px;cursor:pointer">
+        <input type="checkbox" id="bannerConsentCheck" style="margin-top:2px;flex-shrink:0" onchange="document.getElementById('bannerSubmitBtn').disabled=!this.checked">
+        <span>닉네임과 SOOP ID가 배너에 공개 표시되는 것에 동의합니다.</span>
+      </label>
+      <div class="field-error" id="bannerAdError" style="margin-top:8px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeBannerAdModal()">취소</button>
+      <button class="btn-primary" id="bannerSubmitBtn" onclick="handlePlaceBannerAd()" disabled>광고 신청</button>
+    </div>
+  </div>
+</div>
+
 <div id="toastContainer"></div>
 <script type="module" src="js/listing.js"></script>
 </body>
