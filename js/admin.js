@@ -144,8 +144,8 @@ function renderDashboard(data) {
     $('dashHistory').innerHTML = `
       <table class="admin-table">
         <thead><tr><th>닉네임</th><th>유형</th><th>낙찰가</th><th>결과</th><th>입찰</th><th>종료</th></tr></thead>
-        <tbody>${recentHistory.map((h) => `
-          <tr>
+        <tbody>${recentHistory.map((h, i) => `
+          <tr class="clickable" data-history-idx="${i}" onclick="showAuctionDetail(${i})">
             <td>${h.displayName}</td>
             <td><span class="type-tag type-${h.type}">${TYPE_LABEL[h.type] || h.type}</span></td>
             <td>${formatG(h.finalPrice)}</td>
@@ -155,6 +155,7 @@ function renderDashboard(data) {
           </tr>`).join('')}
         </tbody>
       </table>`;
+    window._dashHistory = recentHistory;
   }
 }
 
@@ -621,6 +622,39 @@ window.toggleEditPrice = function(lid) {
     input.focus();
   }
 };
+
+// ===== 경매 상세 모달 =====
+const TYPE_FULL_LABEL = {new: 'A — 신규', holder: 'B — 보유자', selloff: 'C — 손절'};
+
+window.showAuctionDetail = function(idx) {
+  const h = window._dashHistory?.[idx];
+  if (!h) return;
+  $('auctionDetailContent').innerHTML = `
+    <dl class="info-list">
+      <div class="info-row"><dt>경매 ID</dt><dd class="mono" style="font-size:.75rem;word-break:break-all">${h.auctionId || '-'}</dd></div>
+      <div class="info-row"><dt>닉네임</dt><dd>${h.displayName || '-'}</dd></div>
+      <div class="info-row"><dt>SOOP ID</dt><dd class="mono">${h.soopId || '-'}</dd></div>
+      <div class="info-row"><dt>유형</dt><dd>${TYPE_FULL_LABEL[h.type] || h.type}</dd></div>
+      <div class="info-row"><dt>시작가</dt><dd>${formatG(h.startPrice)}</dd></div>
+      <div class="info-row"><dt>낙찰가</dt><dd>${formatG(h.finalPrice)}</dd></div>
+      <div class="info-row"><dt>결과</dt><dd>${h.isWon ? '✅ 낙찰' : '❌ 유찰'}</dd></div>
+      <div class="info-row"><dt>총 입찰</dt><dd>${h.bidCount}회</dd></div>
+      <div class="info-row"><dt>낙찰자 UID</dt><dd class="mono" style="font-size:.75rem;word-break:break-all">${h.winnerId || '없음'}</dd></div>
+      <div class="info-row"><dt>등록자 UID</dt><dd class="mono" style="font-size:.75rem;word-break:break-all">${h.registeredBy || '-'}</dd></div>
+      <div class="info-row"><dt>시작 시각</dt><dd>${formatDate(h.startedAt)}</dd></div>
+      <div class="info-row"><dt>종료 시각</dt><dd>${formatDate(h.endedAt)}</dd></div>
+    </dl>`;
+  $('auctionDetailModal').style.display = 'flex';
+};
+
+window.closeAuctionDetail = function(e) {
+  if (e && e.target !== $('auctionDetailModal')) return;
+  $('auctionDetailModal').style.display = 'none';
+};
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') $('auctionDetailModal').style.display = 'none';
+});
 
 async function handleUpdateListing(listingId, fields, textEl, inputEl) {
   try {

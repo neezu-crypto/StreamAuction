@@ -436,6 +436,71 @@
   color: #6b7280;
 }
 
+/* 클릭 가능한 테이블 행 */
+.admin-table tbody tr.clickable {
+  cursor: pointer;
+  transition: background .12s;
+}
+
+.admin-table tbody tr.clickable:hover {
+  background: #1e2231;
+}
+
+/* 모달 */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+
+.modal-box {
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-hd {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid #2a2e38;
+}
+
+.modal-hd h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.modal-close:hover {
+  color: #e2e8f0;
+  background: #2a2e38;
+}
+
+.modal-body {
+  padding: 18px 22px 22px;
+}
+
 /* 반응형 768px */
 @media (max-width: 768px) {
   .stats-row {

@@ -1559,11 +1559,17 @@ exports.adminGetDashboard = onCall(
         const data = d.data();
         return {
           auctionId: data.auctionId,
+          listingId: data.listingId || null,
+          soopId: data.soopId || null,
           displayName: data.displayName,
           type: data.type || "new",
+          startPrice: data.startPrice || 0,
           finalPrice: data.finalPrice,
           isWon: data.isWon,
           bidCount: data.bidCount || 0,
+          winnerId: data.winnerId || null,
+          registeredBy: data.registeredBy || null,
+          startedAt: data.startedAt?.toMillis?.() || null,
           endedAt: data.endedAt?.toMillis?.() || null,
         };
       });

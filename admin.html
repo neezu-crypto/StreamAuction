@@ -178,6 +178,17 @@
   </main>
 </div>
 
+<!-- 경매 상세 모달 -->
+<div id="auctionDetailModal" class="modal-overlay" style="display:none" onclick="closeAuctionDetail(event)">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <h3>경매 상세 정보</h3>
+      <button class="modal-close" onclick="closeAuctionDetail()">✕</button>
+    </div>
+    <div id="auctionDetailContent" class="modal-body"></div>
+  </div>
+</div>
+
 <div id="tutorialToastContainer"></div>
 <script type="module" src="js/admin.js"></script>
 </body>
