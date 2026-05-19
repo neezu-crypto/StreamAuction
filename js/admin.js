@@ -145,7 +145,7 @@ function renderDashboard(data) {
       <table class="admin-table">
         <thead><tr><th>닉네임</th><th>유형</th><th>낙찰가</th><th>결과</th><th>입찰</th><th>종료</th></tr></thead>
         <tbody>${recentHistory.map((h, i) => `
-          <tr class="clickable" data-history-idx="${i}" onclick="showAuctionDetail(${i})">
+          <tr class="clickable" data-history-idx="${i}">
             <td>${h.displayName}</td>
             <td><span class="type-tag type-${h.type}">${TYPE_LABEL[h.type] || h.type}</span></td>
             <td>${formatG(h.finalPrice)}</td>
@@ -156,6 +156,7 @@ function renderDashboard(data) {
         </tbody>
       </table>`;
     window._dashHistory = recentHistory;
+    $('dashHistory').querySelector('tbody')?.addEventListener('click', onHistoryRowClick);
   }
 }
 
@@ -626,7 +627,14 @@ window.toggleEditPrice = function(lid) {
 // ===== 경매 상세 모달 =====
 const TYPE_FULL_LABEL = {new: 'A — 신규', holder: 'B — 보유자', selloff: 'C — 손절'};
 
-window.showAuctionDetail = function(idx) {
+function onHistoryRowClick(e) {
+  const tr = e.target.closest('tr[data-history-idx]');
+  if (!tr) return;
+  const idx = parseInt(tr.dataset.historyIdx, 10);
+  showAuctionDetail(idx);
+}
+
+function showAuctionDetail(idx) {
   const h = window._dashHistory?.[idx];
   if (!h) return;
   $('auctionDetailContent').innerHTML = `
@@ -645,7 +653,7 @@ window.showAuctionDetail = function(idx) {
       <div class="info-row"><dt>종료 시각</dt><dd>${formatDate(h.endedAt)}</dd></div>
     </dl>`;
   $('auctionDetailModal').style.display = 'flex';
-};
+}
 
 window.closeAuctionDetail = function(e) {
   if (e && e.target !== $('auctionDetailModal')) return;

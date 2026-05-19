@@ -302,11 +302,17 @@
           <li>등록 후 취소는 불가합니다</li>
         </ul>
       </div>
+
+      <label class="consent-label" style="margin-top:12px">
+        <input type="checkbox" id="regConsentCheck" onchange="onRegConsentChange()">
+        <span>닉네임·SOOP ID를 서비스에 공개하는 데 동의합니다.
+          (<a href="privacy.html" target="_blank" style="color:#f5d142">개인정보 처리방침</a>)</span>
+      </label>
     </div>
 
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeRegisterModal()">취소</button>
-      <button class="btn-primary" id="registerBtn" onclick="handleRegisterAuction()">
+      <button class="btn-primary" id="registerBtn" onclick="handleRegisterAuction()" disabled>
         경매 등록
       </button>
     </div>

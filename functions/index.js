@@ -767,9 +767,13 @@ exports.registerAuction = onCall(
 
       await checkAndFinalizeExpiredAuction();
 
-      const {soopId, displayName, startPrice, type: auctionType} = request.data;
+      const {soopId, displayName, startPrice, type: auctionType, consentAgreed} = request.data;
       const uid = request.auth.uid;
       const isSelloff = auctionType === "selloff";
+
+      if (!consentAgreed) {
+        throw new HttpsError("invalid-argument", "개인정보 수집·이용에 동의해주세요.");
+      }
 
       await requireSession(uid);
 

@@ -1091,6 +1091,11 @@ window.openRegisterModal = function(soopId = "", displayName = "", isSelloff = f
   clearRegisterErrors();
   updateProfilePreview();
 
+  const consentCheck = $("regConsentCheck");
+  const regBtn = $("registerBtn");
+  if (consentCheck) consentCheck.checked = false;
+  if (regBtn) regBtn.disabled = true;
+
   modal.classList.add("show");
   pendingRegisterData = {isSelloff};
 };
@@ -1131,9 +1136,20 @@ window.updateProfilePreview = function() {
   }
 };
 
+// ===== 동의 체크박스 → 등록 버튼 활성화 =====
+window.onRegConsentChange = function() {
+  const btn = $("registerBtn");
+  if (btn) btn.disabled = !$("regConsentCheck")?.checked;
+};
+
 // ===== 경매 등록 처리 =====
 window.handleRegisterAuction = async function() {
   if (isRegistering) return;
+
+  if (!$("regConsentCheck")?.checked) {
+    setText("regNicknameError", "개인정보 수집·이용에 동의해주세요.");
+    return;
+  }
 
   clearRegisterErrors();
 
@@ -1191,6 +1207,7 @@ window.handleRegisterAuction = async function() {
       displayName,
       startPrice,
       type: isSelloff ? "selloff" : "new",
+      consentAgreed: true,
     });
 
     log(`경매 등록 성공: ${displayName}, ${formatG(startPrice)}, 상태=${result.status}`);
@@ -1226,8 +1243,8 @@ window.handleRegisterAuction = async function() {
   } finally {
     isRegistering = false;
     if (btn) {
-      btn.disabled = false;
-      btn.textContent = "경매 등록";
+      btn.disabled = !$("regConsentCheck")?.checked;
+      btn.textContent = pendingRegisterData?.isSelloff ? "손절 등록" : "경매 등록";
     }
   }
 };
