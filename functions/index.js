@@ -2327,6 +2327,15 @@ exports.purchaseShopItem = onCall(
 
       const update = {balance: FieldValue.increment(-item.price)};
 
+      const shopHistoryRef = db.collection("users").doc(uid).collection("shopHistory").doc();
+      const baseHistory = {
+        itemId,
+        itemName: item.name,
+        price: item.price,
+        purchasedAt: FieldValue.serverTimestamp(),
+        targetListingId: targetListingId || null,
+      };
+
       if (itemId === "liquidation_extension") {
         const listingRef = db.collection("listings").doc(targetListingId);
         const listingSnap = await listingRef.get();
@@ -2336,7 +2345,6 @@ exports.purchaseShopItem = onCall(
         }
         const reqId = listingSnap.data().pendingRequestId;
         if (reqId) {
-          // 즉시 적용: 현재 대기 중인 경매 요청의 기한 연장
           const reqSnap = await db.collection("auctionRequests").doc(reqId).get();
           if (!reqSnap.exists || reqSnap.data().status !== "pending") {
             throw new HttpsError("failed-precondition", "유효한 경매 요청이 없습니다.");
@@ -2345,14 +2353,15 @@ exports.purchaseShopItem = onCall(
           await db.runTransaction(async (tx) => {
             tx.update(userRef, update);
             tx.update(reqSnap.ref, {expiresAt: newExpiresAt});
+            tx.set(shopHistoryRef, {...baseHistory, targetListingName: listingSnap.data().displayName || null});
           });
           logger.info(`강제청산 기간 즉시 연장: uid=${uid}, listing=${targetListingId}, newExpiresAt=${newExpiresAt}`);
           return {success: true, newBalance: user.balance - item.price, newExpiresAt, immediate: true};
         } else {
-          // 예약 적용: 다음 경매 신청 시 자동 적용
           await db.runTransaction(async (tx) => {
             tx.update(userRef, update);
             tx.update(listingRef, {reservedExtensionHours: FieldValue.increment(24)});
+            tx.set(shopHistoryRef, {...baseHistory, targetListingName: listingSnap.data().displayName || null});
           });
           logger.info(`강제청산 기간 연장 예약: uid=${uid}, listing=${targetListingId}`);
           return {success: true, newBalance: user.balance - item.price, reserved: true};
@@ -2372,6 +2381,7 @@ exports.purchaseShopItem = onCall(
         await db.runTransaction(async (tx) => {
           tx.update(userRef, update);
           tx.update(listingRef, {immunityUntil: newImmunityUntil});
+          tx.set(shopHistoryRef, {...baseHistory, targetListingName: listing.displayName || null});
         });
         logger.info(`면역 연장: uid=${uid}, listing=${targetListingId}, newImmunityUntil=${newImmunityUntil}`);
         return {success: true, newBalance: user.balance - item.price, newImmunityUntil};
@@ -2402,12 +2412,42 @@ exports.purchaseShopItem = onCall(
         }
         finalBalance = fresh.balance - item.price;
         tx.update(userRef, update);
+        tx.set(shopHistoryRef, baseHistory);
       });
       logger.info(`상점 구매: uid=${uid}, itemId=${itemId}, price=${item.price}G`);
       return {success: true, newBalance: finalBalance};
     },
 );
 
+
+// ============================================
+// getShopPurchaseHistory: 상점 구매 기록 조회
+// ============================================
+exports.getShopPurchaseHistory = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+      const uid = request.auth.uid;
+      const snap = await db.collection("users").doc(uid).collection("shopHistory")
+          .orderBy("purchasedAt", "desc")
+          .limit(50)
+          .get();
+      return {
+        records: snap.docs.map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            itemId: data.itemId,
+            itemName: data.itemName,
+            price: data.price,
+            purchasedAt: data.purchasedAt?.toMillis?.() || null,
+            targetListingId: data.targetListingId || null,
+            targetListingName: data.targetListingName || null,
+          };
+        }),
+      };
+    },
+);
 
 // ============================================
 // setVaultListing: 금고 보관 / 인출

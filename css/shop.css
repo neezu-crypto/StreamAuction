@@ -250,9 +250,87 @@
   color: #9ba3b4;
 }
 
+/* ===== 구매 기록 탭 ===== */
+.shop-tab-history {
+  margin-left: auto;
+  border-color: #2a2e38;
+  color: #9ba3b4;
+}
+.shop-tab-history.active,
+.shop-tab-history:hover {
+  background: #1e2130;
+  border-color: #4b5563;
+  color: #e2e8f0;
+}
+
+/* ===== 구매 기록 리스트 ===== */
+.shop-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shop-history-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #12151d;
+  border: 1px solid #1e2130;
+  border-radius: 10px;
+  padding: 14px 16px;
+  transition: border-color .15s;
+}
+.shop-history-item:hover { border-color: #2a2e38; }
+
+.shop-history-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  width: 36px;
+  text-align: center;
+}
+
+.shop-history-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.shop-history-name {
+  font-size: .92rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 2px;
+}
+
+.shop-history-target {
+  font-size: .78rem;
+  color: #9ba3b4;
+  margin-bottom: 2px;
+}
+
+.shop-history-date {
+  font-size: .78rem;
+  color: #4b5563;
+}
+
+.shop-history-price {
+  font-size: .9rem;
+  font-weight: 700;
+  color: #f87171;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.shop-history-empty {
+  text-align: center;
+  padding: 60px;
+  color: #4b5563;
+  font-size: .9rem;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 640px) {
   .shop-grid { grid-template-columns: 1fr; }
   .shop-card-footer { flex-direction: column; align-items: flex-start; }
   .btn-shop-buy { width: 100%; text-align: center; }
+  .shop-tab-history { margin-left: 0; }
 }

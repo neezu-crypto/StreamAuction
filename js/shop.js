@@ -2,10 +2,13 @@
 // shop.js - 상점 페이지
 // ============================================
 
-import {auth, db} from "./firebase-config.js";
+import {auth, db, functions} from "./firebase-config.js";
 import {doc, getDoc} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+import {httpsCallable} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-functions.js";
 import {watchAuthState} from "./auth.js";
 import {purchaseShopItem, formatG} from "./auction.js";
+
+const getShopPurchaseHistoryFn = httpsCallable(functions, "getShopPurchaseHistory");
 
 const $ = (id) => document.getElementById(id);
 const escapeHtml = (s) => {
@@ -145,7 +148,11 @@ window.setCategory = function(cat) {
   document.querySelectorAll(".shop-tab").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.cat === cat);
   });
-  renderShop();
+  if (cat === "history") {
+    renderShopHistory();
+  } else {
+    renderShop();
+  }
 };
 
 // ===== 렌더 =====
@@ -207,6 +214,58 @@ function renderCard(item) {
           onclick="openPurchaseModal('${item.id}')">${btnLabel}</button>
       </div>
     </div>`;
+}
+
+// ===== 구매 기록 =====
+const ITEM_ICON = {
+  liquidation_extension: "🛡️",
+  immunity_extension: "🔰",
+  vault_slot: "🏦",
+  holding_limit_expansion: "📦",
+  queue_priority_pass: "⚡",
+  detail_view_pass: "🔍",
+  history_view_pass: "📜",
+};
+
+function formatDate(ms) {
+  if (!ms) return "-";
+  return new Date(ms).toLocaleString("ko-KR", {
+    month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+async function renderShopHistory() {
+  const container = $("shopContent");
+  if (!container) return;
+  if (!currentUserData) {
+    container.innerHTML = `<div class="shop-login-prompt"><p>로그인이 필요합니다.</p></div>`;
+    return;
+  }
+  container.innerHTML = `<div class="shop-loading">구매 기록 불러오는 중...</div>`;
+  try {
+    const res = await getShopPurchaseHistoryFn();
+    const {records} = res.data;
+    if (!records.length) {
+      container.innerHTML = `<div class="shop-history-empty">구매 기록이 없습니다.</div>`;
+      return;
+    }
+    container.innerHTML = `
+      <div class="shop-history-list">
+        ${records.map((r) => `
+          <div class="shop-history-item">
+            <div class="shop-history-icon">${ITEM_ICON[r.itemId] || "🛒"}</div>
+            <div class="shop-history-info">
+              <div class="shop-history-name">${escapeHtml(r.itemName)}</div>
+              ${r.targetListingName ? `<div class="shop-history-target">대상: ${escapeHtml(r.targetListingName)}</div>` : ""}
+              <div class="shop-history-date">${formatDate(r.purchasedAt)}</div>
+            </div>
+            <div class="shop-history-price">-${(r.price || 0).toLocaleString("ko-KR")}G</div>
+          </div>`).join("")}
+      </div>`;
+  } catch (e) {
+    container.innerHTML = `<div class="shop-loading" style="color:#f87171">오류: ${e.message}</div>`;
+  }
 }
 
 // ===== 구매 모달 =====
