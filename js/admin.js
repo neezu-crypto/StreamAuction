@@ -22,6 +22,7 @@ const adminAdjustBalanceFn = httpsCallable(functions, 'adminAdjustBalance');
 const adminGetConfigFn = httpsCallable(functions, 'adminGetConfig');
 const adminSetConfigFn = httpsCallable(functions, 'adminSetConfig');
 const adminGetUserActivityFn = httpsCallable(functions, 'adminGetUserActivity');
+const adminGetAuctionDetailFn = httpsCallable(functions, 'adminGetAuctionDetail');
 const getBannerAdFn = httpsCallable(functions, 'getBannerAd');
 
 // ===== 상태 =====
@@ -672,25 +673,32 @@ function onHistoryRowClick(e) {
   showAuctionDetail(idx);
 }
 
-function showAuctionDetail(idx) {
+async function showAuctionDetail(idx) {
   const h = window._dashHistory?.[idx];
   if (!h) return;
-  $('auctionDetailContent').innerHTML = `
-    <dl class="info-list">
-      <div class="info-row"><dt>경매 ID</dt><dd class="mono" style="font-size:.75rem;word-break:break-all">${h.auctionId || '-'}</dd></div>
-      <div class="info-row"><dt>닉네임</dt><dd>${h.displayName || '-'}</dd></div>
-      <div class="info-row"><dt>SOOP ID</dt><dd class="mono">${h.soopId || '-'}</dd></div>
-      <div class="info-row"><dt>유형</dt><dd>${TYPE_FULL_LABEL[h.type] || h.type}</dd></div>
-      <div class="info-row"><dt>시작가</dt><dd>${formatG(h.startPrice)}</dd></div>
-      <div class="info-row"><dt>낙찰가</dt><dd>${formatG(h.finalPrice)}</dd></div>
-      <div class="info-row"><dt>결과</dt><dd>${h.isWon ? '✅ 낙찰' : '❌ 유찰'}</dd></div>
-      <div class="info-row"><dt>총 입찰</dt><dd>${h.bidCount}회</dd></div>
-      <div class="info-row"><dt>낙찰자 UID</dt><dd class="mono" style="font-size:.75rem;word-break:break-all">${h.winnerId || '없음'}</dd></div>
-      <div class="info-row"><dt>등록자 UID</dt><dd class="mono" style="font-size:.75rem;word-break:break-all">${h.registeredBy || '-'}</dd></div>
-      <div class="info-row"><dt>시작 시각</dt><dd>${formatDate(h.startedAt)}</dd></div>
-      <div class="info-row"><dt>종료 시각</dt><dd>${formatDate(h.endedAt)}</dd></div>
-    </dl>`;
+  $('auctionDetailContent').innerHTML = `<p class="empty-msg">로딩 중...</p>`;
   $('auctionDetailModal').classList.add('show');
+  try {
+    const result = await adminGetAuctionDetailFn({auctionId: h.auctionId});
+    const d = result.data;
+    $('auctionDetailContent').innerHTML = `
+      <dl class="info-list">
+        <div class="info-row"><dt>경매 ID</dt><dd class="mono" style="font-size:.75rem;word-break:break-all">${d.auctionId || '-'}</dd></div>
+        <div class="info-row"><dt>닉네임</dt><dd>${d.displayName || '-'}</dd></div>
+        <div class="info-row"><dt>SOOP ID</dt><dd class="mono">${d.soopId || '-'}</dd></div>
+        <div class="info-row"><dt>유형</dt><dd>${TYPE_FULL_LABEL[d.type] || d.type}</dd></div>
+        <div class="info-row"><dt>시작가</dt><dd>${formatG(d.startPrice)}</dd></div>
+        <div class="info-row"><dt>낙찰가</dt><dd>${formatG(d.finalPrice)}</dd></div>
+        <div class="info-row"><dt>결과</dt><dd>${d.isWon ? '✅ 낙찰' : '❌ 유찰'}</dd></div>
+        <div class="info-row"><dt>총 입찰</dt><dd>${d.bidCount}회</dd></div>
+        <div class="info-row"><dt>낙찰자 UID</dt><dd class="mono" style="font-size:.75rem;word-break:break-all">${d.winnerId || '없음'}</dd></div>
+        <div class="info-row"><dt>등록자 UID</dt><dd class="mono" style="font-size:.75rem;word-break:break-all">${d.registeredBy || '-'}</dd></div>
+        <div class="info-row"><dt>시작 시각</dt><dd>${formatDate(d.startedAt)}</dd></div>
+        <div class="info-row"><dt>종료 시각</dt><dd>${formatDate(d.endedAt)}</dd></div>
+      </dl>`;
+  } catch (e) {
+    $('auctionDetailContent').innerHTML = `<p class="empty-msg" style="color:#ef4444">오류: ${e.message}</p>`;
+  }
 }
 
 window.closeAuctionDetail = function(e) {

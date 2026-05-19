@@ -1592,6 +1592,36 @@ exports.adminGetDashboard = onCall(
 );
 
 // ============================================
+// adminGetAuctionDetail: 경매 상세 조회
+// ============================================
+exports.adminGetAuctionDetail = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      await requireAdmin(request);
+      const {auctionId} = request.data;
+      if (!auctionId) throw new HttpsError("invalid-argument", "auctionId 필요");
+      const snap = await db.collection("auctionHistory").doc(auctionId).get();
+      if (!snap.exists) throw new HttpsError("not-found", "경매 기록 없음");
+      const d = snap.data();
+      return {
+        auctionId: d.auctionId,
+        listingId: d.listingId || null,
+        soopId: d.soopId || null,
+        displayName: d.displayName,
+        type: d.type || "new",
+        startPrice: d.startPrice || 0,
+        finalPrice: d.finalPrice,
+        isWon: d.isWon,
+        bidCount: d.bidCount || 0,
+        winnerId: d.winnerId || null,
+        registeredBy: d.registeredBy || null,
+        startedAt: d.startedAt?.toMillis?.() || null,
+        endedAt: d.endedAt?.toMillis?.() || null,
+      };
+    },
+);
+
+// ============================================
 // adminForceFinalize: 경매 강제 종료
 // ============================================
 exports.adminForceFinalize = onCall(
