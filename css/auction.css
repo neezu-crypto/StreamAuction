@@ -1817,7 +1817,8 @@
 .ad-purchase-form .form-group { margin-bottom: 14px; }
 .ad-purchase-form label { display: block; font-size: .82rem; color: #9ca3af; margin-bottom: 5px; }
 .ad-purchase-form input[type="text"],
-.ad-purchase-form input[type="number"] {
+.ad-purchase-form input[type="number"],
+.ad-purchase-form select {
   width: 100%;
   box-sizing: border-box;
   background: #1a1d27;
@@ -1826,8 +1827,21 @@
   color: #e2e8f0;
   padding: 8px 12px;
   font-size: .9rem;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+  cursor: pointer;
 }
-.form-hint { font-size: .75rem; color: #6b7280; margin-left: 8px; }
+.ad-purchase-form select:focus,
+.ad-purchase-form input[type="text"]:focus,
+.ad-purchase-form input[type="number"]:focus {
+  outline: none;
+  border-color: #f59e0b;
+}
+.form-hint { display: block; font-size: .75rem; color: #6b7280; margin-top: 5px; }
 .ad-profile-preview {
   display: flex;
   align-items: center;
