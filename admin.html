@@ -54,6 +54,7 @@
     <button class="admin-tab" data-tab="users" onclick="switchTab('users')">유저 관리</button>
     <button class="admin-tab" data-tab="config" onclick="switchTab('config')">시스템 설정</button>
     <button class="admin-tab" data-tab="reports" onclick="switchTab('reports')">신고 관리</button>
+    <button class="admin-tab" data-tab="ads" onclick="switchTab('ads')">광고 관리</button>
   </nav>
 
   <main class="admin-main">
@@ -176,6 +177,30 @@
           <button class="btn-sm btn-ghost" onclick="loadReports()">새로고침</button>
         </div>
         <div id="reportsContent"><p class="empty-msg">로딩 중...</p></div>
+      </div>
+    </div>
+
+    <!-- 광고 관리 -->
+    <div id="tab-ads" class="tab-pane" style="display:none">
+      <div class="admin-grid">
+
+        <!-- 배너 광고 -->
+        <div class="admin-card">
+          <div class="admin-card-hd">
+            <h3>배너 광고</h3>
+            <button class="btn-sm btn-ghost" onclick="loadAdsTab()">새로고침</button>
+          </div>
+          <div id="adsBannerContent"><p class="empty-msg">로딩 중...</p></div>
+        </div>
+
+        <!-- 보상형 광고 -->
+        <div class="admin-card" style="grid-column: 1 / -1">
+          <div class="admin-card-hd">
+            <h3>보상형 광고 <span style="font-size:.8rem;color:#6b7280;font-weight:400">(최근 100건)</span></h3>
+          </div>
+          <div id="adsRewardContent"><p class="empty-msg">로딩 중...</p></div>
+        </div>
+
       </div>
     </div>
 

@@ -122,6 +122,7 @@ window.switchTab = function(tab) {
   if (tab === 'auction') refreshAuctionTab();
   if (tab === 'config') loadConfig();
   if (tab === 'reports') loadReports();
+  if (tab === 'ads') loadAdsTab();
 };
 
 // ===== 대시보드 =====
@@ -547,6 +548,9 @@ window.handleSaveConfig = async function() {
 const adminGetReportsFn = httpsCallable(functions, "adminGetReports");
 const adminSetMosaicFn = httpsCallable(functions, "adminSetMosaic");
 const adminUpdateListingFn = httpsCallable(functions, "adminUpdateListing");
+const adminGetAllAdsFn = httpsCallable(functions, "adminGetAllAds");
+const adminTerminateAdFn = httpsCallable(functions, "adminTerminateAd");
+const adminDeleteBannerAdFn = httpsCallable(functions, "adminDeleteBannerAd");
 
 window.loadReports = async function loadReports() {
   $("reportsContent").innerHTML = `<p class="empty-msg">로딩 중...</p>`;
@@ -730,3 +734,120 @@ async function handleUpdateListing(listingId, fields, textEl, inputEl) {
     textEl.style.display = "";
   }
 }
+
+// ===== 광고 관리 탭 =====
+window.loadAdsTab = async function() {
+  await Promise.all([loadBannerAdManagement(), loadRewardAds()]);
+};
+
+async function loadBannerAdManagement() {
+  const el = $('adsBannerContent');
+  if (!el) return;
+  try {
+    const [lb, hb] = await Promise.all([
+      getBannerAdFn({slot: 'listing'}).then((r) => r.data?.ad),
+      getBannerAdFn({slot: 'history'}).then((r) => r.data?.ad),
+    ]);
+
+    const renderBannerRow = (label, slot, ad) => {
+      if (!ad) {
+        return `<tr><td>${label}</td><td colspan="3" style="color:#4b5563">비어 있음</td><td>-</td></tr>`;
+      }
+      const isProtected = ad.protectedUntil > Date.now();
+      const remainH = isProtected ? Math.ceil((ad.protectedUntil - Date.now()) / 3600000) : 0;
+      return `<tr>
+        <td>${label}</td>
+        <td>${ad.displayName} <span class="mono" style="font-size:.75rem">@${ad.soopId}</span></td>
+        <td>${formatG(ad.bidAmount)}</td>
+        <td>${isProtected ? `보호 ${remainH}h` : '덮어쓰기 가능'}</td>
+        <td>
+          <button class="btn-sm btn-danger" onclick="handleDeleteBannerAd('${slot}')">슬롯 초기화</button>
+        </td>
+      </tr>`;
+    };
+
+    el.innerHTML = `
+      <table class="admin-table">
+        <thead><tr><th>슬롯</th><th>광고주</th><th>입찰가</th><th>상태</th><th>조치</th></tr></thead>
+        <tbody>
+          ${renderBannerRow('매물 상세', 'listing', lb)}
+          ${renderBannerRow('히스토리', 'history', hb)}
+        </tbody>
+      </table>`;
+  } catch (e) {
+    el.innerHTML = `<p class="msg-error">${e.message}</p>`;
+  }
+}
+
+async function loadRewardAds() {
+  const el = $('adsRewardContent');
+  if (!el) return;
+  el.innerHTML = `<p class="empty-msg">로딩 중...</p>`;
+  try {
+    const result = await adminGetAllAdsFn();
+    const ads = result.data.ads;
+    if (!ads.length) {
+      el.innerHTML = `<p class="empty-msg">등록된 보상형 광고 없음</p>`;
+      return;
+    }
+    el.innerHTML = `
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>닉네임</th>
+            <th>SOOP ID</th>
+            <th>남은 예산</th>
+            <th>총 충전액</th>
+            <th>등록 시각</th>
+            <th>상태</th>
+            <th>조치</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${ads.map((ad) => {
+            const isActive = ad.remainingBudget > 0;
+            return `<tr>
+              <td>${ad.displayName}</td>
+              <td class="mono" style="font-size:.8rem">${ad.soopId}</td>
+              <td style="color:${isActive ? '#4ade80' : '#6b7280'};font-weight:600">
+                ${ad.remainingBudget.toLocaleString('ko-KR')}G
+              </td>
+              <td style="color:#9ba3b4">${ad.totalCharged.toLocaleString('ko-KR')}G</td>
+              <td style="font-size:.8rem;color:#6b7280">${formatDate(ad.createdAt)}</td>
+              <td>
+                <span style="color:${isActive ? '#4ade80' : '#4b5563'};font-size:.82rem">
+                  ${isActive ? '● 활성' : '○ 소진'}
+                </span>
+              </td>
+              <td>
+                ${isActive ? `<button class="btn-sm btn-danger" onclick="handleTerminateAd('${ad.adId}')">강제 종료</button>` : '-'}
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+  } catch (e) {
+    el.innerHTML = `<p class="msg-error">${e.message}</p>`;
+  }
+}
+
+window.handleTerminateAd = async function(adId) {
+  if (!confirm(`광고 ${adId}\n를 강제 종료하시겠습니까?\n남은 예산이 0으로 처리됩니다.`)) return;
+  try {
+    await adminTerminateAdFn({adId});
+    await loadRewardAds();
+  } catch (e) {
+    alert(`실패: ${e.message}`);
+  }
+};
+
+window.handleDeleteBannerAd = async function(slot) {
+  const label = slot === 'listing' ? '매물 상세' : '히스토리';
+  if (!confirm(`배너 광고 슬롯 [${label}]을 초기화하시겠습니까?\n현재 광고가 삭제됩니다.`)) return;
+  try {
+    await adminDeleteBannerAdFn({slot});
+    await loadBannerAdManagement();
+  } catch (e) {
+    alert(`실패: ${e.message}`);
+  }
+};

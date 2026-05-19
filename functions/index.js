@@ -3013,3 +3013,67 @@ exports.setOwnerTag = onCall(
       return {success: true, newBalance};
     },
 );
+
+// ============================================
+// adminGetAllAds: 전체 보상형 광고 목록 조회
+// ============================================
+exports.adminGetAllAds = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      await requireAdmin(request);
+      const snap = await db.collection("ads")
+          .orderBy("createdAt", "desc")
+          .limit(100)
+          .get();
+      const docs = snap.docs.filter((d) => !d.id.endsWith("-banner"));
+      return {
+        ads: docs.map((d) => {
+          const data = d.data();
+          return {
+            adId: d.id,
+            uid: data.uid,
+            displayName: data.displayName,
+            soopId: data.soopId,
+            remainingBudget: data.remainingBudget || 0,
+            totalCharged: data.totalCharged || 0,
+            createdAt: data.createdAt?.toMillis?.() || null,
+          };
+        }),
+      };
+    },
+);
+
+// ============================================
+// adminTerminateAd: 보상형 광고 강제 종료 (예산 0 처리)
+// ============================================
+exports.adminTerminateAd = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      await requireAdmin(request);
+      const {adId} = request.data;
+      if (!adId) throw new HttpsError("invalid-argument", "adId 필요");
+      const adRef = db.collection("ads").doc(adId);
+      const snap = await adRef.get();
+      if (!snap.exists) throw new HttpsError("not-found", "광고 없음");
+      await adRef.update({remainingBudget: 0});
+      logger.info(`관리자 광고 강제 종료: ${adId} by ${request.auth.uid}`);
+      return {success: true};
+    },
+);
+
+// ============================================
+// adminDeleteBannerAd: 배너 광고 슬롯 초기화
+// ============================================
+exports.adminDeleteBannerAd = onCall(
+    {region: "asia-northeast3"},
+    async (request) => {
+      await requireAdmin(request);
+      const {slot} = request.data;
+      if (!["listing", "history"].includes(slot)) {
+        throw new HttpsError("invalid-argument", "slot은 listing 또는 history");
+      }
+      await db.collection("ads").doc(`${slot}-banner`).delete();
+      logger.info(`관리자 배너 슬롯 초기화: ${slot} by ${request.auth.uid}`);
+      return {success: true};
+    },
+);
