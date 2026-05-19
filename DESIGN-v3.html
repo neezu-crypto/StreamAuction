@@ -148,6 +148,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
     <a class="nav-btn" href="#s22">22. 개인정보 처리방침</a>
     <a class="nav-btn" href="#s23">23. 위변조 방지</a>
     <a class="nav-btn" href="#s24">24. 모바일 대응</a>
+    <a class="nav-btn" href="#s25">25. 입찰형 배너 광고</a>
   </div>
 </nav>
 
@@ -159,7 +160,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
   <div class="hero-badges">
     <span class="badge badge-done">v3 경매 중심 재설계</span>
     <span class="badge badge-phase">2026-05-19 최종 업데이트</span>
-    <span class="badge badge-new">관리자 대시보드 경매 상세 모달 · 신고 관리 인라인 편집 구현 완료</span>
+    <span class="badge badge-new">입찰형 배너 광고 시스템 · 내가 보낸 경매 요청 표시 구현 완료</span>
   </div>
 </div>
 
@@ -191,11 +192,12 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
     <a class="toc-item" href="#s22">22. 개인정보 처리방침</a>
     <a class="toc-item" href="#s23">23. 위변조 방지 대책</a>
     <a class="toc-item" href="#s24">24. 모바일 대응</a>
+    <a class="toc-item" href="#s25">25. 입찰형 배너 광고</a>
   </div>
 </div>
 
 <div id="s0" class="section-anchor">
-<h2>구현 현황 요약 <span class="badge badge-new">2026-05-19 기준 (관리자 경매 상세 모달 · 인라인 편집 구현 완료)</span></h2>
+<h2>구현 현황 요약 <span class="badge badge-new">2026-05-19 기준 (입찰형 배너 광고 시스템 · 내가 보낸 경매 요청 표시 구현 완료)</span></h2>
 
 <h3>✅ 구현 완료</h3>
 <table>
@@ -227,6 +229,8 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>잔액 변화 히스토리 모달</td><td>마이페이지 잔액 stat 박스 클릭 → 최근 7일 잔액 변화 모달. 탭 2개: ① 지출/획득 내역 (auctionHistory 기반 매입·판매 이벤트) ② 총 잔액 변화 (Firestore <code>users/{uid}/balanceHistory</code> 서브컬렉션 — 클라이언트에서 페이지 진입·보상 수령·건너뛰기 시 자동 기록). 날짜별 그룹 + 7일 순변화 요약.</td></tr>
 <tr><td>랭킹 페이지</td><td>ranking.html — <strong>50,000G 결제 게이트</strong> (viewRanking CF · 트랜잭션) · 탭 3개: 시세 랭킹 / 거래량 랭킹 / 거래 횟수 랭킹 · 모자이크 매물 블러 처리 · 차단 매물 숨김 · 메달(🥇🥈🥉) 표시</td></tr>
 <tr><td>소유자 표시 (ownerTag)</td><td>setOwnerTag CF (보유자 검증 · 30,000G 트랜잭션 차감 · 삭제 무료) · listing.js 상세 페이지 내 ownerTag 섹션 렌더링 — 보유자: 등록(30,000G)/수정/삭제 버튼 · 타 유저: 닉네임·@soopId + ch.sooplive.co.kr/{soopId} 방송국 링크 · 소유권 이전(낙찰·강제청산) 시 ownerTag 자동 초기화 · 개인정보 동의 체크박스 포함</td></tr>
+<tr><td>내가 보낸 경매 요청 표시</td><td>메인 페이지 <code>sentRequestsSection</code> · 마이페이지 <code>renderSentRequests()</code> 섹션 — <code>auctionRequests</code> where <code>requesterId==uid &amp;&amp; status=="pending"</code> 조회 → "📨 답변 대기 중" 배지 + 만료 시각 표시. 보내는 쪽에서도 요청 상태 확인 가능.</td></tr>
+<tr><td>입찰형 배너 광고 시스템</td><td>매물 상세 페이지(listing.html) 하단 + 경매 히스토리 모달 하단 배너 광고 슬롯 2종. 입찰 경쟁 방식 (최소 10,000G · 현재 광고보다 높아야 함) · 1일 보호 기간(protectedUntil = placedAt + 24h, 보호 기간 중 덮어쓰기 불가) · 다음 입찰자가 덮어쓸 때까지 무기한 유지 · 이미지 URL <code>stimg.sooplive.com/NORMAL_BBS/</code> 도메인 제한 (720×150px) · Google 계정 전용. CF: <code>placeBannerAd</code> (Firestore 트랜잭션 — 잔액 차감 + <code>ads/{slot}-banner</code> 갱신) · <code>getBannerAd</code> (인증 불필요 · 공개 조회). 관리자 대시보드 배너 광고 현황 카드 추가.</td></tr>
 <tr><td>내 보유 매물 실시간 갱신</td><td>main.js — watchMyHoldings(uid): Firestore onSnapshot으로 users/{uid}.ownedListingIds 변화 감시 → 변경 시 loadMyHoldings 자동 호출. 경매 완료 시 기존 보유자·신규 보유자 패널 즉시 갱신.</td></tr>
 <tr><td>보상형 광고 시스템</td><td>purchaseAd CF (Google 계정 · consentAgreed · soopId 검증 · 잔액 트랜잭션 · 최대 7일) · claimAdReward CF (만료 확인 · 자기 광고 차단 · KST 일일 3개 한도 · 광고별 중복 차단 · +5,000G) · getActiveAds CF (활성 광고 목록 + claimedToday 반환) · 보상 센터 탭 UI (출석·광고 탭 분리) · 광고 카드 (프로필 이미지 · 남은 시간 · 수령 상태) · 광고 신청 모달 (SOOP ID 입력 시 이미지 미리보기 · 비용 실시간 계산 · 개인정보 동의) · Firestore 규칙 (ads public read · adClaims 본인 read)</td></tr>
 <tr><td>이용약관·개인정보 처리방침 페이지</td><td>terms.html · privacy.html — 독립 열람 페이지. 모든 페이지 footer에 링크 추가.</td></tr>
@@ -443,6 +447,7 @@ CANCELLED  취소 (시스템 예외)</pre>
 <tr><td>매물 숨기기</td><td>❌</td><td>✅</td></tr>
 <tr><td>경매 히스토리 열람</td><td>50,000G 결제</td><td>50,000G 결제</td></tr>
 <tr><td>랭킹 페이지 열람</td><td>❌</td><td>50,000G 결제</td></tr>
+<tr><td>배너 광고 신청</td><td>❌</td><td>10,000G 이상 입찰</td></tr>
 <tr><td>데이터 영속성</td><td>브라우저 종속</td><td>영구 보관</td></tr>
 </table>
 
@@ -653,6 +658,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <tr><td>금고 슬롯</td><td>1,500,000G (영구)</td><td><span class="badge badge-done">구현</span></td></tr>
 <tr><td>패스권 3종</td><td>각 300,000G / 30일</td><td><span class="badge badge-done">구현</span></td></tr>
 <tr><td>보상형 광고 등록비</td><td>200,000G / 일 × 기간</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>배너 광고 입찰금</td><td>10,000G 이상 (입찰가 전액 소각)</td><td><span class="badge badge-done">구현</span></td></tr>
 <tr><td>경매 수수료</td><td>제거 (수수료 없음)</td><td><span class="badge badge-todo">미적용</span></td></tr>
 </table>
 
@@ -695,6 +701,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <tr><td>대기열 우선권 패스</td><td>300,000G / 30일</td><td>기간 내 경매 대기열 우선 배치.</td><td><span class="badge badge-done">구현 완료</span></td></tr>
 <tr><td>보유 한도 +1</td><td>1,000,000G / 영구</td><td>기본 보유 한도 1슬롯 영구 확장. Google 계정 전용.</td><td><span class="badge badge-done">구현 완료</span></td></tr>
 <tr><td>금고 슬롯</td><td>1,500,000G / 영구</td><td>매물 1개 보관 슬롯. 금고 매물은 강제청산 완전 면제. 손절 후 슬롯 재사용 가능. Google 계정 전용.</td><td><span class="badge badge-done">구현 완료</span></td></tr>
+<tr><td>배너 광고 (입찰형)</td><td>10,000G 이상 / 입찰</td><td>매물 상세 페이지 하단 또는 경매 히스토리 모달 하단에 720×150px 배너 게재. 최소 1일 보호 → 더 높은 입찰가로 덮어쓰기 가능. 이미지 URL stimg.sooplive.com/NORMAL_BBS/ 제한. Google 계정 전용. (placeBannerAd CF · getBannerAd CF)</td><td><span class="badge badge-done">구현 완료</span></td></tr>
 <tr><td>스킨/칭호/프로필 테두리</td><td>미정</td><td>코스메틱 아이템 — 상점에서 G로 구매.</td><td><span class="badge badge-phase">Phase 3</span></td></tr>
 </table>
 
@@ -720,6 +727,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <tr><td>쿨다운 건너뛰기 / 랭킹</td><td>50,000G/회</td><td>-</td></tr>
 <tr><td>보호 아이템 (연장권류)</td><td>100,000G~</td><td>상황별 지출</td></tr>
 <tr><td>소유자 표시</td><td>30,000G/회</td><td>소유권 이전 시 재등록 필요</td></tr>
+<tr><td>배너 광고 입찰</td><td>10,000G 이상/회</td><td>덮어쓰기 경쟁 시 누적 소각</td></tr>
 <tr><td>패스 / 한도 확장 / 금고</td><td>300,000G ~ 1,500,000G</td><td>고가 아이템 → 주요 소각 동력</td></tr>
 </table>
 
@@ -2081,6 +2089,7 @@ async function requireSession(uid) {
 <tr><td>보상형 광고 신청 모달 (§19)</td><td>닉네임, SOOP ID</td><td>광고 슬롯 카드</td><td>필수</td><td><code>purchaseAd</code> — consentAgreed 검증</td></tr>
 <tr><td>중계방송 등록 모달 (§20)</td><td>닉네임, SOOP ID</td><td>중계 슬롯 카드</td><td>필수</td><td><code>registerRelay</code> — consentAgreed 검증</td></tr>
 <tr><td>소유자 표시 모달 (§5의2)</td><td>닉네임, SOOP ID</td><td>매물 상세 페이지</td><td>필수</td><td><code>setOwnerTag</code> — 클라이언트 동의 후 호출 (CF 검증 없음, 클라이언트 강제)</td></tr>
+<tr><td>배너 광고 신청 모달 (§25)</td><td>닉네임, SOOP ID</td><td>매물 상세·히스토리 모달 하단 배너</td><td>필수</td><td><code>placeBannerAd</code> — consentAgreed 체크박스 확인 (CF에서 별도 검증 없음, 클라이언트 강제)</td></tr>
 </table>
 
 <p style="font-size:.85rem;color:#9ca3af">※ 향후 닉네임·SOOP ID를 공개 표시하는 신규 기능이 추가될 경우, 동일 원칙을 적용하여 동의 체크박스를 반드시 포함해야 합니다.</p>
@@ -2483,8 +2492,118 @@ async function requireSession(uid) {
 
 <hr>
 
+<div id="s25" class="section-anchor">
+<h2>25. 입찰형 배너 광고 시스템 <span class="badge badge-done">구현 완료</span></h2>
+
+<blockquote>매물 상세 페이지 하단과 경매 히스토리 모달 하단에 유저가 직접 입찰해 게재하는 배너 광고. 경매 입찰 방식으로 현재 광고보다 높은 금액을 제시해야 덮어쓸 수 있으며, 1일 보호 기간 동안은 무조건 유지된다.</blockquote>
+
+<div class="info-box">
+  <div class="info-box-title">핵심 구조</div>
+  <div class="info-box-text">
+    슬롯 2개: <code>listing-banner</code> (매물 상세 하단) · <code>history-banner</code> (경매 히스토리 모달 하단)<br>
+    광고 문서 위치: Firestore <code>ads/{slot}-banner</code><br>
+    입찰 후 1일 보호 → 보호 중에는 덮어쓰기 불가 → 보호 만료 후 더 높은 금액으로 덮어쓰기 가능 → 다음 입찰자가 나타날 때까지 무기한 유지
+  </div>
+</div>
+
+<h3>25.1 광고 신청 정책</h3>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>신청 자격</td><td>Google 계정 전용</td></tr>
+<tr><td>최소 입찰금</td><td>10,000G</td></tr>
+<tr><td>덮어쓰기 조건</td><td>현재 광고의 <code>bidAmount</code>보다 높은 금액 필요. 1일 보호 기간(<code>protectedUntil</code>) 중에는 덮어쓰기 불가.</td></tr>
+<tr><td>유지 기간</td><td>다음 입찰자가 덮어쓸 때까지 무기한 (기간 만료 없음)</td></tr>
+<tr><td>1일 보호</td><td>신청 직후 24시간은 어떤 금액으로도 덮어쓰기 불가 (<code>protectedUntil = now + 86400000ms</code>)</td></tr>
+<tr><td>환불</td><td>불가 (G 즉시 소각)</td></tr>
+<tr><td>이미지 URL 규칙</td><td><code>stimg.sooplive.com/NORMAL_BBS/</code> 도메인 · .png/.jpg/.jpeg/.gif 확장자만 허용</td></tr>
+<tr><td>배너 크기</td><td>720 × 150 px (aspect-ratio: 720/150 CSS 강제)</td></tr>
+<tr><td>필수 동의</td><td>닉네임·SOOP ID 공개 표시 동의 체크박스</td></tr>
+</table>
+
+<h3>25.2 슬롯 구성</h3>
+<table>
+<tr><th>슬롯 ID</th><th>표시 위치</th><th>뷰어</th></tr>
+<tr><td><code>listing-banner</code></td><td>매물 상세 페이지(listing.html) 카드 하단</td><td>상세 페이지 열람 유저 전체</td></tr>
+<tr><td><code>history-banner</code></td><td>경매 히스토리 모달(메인 페이지 / 상세 페이지) 하단</td><td>히스토리 모달 열람 유저 전체</td></tr>
+</table>
+
+<h3>25.3 광고 렌더링</h3>
+<ul>
+<li>광고가 있으면: <code>AD</code> 라벨 + 이미지(링크) + 닉네임·SOOP ID 표시 + "광고 신청" 버튼</li>
+<li>광고가 없으면: 점선 빈 영역 + "이곳에 광고를 게재하세요" 안내 + "광고 신청" 버튼</li>
+<li>이미지 클릭 시 <code>ch.sooplive.co.kr/{soopId}</code> 방송국 링크 새 탭 오픈</li>
+<li>보호 기간 중에는 입찰 모달에 "1일 보호 기간 중" 안내 표시</li>
+</ul>
+
+<h3>25.4 입찰 플로우</h3>
+<pre>광고 슬롯 하단 "광고 신청" 버튼 클릭
+→ 배너 광고 신청 모달 오픈
+   - 현재 광고주 정보 표시 (있는 경우): 닉네임·SOOP ID·현재 입찰금·보호 만료 여부
+   - 닉네임·SOOP ID·이미지 URL(미리보기)·입찰 금액 입력
+   - 개인정보 동의 체크박스
+→ "광고 신청" 버튼 → placeBannerAd CF 호출
+→ CF 검증: Google 계정 · 필드 형식 · 이미지 URL 도메인 · 입찰금 >= 10000
+→ Firestore 트랜잭션:
+   - 현재 광고 확인 → protectedUntil > now 이면 "1일 보호 기간 중" 에러
+   - bidAmount <= 현재 입찰금 이면 "더 높은 금액 입력" 에러
+   - balance -= bidAmount
+   - ads/{slot}-banner 문서 갱신 (displayName·soopId·imageUrl·bidAmount·protectedUntil·placedAt)
+→ 성공 토스트 + 잔액 즉시 갱신 + 광고 화면 갱신</pre>
+
+<h3>25.5 Cloud Functions</h3>
+
+<h4>placeBannerAd</h4>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>인증</td><td>Google 계정 전용 (<code>sign_in_provider !== "anonymous"</code>)</td></tr>
+<tr><td>입력</td><td><code>{ slot, displayName, soopId, imageUrl, bidAmount }</code></td></tr>
+<tr><td>처리</td><td>① slot 검증 ("listing"/"history") ② displayName 1~20자 ③ soopId 영문+숫자 1~20자 ④ imageUrl regex 검증 ⑤ bidAmount &gt;= 10000 정수 ⑥ Firestore 트랜잭션: protectedUntil 체크 → bidAmount 비교 → balance 차감 → ads/{slot}-banner 갱신</td></tr>
+<tr><td>반환</td><td><code>{ success, newBalance }</code></td></tr>
+</table>
+
+<h4>getBannerAd</h4>
+<table>
+<tr><th>항목</th><th>내용</th></tr>
+<tr><td>인증</td><td>불필요 (공개 조회)</td></tr>
+<tr><td>입력</td><td><code>{ slot }</code></td></tr>
+<tr><td>처리</td><td>Firestore <code>ads/{slot}-banner</code> 문서 조회. 없으면 <code>ad: null</code> 반환.</td></tr>
+<tr><td>반환</td><td><code>{ ad: { displayName, soopId, imageUrl, bidAmount, protectedUntil } | null }</code></td></tr>
+</table>
+
+<h3>25.6 Firestore 데이터 구조</h3>
+<pre>// ads/{slot}-banner  (slot = "listing" | "history")
+{
+  displayName: string,      // 광고주 닉네임 (1~20자)
+  soopId: string,           // SOOP ID (영문+숫자 1~20자)
+  imageUrl: string,         // 배너 이미지 URL (stimg.sooplive.com/NORMAL_BBS/ 한정)
+  bidAmount: number,        // 현재 입찰금 (최소 10,000G)
+  placedAt: number,         // 게재 timestamp (ms)
+  protectedUntil: number,   // placedAt + 86,400,000 (24h 보호 만료 timestamp)
+  uid: string,              // 광고주 UID
+}</pre>
+
+<h3>25.7 어뷰징 방어</h3>
+<table>
+<tr><th>위협</th><th>방어</th></tr>
+<tr><td>보호 기간 중 덮어쓰기</td><td>CF 트랜잭션에서 <code>protectedUntil > Date.now()</code> 체크 → 에러 반환</td></tr>
+<tr><td>현재 입찰금 이하로 덮어쓰기</td><td>CF 트랜잭션에서 <code>bidAmount &lt;= existing.bidAmount</code> 체크</td></tr>
+<tr><td>잔액 부족 광고 신청</td><td>Firestore 트랜잭션에서 <code>balance &gt;= bidAmount</code> 재확인</td></tr>
+<tr><td>허용되지 않은 이미지 URL</td><td>CF에서 regex <code>/^https:\/\/stimg\.sooplive\.com\/NORMAL_BBS\/.+\.(png|jpg|jpeg|gif)$/i</code> 검증</td></tr>
+<tr><td>익명 유저 광고 신청</td><td>CF에서 <code>sign_in_provider !== "anonymous"</code> 확인</td></tr>
+</table>
+
+<h3>25.8 화폐 수지</h3>
+<table>
+<tr><th>구분</th><th>방향</th><th>계산</th></tr>
+<tr><td>배너 광고 입찰금</td><td>회수 (deflation)</td><td>입찰 성공 시 bidAmount 전액 소각 (환불 없음)</td></tr>
+</table>
+<p style="font-size:.85rem;color:#6b7280">기존 광고주는 덮어씌워지더라도 환불 없음. 후발 입찰자 진입 시 순차적으로 G가 소각됨. 광고 슬롯이 활발하게 경쟁될수록 소각량 증가 → 인플레이션 억제 기여.</p>
+</div>
+
+<hr>
+
 <p style="font-size:12px;color:#999;text-align:center;padding:1rem 0">
-  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-19 (모바일 대응 섹션 추가) · 작성자: 오목지면시그
+  StreamAuction 기획서 v3 · 최종 업데이트: 2026-05-19 (입찰형 배너 광고 · 내가 보낸 경매 요청 표시 추가) · 작성자: 오목지면시그
 </p>
 
 </div>
