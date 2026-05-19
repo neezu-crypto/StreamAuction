@@ -158,8 +158,8 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
   <p class="hero-sub">스트리머 닉네임을 사고파는 실시간 경매 게임 — Trade the Streamers You Love</p>
   <div class="hero-badges">
     <span class="badge badge-done">v3 경매 중심 재설계</span>
-    <span class="badge badge-phase">2026-05-18 최종 업데이트</span>
-    <span class="badge badge-new">테스트 기간 배너 · 잔액 히스토리 구현 완료</span>
+    <span class="badge badge-phase">2026-05-19 최종 업데이트</span>
+    <span class="badge badge-new">관리자 대시보드 경매 상세 모달 · 신고 관리 인라인 편집 구현 완료</span>
   </div>
 </div>
 
@@ -195,7 +195,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 </div>
 
 <div id="s0" class="section-anchor">
-<h2>구현 현황 요약 <span class="badge badge-new">2026-05-19 기준 (소유자 표시 구현 완료)</span></h2>
+<h2>구현 현황 요약 <span class="badge badge-new">2026-05-19 기준 (관리자 경매 상세 모달 · 인라인 편집 구현 완료)</span></h2>
 
 <h3>✅ 구현 완료</h3>
 <table>
@@ -215,7 +215,7 @@ blockquote{border-left:3px solid #a5b4fc;padding:10px 16px;color:#555;background
 <tr><td>경매 수수료</td><td>수수료 없음 — 낙찰가 100% 판매자에게 지급. 기타 소각원(상점·열람 과금 등)으로 경제 균형 유지.</td></tr>
 <tr><td>튜토리얼 보상 (전체)</td><td>첫 낙찰 30,000G · 첫 경매 등록 10,000G · 첫 손절 5,000G · 첫 강제청산 10,000G — 서버에서 자동 지급, 토스트 알림</td></tr>
 <tr><td>튜토리얼 UI</td><td>헤더 "🎁 보상" 버튼 → 보상 센터 모달 — 단계별 1개씩 표시 (완료 단계는 칩으로 압축), 진행 배지, 전체 완료 카드</td></tr>
-<tr><td>관리자 페이지 (admin.html)</td><td>5개 탭: 대시보드(통계·경매·기록) / 경매 제어(강제종료·대기열 비우기) / 유저 관리(조회·잔액조정·정지·최근경매활동20건) / 시스템 설정(config 편집) / 신고 관리(모자이크 해제 포함) — <code>system/admin.adminUids</code>로 접근 제어</td></tr>
+<tr><td>관리자 페이지 (admin.html)</td><td>5개 탭: 대시보드(통계·경매·기록 — <strong>최근 경매 행 클릭 시 상세 모달: 경매ID·SOOP ID·유형·시작가·낙찰가·결과·입찰수·낙찰자/등록자 UID·시작/종료 시각</strong>) / 경매 제어(강제종료·대기열 비우기·매물 잠금 강제 해제) / 유저 관리(조회·잔액조정·정지·최근경매활동20건) / 시스템 설정(config 편집) / 신고 관리(모자이크 해제 · <strong>닉네임·현재 시세 인라인 수동 편집</strong> 포함) — <code>system/admin.adminUids</code>로 접근 제어 · <code>adminUpdateListing</code> CF</td></tr>
 <tr><td>금고 슬롯</td><td>상점에서 1,500,000G에 영구 구매 (구글 전용) → 마이페이지 금고 패널에서 보유 매물 보관/인출. 보관 중 강제청산 면제. 소유권 이전 시 자동 초기화. setVaultListing CF + checkAndFinalizeExpiredRequests 면제 로직.</td></tr>
 <tr><td>신고/차단 시스템</td><td>reportListing (Google 계정 전용 · 중복 방지 · 10회 누적 자동 모자이크) · blockListing · 검색 결과 / 상세 페이지 차단/신고 UI · 모자이크 블러 · adminGetReports · adminSetMosaic</td></tr>
 <tr><td>경매 히스토리 열람 BM</td><td>viewAuctionHistory CF (50,000G 차감 · 트랜잭션) · 검색 결과 내 "히스토리 열람" 버튼 · 상세 페이지 내 열람 버튼 · 히스토리 모달 (날짜/유형/시작가/최종가/입찰 수/결과 테이블)</td></tr>
@@ -506,7 +506,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
 <h3>BM 확장</h3>
 <table>
 <tr><th>아이템</th><th>효과</th><th>상태</th></tr>
-<tr><td>강제청산 기간 연장권</td><td>보유 매물의 강제청산 회신 기한을 24시간씩 연장 (80,000G / 24h, 중복 사용 가능). <strong>경매 신청 전 사전 구매 가능</strong> — listings.reservedExtensionHours에 24h씩 누적 저장, requestAuction 시 expiresAt에 자동 반영 후 필드 삭제.</td><td><span class="badge badge-done">구현</span></td></tr>
+<tr><td>강제청산 기간 연장권</td><td>보유 매물의 강제청산 회신 기한을 24시간씩 연장 (100,000G / 24h, 중복 사용 가능). <strong>경매 신청 전 사전 구매 가능</strong> — listings.reservedExtensionHours에 24h씩 누적 저장, requestAuction 시 expiresAt에 자동 반영 후 필드 삭제.</td><td><span class="badge badge-done">구현</span></td></tr>
 <tr><td>금고</td><td>계정에 금고 슬롯 1칸 영구 추가 — 슬롯에 보유 매물 1개를 보관하면 강제청산 완전 면제. 손절 시 슬롯이 비워지며 다른 매물에 재사용 가능. 슬롯은 계정에 귀속 (양도 불가). <strong>구글 전용 1,500,000G.</strong></td><td><span class="badge badge-done">구현 완료</span></td></tr>
 </table>
 </div>
@@ -785,7 +785,7 @@ const isValidId = /^[a-zA-Z0-9]+$/.test(soopId);</pre>
   <div class="timeline-dot dot-done">5</div>
   <div>
     <div class="timeline-title">Step 5 — 경매 Cloud Functions <span class="badge badge-done">완료</span></div>
-    <div class="timeline-desc">registerAuction(유형A/B/C), placeBid, finalizeAuction, searchListing, getAuctionState, requestAuction, respondToAuctionRequest, checkAndFinalizeExpiredRequests, reportListing, blockListing, viewAuctionHistory, claimDailyReward, updateUserNickname, purchaseShopItem, skipCooldown, 관리자 CF 8개 (adminGetDashboard 외)</div>
+    <div class="timeline-desc">registerAuction(유형A/B/C), placeBid, finalizeAuction, searchListing, getAuctionState, requestAuction, respondToAuctionRequest, checkAndFinalizeExpiredRequests, reportListing, blockListing, viewAuctionHistory, claimDailyReward, updateUserNickname, purchaseShopItem, skipCooldown, 관리자 CF — adminGetDashboard(경매 상세 필드 확장: soopId·startPrice·startedAt·winnerId·registeredBy) · adminUpdateListing(닉네임·시세 인라인 편집) 외</div>
   </div>
 </div>
 <div class="timeline-item">
