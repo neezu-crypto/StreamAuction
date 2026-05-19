@@ -510,3 +510,33 @@ a {
   cursor: pointer;
 }
 .inapp-copy-btn:active { background: #d97706; }
+
+/* ===== 버그 제보 플로팅 버튼 ===== */
+.btn-bug-report {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  background: #1e2130;
+  border: 1px solid #2a2e38;
+  border-radius: 20px;
+  color: #9ba3b4;
+  font-size: .8rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+  white-space: nowrap;
+}
+.btn-bug-report:hover {
+  background: #252a3a;
+  border-color: #3a3f4b;
+  color: #e2e8f0;
+}
+@media (max-width: 640px) {
+  .btn-bug-report { bottom: 16px; right: 16px; padding: 8px 12px; }
+}

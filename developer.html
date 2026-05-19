@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>개발자 - StreamAuction</title>
+  <link rel="stylesheet" href="css/common.css">
+  <style>
+    .dev-wrap {
+      max-width: 520px;
+      margin: 60px auto;
+      padding: 0 1.5rem 4rem;
+      text-align: center;
+    }
+    .dev-avatar {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #1e2130;
+      margin-bottom: 20px;
+      border: 2px solid #2a2e38;
+    }
+    .dev-name {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-bottom: 4px;
+    }
+    .dev-id {
+      font-size: .9rem;
+      color: #6b7280;
+      margin-bottom: 24px;
+      font-family: monospace;
+    }
+    .dev-desc {
+      font-size: .92rem;
+      color: #9ba3b4;
+      line-height: 1.75;
+      margin-bottom: 32px;
+    }
+    .dev-links {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+    .dev-link-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 28px;
+      border-radius: 10px;
+      font-size: .92rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: opacity .15s;
+      min-width: 220px;
+      justify-content: center;
+    }
+    .dev-link-btn:hover { opacity: .85; }
+    .dev-link-soop {
+      background: #1a3a5c;
+      color: #60b4f7;
+      border: 1px solid #1e4a7a;
+    }
+    .dev-link-note {
+      background: #1e2130;
+      color: #9ba3b4;
+      border: 1px solid #2a2e38;
+    }
+    .dev-divider {
+      border: none;
+      border-top: 1px solid #1e2130;
+      margin: 36px 0;
+    }
+    .dev-project-title {
+      font-size: .82rem;
+      color: #4b5563;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 12px;
+    }
+    .dev-project-desc {
+      font-size: .88rem;
+      color: #6b7280;
+      line-height: 1.7;
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <a href="index.html" class="logo">StreamAuction</a>
+  </div>
+</header>
+
+<main>
+  <div class="dev-wrap">
+    <img
+      class="dev-avatar"
+      src="https://stimg.sooplive.co.kr/LOGO/sk/skftodwocks2/skftodwocks2.jpg"
+      alt="skftodwocks2"
+      onerror="this.style.background='#2a2e38'"
+    >
+    <div class="dev-name">skftodwocks2</div>
+    <div class="dev-id">@skftodwocks2</div>
+    <p class="dev-desc">
+      StreamAuction을 개발 및 운영하고 있습니다.<br>
+      버그 제보나 문의는 SOOP 쪽지로 보내주세요.
+    </p>
+    <div class="dev-links">
+      <a class="dev-link-btn dev-link-soop"
+        href="https://www.sooplive.com/station/skftodwocks2"
+        target="_blank" rel="noopener">
+        📺 방송국 바로가기
+      </a>
+      <a class="dev-link-btn dev-link-note"
+        href="https://note.sooplive.com/app/index.php?page=write&targetUserId=skftodwocks2"
+        target="_blank" rel="noopener">
+        🐛 버그 제보 / 문의
+      </a>
+    </div>
+
+    <hr class="dev-divider">
+
+    <div class="dev-project-title">About StreamAuction</div>
+    <p class="dev-project-desc">
+      StreamAuction은 SOOP 스트리머 닉네임을 게임 화폐(G)로 경매하는 팬 참여형 서비스입니다.<br>
+      입찰·낙찰·손절 등 경매 시스템을 통해 스트리머 가치를 시장에서 결정합니다.
+    </p>
+  </div>
+</main>
+
+<footer class="footer">
+  <p>&copy; 2026 StreamAuction. MVP Build.</p>
+  <p style="margin-top:6px;font-size:.8rem">
+    <a href="terms.html" style="color:#6b7280;text-decoration:none;margin-right:12px">이용약관</a>
+    <a href="privacy.html" style="color:#6b7280;text-decoration:none;margin-right:12px">개인정보 처리방침</a>
+    <a href="developer.html" style="color:#6b7280;text-decoration:none">개발자</a>
+  </p>
+</footer>
+
+<a class="btn-bug-report" href="https://note.sooplive.com/app/index.php?page=write&targetUserId=skftodwocks2" target="_blank" rel="noopener">🐛 버그 제보</a>
+</body>
+</html>
