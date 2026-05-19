@@ -35,6 +35,7 @@ const toMillis = (v) => {
 let currentUserData = null;
 let myHoldings = [];
 let pendingByListing = {};  // listingId → requestData
+let sentRequests = [];       // 내가 보낸 대기 중인 경매 요청
 let buyHistory = [];
 let sellHistory = [];
 let activeTab = "all";
@@ -75,16 +76,36 @@ async function loadHoldings(uid) {
     if (!userSnap.exists()) return;
 
     const ids = userSnap.data().ownedListingIds || [];
-    if (ids.length === 0) { myHoldings = []; return; }
+    if (ids.length === 0) {
+      myHoldings = [];
+      pendingByListing = {};
+      const sentSnap = await getDocs(query(
+          collection(db, "auctionRequests"),
+          where("requesterId", "==", uid),
+          where("status", "==", "pending"),
+      ));
+      sentRequests = [];
+      sentSnap.forEach((d) => { sentRequests.push(d.data()); });
+      return;
+    }
 
-    // 대기 중인 경매 요청 조회
-    const reqSnap = await getDocs(query(
-        collection(db, "auctionRequests"),
-        where("ownerId", "==", uid),
-        where("status", "==", "pending"),
-    ));
+    // 대기 중인 경매 요청 조회 (받은 것 + 보낸 것 병렬)
+    const [reqSnap, sentSnap] = await Promise.all([
+      getDocs(query(
+          collection(db, "auctionRequests"),
+          where("ownerId", "==", uid),
+          where("status", "==", "pending"),
+      )),
+      getDocs(query(
+          collection(db, "auctionRequests"),
+          where("requesterId", "==", uid),
+          where("status", "==", "pending"),
+      )),
+    ]);
     pendingByListing = {};
     reqSnap.forEach((d) => { pendingByListing[d.data().listingId] = d.data(); });
+    sentRequests = [];
+    sentSnap.forEach((d) => { sentRequests.push(d.data()); });
 
     // 매물 배치 조회 (서버에서 직접 조회해 isLocked 등 최신값 보장)
     const snaps = await Promise.all(ids.map((id) => getDocFromServer(doc(db, "listings", id))));
@@ -178,6 +199,7 @@ function renderAll() {
       </div>
       ${renderHoldings()}
     </div>
+    ${renderSentRequests()}
     <div class="my-section">
       <div class="my-section-header">
         <span class="my-section-title">거래 내역</span>
@@ -372,6 +394,45 @@ function renderHoldings() {
         ${requestRow}
       </div>`;
   }).join("")}</div>`;
+}
+
+function formatRequestExpiry(expiresAt) {
+  const remaining = expiresAt - Date.now();
+  if (remaining <= 0) return "⚠️ 기한 만료";
+  const h = Math.floor(remaining / (1000 * 60 * 60));
+  const m = Math.ceil((remaining % (1000 * 60 * 60)) / (1000 * 60));
+  if (h > 0) return `⏱ ${h}시간 ${m}분 남음`;
+  return `⏱ ${m}분 남음`;
+}
+
+function renderSentRequests() {
+  if (sentRequests.length === 0) return "";
+
+  const cards = sentRequests.map((r) => {
+    const img = r.profileImageUrl || "assets/images/default-avatar.svg";
+    return `
+      <div class="my-holding-card">
+        <img class="my-holding-img" src="${escapeHtml(img)}"
+          onerror="this.src='assets/images/default-avatar.svg'" alt="프로필">
+        <div class="my-holding-info">
+          <div class="my-holding-name">${escapeHtml(r.displayName)}</div>
+          <div class="my-holding-id">@${escapeHtml(r.soopId)}</div>
+        </div>
+        <div class="my-holding-actions">
+          <span class="request-status-badge">📨 답변 대기 중</span>
+          <span style="display:block;font-size:.78rem;color:#9ba3b4;margin-top:4px">${formatRequestExpiry(r.expiresAt)}</span>
+        </div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="my-section">
+      <div class="my-section-header">
+        <span class="my-section-title">내가 보낸 경매 요청</span>
+        <span class="my-section-count">${sentRequests.length}건 대기 중</span>
+      </div>
+      <div class="my-holdings-grid">${cards}</div>
+    </div>`;
 }
 
 function renderHistoryTabs() {

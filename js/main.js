@@ -388,10 +388,13 @@ async function loadMyHoldings(uid) {
 
   if (!uid) {
     section.style.display = "none";
+    const sentSection = $("sentRequestsSection");
+    if (sentSection) sentSection.style.display = "none";
     return;
   }
 
   section.style.display = "";
+  loadSentRequests(uid);
 
   try {
     const userSnap = await getDoc(doc(db, "users", uid));
@@ -468,6 +471,51 @@ async function loadMyHoldings(uid) {
     }).join("");
   } catch (e) {
     log(`보유 매물 로드 실패: ${e.message}`, true);
+  }
+}
+
+// ===== 내가 보낸 경매 요청 로드 =====
+async function loadSentRequests(uid) {
+  const section = $("sentRequestsSection");
+  const list = $("sentRequestsList");
+  if (!section || !list) return;
+
+  try {
+    const snap = await getDocs(query(
+        collection(db, "auctionRequests"),
+        where("requesterId", "==", uid),
+        where("status", "==", "pending"),
+    ));
+
+    const requests = [];
+    snap.forEach((d) => requests.push(d.data()));
+
+    if (requests.length === 0) {
+      section.style.display = "none";
+      return;
+    }
+
+    section.style.display = "";
+    setText("sentRequestsCount", `${requests.length}건 대기 중`);
+
+    list.innerHTML = requests.map((r) => {
+      const img = r.profileImageUrl || "assets/images/default-avatar.svg";
+      return `
+        <div class="holding-card" onclick="searchByHolding('${escapeHtml(r.soopId)}')">
+          <img class="holding-img" src="${img}"
+            onerror="this.src='assets/images/default-avatar.svg'" alt="프로필">
+          <div class="holding-info">
+            <div class="holding-name">${escapeHtml(r.displayName)}</div>
+            <div class="holding-id">${escapeHtml(r.soopId)}</div>
+          </div>
+          <div class="holding-price">
+            <span class="request-status-badge">📨 답변 대기 중</span>
+            <div style="font-size:.78rem;color:#9ba3b4;margin-top:4px">${formatRequestExpiry(r.expiresAt)}</div>
+          </div>
+        </div>`;
+    }).join("");
+  } catch (e) {
+    log(`보낸 요청 로드 실패: ${e.message}`, true);
   }
 }
 
