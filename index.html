@@ -429,22 +429,61 @@
           </div>
         </div>
         <div class="form-group">
-          <label>기간 (일)</label>
-          <input type="number" id="adDurationDays" min="1" max="7" value="1">
-          <span class="form-hint">최대 7일 · 24시간 단위</span>
+          <label>광고 예산</label>
+          <select id="adBudget" onchange="updateAdCostPreview()">
+            <option value="100000">100,000G</option>
+            <option value="200000">200,000G</option>
+            <option value="300000">300,000G</option>
+            <option value="500000">500,000G</option>
+            <option value="1000000">1,000,000G</option>
+          </select>
+          <span class="form-hint">10만G 단위 · 예산 소진 시 자동 마감</span>
         </div>
         <div class="ad-cost-preview">
-          <span id="adCostPreview">총 비용: 200,000G</span>
+          <span id="adCostPreview"></span>
           <span id="adBalancePreview"></span>
         </div>
         <label class="consent-label">
-          <input type="checkbox" id="adConsentCheck">
+          <input type="checkbox" id="adConsentCheck" onchange="updateAdConfirmBtn()">
           닉네임·SOOP ID가 서비스 화면에 공개적으로 표시되는 것에 동의합니다.
         </label>
         <p id="adPurchaseError" class="form-error" style="display:none"></p>
         <div class="modal-actions">
           <button class="btn-secondary" onclick="closeAdPurchaseModal()">취소</button>
           <button class="btn-primary" id="btnAdPurchaseConfirm" onclick="handleAdPurchase()" disabled>광고 등록</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="adTopUpModal" onclick="if(event.target===this)closeAdTopUpModal()">
+  <div class="modal modal-ad-purchase">
+    <div class="modal-header">
+      <h2>예산 충전</h2>
+      <button class="modal-close" onclick="closeAdTopUpModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="ad-purchase-form">
+        <div class="form-group">
+          <label>충전액</label>
+          <select id="topUpAmount" onchange="updateTopUpPreview()">
+            <option value="100000">100,000G</option>
+            <option value="200000">200,000G</option>
+            <option value="300000">300,000G</option>
+            <option value="500000">500,000G</option>
+            <option value="1000000">1,000,000G</option>
+          </select>
+          <span class="form-hint">10만G 단위</span>
+        </div>
+        <div class="ad-cost-preview">
+          <span id="topUpCostPreview"></span>
+          <span id="topUpBalancePreview"></span>
+        </div>
+        <p id="topUpError" class="form-error" style="display:none"></p>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="closeAdTopUpModal()">취소</button>
+          <button class="btn-primary" id="btnTopUpConfirm" onclick="handleAdTopUp()">충전</button>
         </div>
       </div>
     </div>

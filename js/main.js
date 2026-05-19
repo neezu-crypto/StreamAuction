@@ -98,6 +98,7 @@ const convertAnonymousToGoogleFn = httpsCallable(functions, "convertAnonymousToG
 const endSessionFn = httpsCallable(functions, "endSession");
 const getActiveAdsFn = httpsCallable(functions, "getActiveAds");
 const purchaseAdFn = httpsCallable(functions, "purchaseAd");
+const topUpAdFn = httpsCallable(functions, "topUpAd");
 const claimAdRewardFn = httpsCallable(functions, "claimAdReward");
 
 // ===== 잔액 히스토리 기록 =====
@@ -1850,35 +1851,36 @@ async function renderAdRewardSection() {
   try {
     const res = await getActiveAdsFn();
     const {ads, todayCount} = res.data;
-    ads.sort((a, b) => a.expiresAt - b.expiresAt);
-    const now = Date.now();
-    const activeAds = ads.filter(ad => ad.expiresAt > now);
 
     let html = `<div class="ad-reward-header">
       <span class="ad-today-count">오늘 보상: <strong>${todayCount} / 3</strong>개 완료</span>
       ${isGoogle ? `<button class="btn-ad-register" onclick="openAdPurchaseModal()">+ 광고 신청</button>` : ""}
     </div>`;
 
-    if (activeAds.length === 0) {
+    if (ads.length === 0) {
       html += `<div class="ad-empty">현재 진행 중인 광고가 없습니다.<br>${isGoogle ? "광고를 직접 신청해보세요!" : ""}</div>`;
     } else {
-      activeAds.forEach((ad) => {
+      ads.forEach((ad) => {
         const imgSrc = `https://stimg.sooplive.co.kr/LOGO/${ad.soopId.slice(0, 2)}/${ad.soopId}/${ad.soopId}.jpg`;
-        const remaining = msToRemaining(ad.expiresAt - now);
         const claimed = ad.claimedToday;
         const isOwn = ad.isOwn;
+        const budgetText = `남은 예산: ${(ad.remainingBudget || 0).toLocaleString("ko-KR")}G`;
         html += `
           <div class="ad-card${claimed ? " claimed" : ""}${isOwn ? " own-ad" : ""}">
             <img class="ad-card-img" src="${imgSrc}" alt="" onerror="this.style.background='#374151';this.src=''">
             <div class="ad-card-body">
               <div class="ad-card-name">${escapeHtml(ad.displayName)}${isOwn ? `<span class="ad-own-badge">내 광고</span>` : ""}</div>
               <div class="ad-card-id">${ad.soopId}</div>
-              <div class="ad-card-expires">종료까지 ${remaining}</div>
+              <div class="ad-card-expires">${budgetText}</div>
             </div>
             <div class="ad-card-actions">
-              <span class="ad-card-reward ${claimed ? "claimed-text" : ""}">${claimed ? "오늘 수령 완료 ✅" : "+10,000G"}</span>
-              <button class="btn-ad-visit" onclick="handleAdVisit('${ad.adId}','${ad.soopId}')"
-                ${claimed || isOwn ? "disabled" : ""}>${isOwn ? "본인 광고" : "방송국 방문 →"}</button>
+              ${isOwn ? `
+                <button class="btn-ad-topup" onclick="openAdTopUpModal('${ad.adId}')">충전</button>
+              ` : `
+                <span class="ad-card-reward ${claimed ? "claimed-text" : ""}">${claimed ? "오늘 수령 완료 ✅" : "+5,000G"}</span>
+                <button class="btn-ad-visit" onclick="handleAdVisit('${ad.adId}','${ad.soopId}')"
+                  ${claimed ? "disabled" : ""}>${"방송국 방문 →"}</button>
+              `}
             </div>
           </div>`;
       });
@@ -1890,24 +1892,30 @@ async function renderAdRewardSection() {
 }
 
 window.handleAdVisit = async function(adId, soopId) {
-  const btn = document.querySelector(`.btn-ad-visit[onclick*="${adId}"]`);
+  const card = document.querySelector(`.btn-ad-visit[onclick*="${adId}"]`)?.closest(".ad-card");
+  const btn = card?.querySelector(".btn-ad-visit");
   if (btn) { btn.disabled = true; btn.textContent = "처리 중..."; }
   try {
     const res = await claimAdRewardFn({adId});
-    const {newBalance, todayCount} = res.data;
+    const {newBalance, todayCount, remainingBudget} = res.data;
     if (currentUserData) currentUserData.balance = newBalance;
     updateAuthUI(auth.currentUser, currentUserData);
     if (auth.currentUser) recordBalanceHistory(auth.currentUser.uid, newBalance);
     window.open(`https://www.sooplive.com/station/${soopId}`, "_blank");
-    showToast(`+5,000G 획득! (오늘 ${todayCount}/3개)`);
-    renderAdRewardSection();
+    if (remainingBudget <= 0 && card) {
+      card.remove();
+      showToast(`+5,000G 획득! (오늘 ${todayCount}/3개) · 광고 예산 소진`);
+    } else {
+      showToast(`+5,000G 획득! (오늘 ${todayCount}/3개)`);
+      renderAdRewardSection();
+    }
   } catch (e) {
     if (e.code === "already-exists") {
       showToast("이 광고는 오늘 이미 수령했습니다.");
       renderAdRewardSection();
       window.open(`https://www.sooplive.com/station/${soopId}`, "_blank");
     } else if (e.code === "functions/resource-exhausted") {
-      showToast("오늘 보상 한도(5개)에 도달했습니다.");
+      showToast("오늘 보상 한도(3개)에 도달했습니다.");
       if (btn) { btn.disabled = false; btn.textContent = "방송국 방문 →"; }
     } else {
       alert(`보상 수령 실패: ${e.message}`);
@@ -1923,7 +1931,7 @@ window.openAdPurchaseModal = function() {
   if (!modal) return;
   $("adDisplayName").value = "";
   $("adSoopId").value = "";
-  $("adDurationDays").value = "1";
+  $("adBudget").value = "100000";
   $("adConsentCheck").checked = false;
   $("btnAdPurchaseConfirm").disabled = true;
   $("adPurchaseError").style.display = "none";
@@ -1932,8 +1940,7 @@ window.openAdPurchaseModal = function() {
   modal.classList.add("show");
 
   $("adSoopId").addEventListener("input", onAdSoopIdInput);
-  $("adDurationDays").addEventListener("input", updateAdCostPreview);
-  $("adConsentCheck").addEventListener("change", updateAdConfirmBtn);
+  $("adDisplayName").addEventListener("input", onAdSoopIdInput);
 };
 
 window.closeAdPurchaseModal = function() {
@@ -1944,7 +1951,7 @@ window.closeAdPurchaseModal = function() {
 function onAdSoopIdInput() {
   const soopId = $("adSoopId").value.trim().toLowerCase();
   const preview = $("adProfilePreview");
-  if (!soopId) { preview.style.display = "none"; return; }
+  if (!soopId) { preview.style.display = "none"; updateAdConfirmBtn(); return; }
   const imgSrc = `https://stimg.sooplive.co.kr/LOGO/${soopId.slice(0, 2)}/${soopId}/${soopId}.jpg`;
   $("adProfileImg").src = imgSrc;
   $("adProfileImg").onerror = () => { $("adProfileImg").src = ""; };
@@ -1955,15 +1962,15 @@ function onAdSoopIdInput() {
 }
 
 function updateAdCostPreview() {
-  const days = parseInt($("adDurationDays")?.value) || 1;
-  const cost = days * 200000;
+  const budget = parseInt($("adBudget")?.value) || 100000;
   const balance = currentUserData?.balance || 0;
   const el = $("adCostPreview");
-  if (el) el.textContent = `총 비용: ${days}일 × 200,000G = ${cost.toLocaleString("ko-KR")}G`;
+  if (el) el.textContent = `광고 예산: ${budget.toLocaleString("ko-KR")}G`;
   const balEl = $("adBalancePreview");
   if (balEl) {
-    if (balance >= cost) {
-      balEl.textContent = `잔액: ${formatG(balance)} → ${formatG(balance - cost)}`;
+    if (balance >= budget) {
+      balEl.textContent = `잔액: ${formatG(balance)} → ${formatG(balance - budget)}`;
+      balEl.style.color = "";
     } else {
       balEl.textContent = `잔액 부족 (${formatG(balance)})`;
       balEl.style.color = "#f87171";
@@ -1975,11 +1982,10 @@ function updateAdCostPreview() {
 function updateAdConfirmBtn() {
   const soopId = $("adSoopId")?.value.trim();
   const name = $("adDisplayName")?.value.trim();
-  const days = parseInt($("adDurationDays")?.value) || 0;
+  const budget = parseInt($("adBudget")?.value) || 0;
   const consent = $("adConsentCheck")?.checked;
   const balance = currentUserData?.balance || 0;
-  const cost = days * 200000;
-  const valid = name && /^[a-zA-Z0-9]{1,20}$/.test(soopId) && days >= 1 && days <= 7 && consent && balance >= cost;
+  const valid = name && /^[a-zA-Z0-9]{1,20}$/.test(soopId) && budget >= 100000 && consent && balance >= budget;
   const btn = $("btnAdPurchaseConfirm");
   if (btn) btn.disabled = !valid;
 }
@@ -1987,7 +1993,7 @@ function updateAdConfirmBtn() {
 window.handleAdPurchase = async function() {
   const displayName = $("adDisplayName").value.trim();
   const soopId = $("adSoopId").value.trim().toLowerCase();
-  const durationDays = parseInt($("adDurationDays").value);
+  const budget = parseInt($("adBudget").value);
   const consentAgreed = $("adConsentCheck").checked;
   const errEl = $("adPurchaseError");
   const btn = $("btnAdPurchaseConfirm");
@@ -1997,18 +2003,78 @@ window.handleAdPurchase = async function() {
   errEl.style.display = "none";
 
   try {
-    const res = await purchaseAdFn({displayName, soopId, durationDays, consentAgreed});
+    const res = await purchaseAdFn({displayName, soopId, budget, consentAgreed});
     const {newBalance} = res.data;
     if (currentUserData) currentUserData.balance = newBalance;
     updateAuthUI(auth.currentUser, currentUserData);
     if (auth.currentUser) recordBalanceHistory(auth.currentUser.uid, newBalance);
     closeAdPurchaseModal();
-    showToast(`광고 등록 완료! ${durationDays}일간 노출됩니다.`);
+    showToast(`광고 등록 완료! 예산 소진 시 자동 마감됩니다.`);
     renderAdRewardSection();
   } catch (e) {
     errEl.textContent = e.message || "광고 등록에 실패했습니다.";
     errEl.style.display = "block";
     btn.disabled = false;
     btn.textContent = "광고 등록";
+  }
+};
+
+// ===== 광고 예산 충전 모달 =====
+let _topUpAdId = null;
+
+window.openAdTopUpModal = function(adId) {
+  _topUpAdId = adId;
+  $("topUpAmount").value = "100000";
+  $("topUpError").style.display = "none";
+  updateTopUpPreview();
+  $("adTopUpModal").classList.add("show");
+};
+
+window.closeAdTopUpModal = function() {
+  $("adTopUpModal").classList.remove("show");
+  _topUpAdId = null;
+};
+
+window.updateTopUpPreview = function() {
+  const amount = parseInt($("topUpAmount")?.value) || 100000;
+  const balance = currentUserData?.balance || 0;
+  const el = $("topUpCostPreview");
+  if (el) el.textContent = `충전액: ${amount.toLocaleString("ko-KR")}G`;
+  const balEl = $("topUpBalancePreview");
+  if (balEl) {
+    if (balance >= amount) {
+      balEl.textContent = `잔액: ${formatG(balance)} → ${formatG(balance - amount)}`;
+      balEl.style.color = "";
+    } else {
+      balEl.textContent = `잔액 부족 (${formatG(balance)})`;
+      balEl.style.color = "#f87171";
+    }
+  }
+};
+
+window.handleAdTopUp = async function() {
+  if (!_topUpAdId) return;
+  const topUpAmount = parseInt($("topUpAmount").value);
+  const errEl = $("topUpError");
+  const btn = $("btnTopUpConfirm");
+
+  btn.disabled = true;
+  btn.textContent = "처리 중...";
+  errEl.style.display = "none";
+
+  try {
+    const res = await topUpAdFn({adId: _topUpAdId, topUpAmount});
+    const {newBalance, remainingBudget} = res.data;
+    if (currentUserData) currentUserData.balance = newBalance;
+    updateAuthUI(auth.currentUser, currentUserData);
+    if (auth.currentUser) recordBalanceHistory(auth.currentUser.uid, newBalance);
+    closeAdTopUpModal();
+    showToast(`충전 완료! 남은 예산: ${remainingBudget.toLocaleString("ko-KR")}G`);
+    renderAdRewardSection();
+  } catch (e) {
+    errEl.textContent = e.message || "충전에 실패했습니다.";
+    errEl.style.display = "block";
+    btn.disabled = false;
+    btn.textContent = "충전";
   }
 };

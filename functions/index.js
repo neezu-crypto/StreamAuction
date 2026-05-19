@@ -2657,7 +2657,7 @@ exports.purchaseAd = onCall(
         throw new HttpsError("permission-denied", "Google 계정 전용");
       }
 
-      const {displayName, soopId, durationDays, consentAgreed} = request.data;
+      const {displayName, soopId, budget, consentAgreed} = request.data;
 
       if (!consentAgreed) throw new HttpsError("invalid-argument", "개인정보 수집·이용에 동의해주세요");
       if (!displayName || typeof displayName !== "string" || displayName.trim().length === 0) {
@@ -2666,36 +2666,69 @@ exports.purchaseAd = onCall(
       if (!soopId || !/^[a-zA-Z0-9]{1,20}$/.test(soopId)) {
         throw new HttpsError("invalid-argument", "SOOP ID는 영문·숫자 1~20자입니다");
       }
-      if (!Number.isInteger(durationDays) || durationDays < 1 || durationDays > 7) {
-        throw new HttpsError("invalid-argument", "기간은 1~7일로 입력해주세요");
+      if (!Number.isInteger(budget) || budget < 100000 || budget % 100000 !== 0) {
+        throw new HttpsError("invalid-argument", "예산은 10만G 단위로 입력해주세요 (최소 10만G)");
       }
-
-      const config = (await db.collection("system").doc("config").get()).data() || {};
-      const pricePerDay = config.adPricePerDay || 200000;
-      const totalCost = durationDays * pricePerDay;
 
       const userRef = db.collection("users").doc(uid);
       const adRef = db.collection("ads").doc();
-      const now = Date.now();
 
       const result = await db.runTransaction(async (tx) => {
         const userSnap = await tx.get(userRef);
         if (!userSnap.exists) throw new HttpsError("not-found", "유저 정보 없음");
         const balance = userSnap.data().balance || 0;
-        if (balance < totalCost) throw new HttpsError("failed-precondition", "잔액이 부족합니다");
+        if (balance < budget) throw new HttpsError("failed-precondition", "잔액이 부족합니다");
 
-        tx.update(userRef, {balance: balance - totalCost});
+        tx.update(userRef, {balance: balance - budget});
         tx.set(adRef, {
           uid,
           displayName: displayName.trim(),
           soopId: soopId.toLowerCase(),
-          durationDays,
-          totalCost,
+          totalCharged: budget,
+          remainingBudget: budget,
           createdAt: FieldValue.serverTimestamp(),
-          expiresAt: now + durationDays * 86400000,
           consentAgreed: true,
         });
-        return {newBalance: balance - totalCost, adId: adRef.id, expiresAt: now + durationDays * 86400000};
+        return {newBalance: balance - budget, adId: adRef.id};
+      });
+
+      return {success: true, ...result};
+    },
+);
+
+exports.topUpAd = onCall(
+    async (request) => {
+      if (!request.auth) throw new HttpsError("unauthenticated", "로그인 필요");
+      const uid = request.auth.uid;
+      if (request.auth.token.firebase?.sign_in_provider === "anonymous") {
+        throw new HttpsError("permission-denied", "Google 계정 전용");
+      }
+
+      const {adId, topUpAmount} = request.data;
+      if (!adId) throw new HttpsError("invalid-argument", "adId 필요");
+      if (!Number.isInteger(topUpAmount) || topUpAmount < 100000 || topUpAmount % 100000 !== 0) {
+        throw new HttpsError("invalid-argument", "충전액은 10만G 단위로 입력해주세요 (최소 10만G)");
+      }
+
+      const userRef = db.collection("users").doc(uid);
+      const adRef = db.collection("ads").doc(adId);
+
+      const result = await db.runTransaction(async (tx) => {
+        const [userSnap, adSnap] = await Promise.all([tx.get(userRef), tx.get(adRef)]);
+        if (!userSnap.exists) throw new HttpsError("not-found", "유저 정보 없음");
+        if (!adSnap.exists) throw new HttpsError("not-found", "광고를 찾을 수 없습니다");
+        if (adSnap.data().uid !== uid) throw new HttpsError("permission-denied", "본인 광고만 충전할 수 있습니다");
+
+        const balance = userSnap.data().balance || 0;
+        if (balance < topUpAmount) throw new HttpsError("failed-precondition", "잔액이 부족합니다");
+
+        const newRemaining = (adSnap.data().remainingBudget || 0) + topUpAmount;
+        tx.update(userRef, {balance: balance - topUpAmount});
+        tx.update(adRef, {
+          remainingBudget: newRemaining,
+          totalCharged: FieldValue.increment(topUpAmount),
+        });
+        return {newBalance: balance - topUpAmount, remainingBudget: newRemaining};
       });
 
       return {success: true, ...result};
@@ -2729,7 +2762,9 @@ exports.claimAdReward = onCall(
 
         if (!adSnap.exists) throw new HttpsError("not-found", "광고를 찾을 수 없습니다");
         const ad = adSnap.data();
-        if (ad.expiresAt < now) throw new HttpsError("failed-precondition", "만료된 광고입니다");
+        if ((ad.remainingBudget || 0) < rewardAmount) {
+          throw new HttpsError("failed-precondition", "예산이 소진된 광고입니다");
+        }
         if (ad.uid === uid) throw new HttpsError("failed-precondition", "본인 광고는 보상 수령 불가");
 
         const userData = userSnap.data() || {};
@@ -2742,6 +2777,8 @@ exports.claimAdReward = onCall(
         }
 
         const balance = userData.balance || 0;
+        const newRemainingBudget = ad.remainingBudget - rewardAmount;
+        tx.update(adRef, {remainingBudget: newRemainingBudget});
         tx.update(userRef, {
           balance: balance + rewardAmount,
           adClaimDate: todayKST,
@@ -2749,7 +2786,7 @@ exports.claimAdReward = onCall(
         });
         tx.set(claimRef, {lastClaimedDate: todayKST});
 
-        return {newBalance: balance + rewardAmount, todayCount: claimCount + 1};
+        return {newBalance: balance + rewardAmount, todayCount: claimCount + 1, remainingBudget: newRemainingBudget};
       });
 
       return {success: true, ...result};
@@ -2760,17 +2797,18 @@ exports.getActiveAds = onCall(
     async (request) => {
       if (!request.auth) throw new HttpsError("unauthenticated", "로그인 필요");
       const uid = request.auth.uid;
-      const now = Date.now();
-      const todayKST = getKSTDateStr(new Date(now));
+      const todayKST = getKSTDateStr(new Date());
 
       const adsSnap = await db.collection("ads")
-          .where("expiresAt", ">", now)
-          .orderBy("expiresAt", "asc")
-          .limit(20)
+          .where("remainingBudget", ">", 0)
           .get();
 
-      const ads = await Promise.all(adsSnap.docs.map(async (doc) => {
-        const d = doc.data();
+      const rawAds = adsSnap.docs
+          .map((doc) => ({doc, d: doc.data()}))
+          .sort((a, b) => (b.d.remainingBudget || 0) - (a.d.remainingBudget || 0))
+          .slice(0, 20);
+
+      const ads = await Promise.all(rawAds.map(async ({doc, d}) => {
         const claimSnap = await db.collection("users").doc(uid)
             .collection("adClaims").doc(doc.id).get();
         const claimedToday = claimSnap.exists && claimSnap.data().lastClaimedDate === todayKST;
@@ -2778,7 +2816,7 @@ exports.getActiveAds = onCall(
           adId: doc.id,
           displayName: d.displayName,
           soopId: d.soopId,
-          expiresAt: d.expiresAt,
+          remainingBudget: d.remainingBudget || 0,
           isOwn: d.uid === uid,
           claimedToday,
         };
